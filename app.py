@@ -22,16 +22,18 @@ if not st.session_state["autenticado"]:
 
 # --- CONFIGURACIÓN IA ---
 try:
-    # Intentamos leer la llave de los Secrets
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Cambiamos el nombre del modelo a la versión más compatible
+    model = genai.GenerativeModel('gemini-1.5-flash-latest') 
 except Exception as e:
-    st.error(f"Error en la configuración técnica: {e}")
+    st.error(f"Error técnico: {e}")
     st.stop()
 
 # --- INTERFAZ ---
 st.title("🚜 LA CLEMENTINA IA")
+st.write("Cargá una foto para el diagnóstico experto.")
+
 archivo = st.file_uploader("📸 Subí la foto aquí:", type=['jpg', 'jpeg', 'png'])
 
 if archivo:
@@ -39,16 +41,12 @@ if archivo:
     st.image(img, use_container_width=True)
     
     if st.button("🚀 INICIAR DIAGNÓSTICO"):
-        with st.spinner('Analizando...'):
+        with st.spinner('⌛ Analizando con IA...'):
             try:
-                # El pedido a la IA
-                prompt = "Sos un ingeniero agrónomo. Analizá esta imagen de cultivo. Identificá el problema y recomendá tratamiento con productos y dosis."
+                prompt = "Sos un ingeniero agrónomo experto. Identifica el cultivo, el problema y da un tratamiento con productos y dosis."
                 response = model.generate_content([prompt, img])
-                
                 st.success("### ✅ Dictamen:")
                 st.write(response.text)
             except Exception as e:
-                # ESTO ES LO IMPORTANTE: Ahora nos va a decir el error real
-                st.error("❌ ERROR TÉCNICO DETECTADO:")
-                st.info(f"Detalle del error: {str(e)}")
-                st.warning("Si el error dice 'API_KEY_INVALID', hay que generar una llave nueva en Google AI Studio.")
+                st.error("❌ El sistema no pudo procesar la imagen.")
+                st.info(f"Detalle técnico: {str(e)}")
