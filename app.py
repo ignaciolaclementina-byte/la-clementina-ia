@@ -2,10 +2,10 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# --- CONFIGURACIÓN ---
+# 1. Configuración de Página
 st.set_page_config(page_title="LA CLEMENTINA IA", page_icon="🚜")
 
-# --- ESTILOS (FONDO SOJA) ---
+# 2. Estilos (Fondo de Soja Garantizado)
 st.markdown("""
 <style>
 .stApp {
@@ -25,62 +25,55 @@ h1 { color: #4CAF50 !important; text-align: center; text-shadow: 2px 2px 4px #00
 </style>
 """, unsafe_allow_html=True)
 
-# --- LOGIN ---
-if "logueado" not in st.session_state:
-    st.session_state.logueado = False
+# 3. Login
+if "auth" not in st.session_state:
+    st.session_state.auth = False
 
-if not st.session_state.logueado:
+if not st.session_state.auth:
     st.title("🔐 Acceso La Clementina")
     clave = st.text_input("Contraseña:", type="password")
     if st.button("INGRESAR"):
         if clave == "clementina2024":
-            st.session_state.logueado = True
+            st.session_state.auth = True
             st.rerun()
         else:
             st.error("Clave incorrecta")
     st.stop()
 
-# --- INTERFAZ ---
+# 4. Interfaz Principal
 st.title("🚜 LA CLEMENTINA IA")
-st.write("### Diagnóstico con Stock Real 2026")
+st.write("### Diagnóstico con Stock 2026")
 
-opcion = st.radio("Origen de la imagen:", ["📸 Cámara", "📁 Galería"], horizontal=True)
-archivo = st.camera_input("Capturar") if opcion == "📸 Cámara" else st.file_uploader("Subir", type=["jpg", "png"])
+archivo = st.camera_input("Sacar foto al cultivo")
+if not archivo:
+    archivo = st.file_uploader("O subir desde galería", type=["jpg", "png", "jpeg"])
 
 if archivo:
+    # Mostramos la imagen
     img = Image.open(archivo)
-    st.image(img, width=350, caption="Muestra seleccionada")
+    st.image(img, width=400)
     
     if st.button("🚀 ANALIZAR AHORA"):
-        with st.spinner("Consultando con el Ingeniero IA..."):
-            try:
-                # 1. Verificación de Clave
-                if "GOOGLE_API_KEY" not in st.secrets:
-                    st.error("⚠️ ERROR: No configuraste la clave en 'Secrets' de Streamlit.")
-                    st.stop()
-                
-                genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                
-                # 2. Instrucciones basadas en tu Excel
-                instruccion = """
-                Sos ingeniero agrónomo de La Clementina. 
-                Analiza la imagen y recomienda SOLO estos productos de nuestro stock:
-                INSECTICIDAS: Solomon, Bifentrin 25%, Starkle, Ampligo-Zariva, Lambda Microencapsulada, Boomer, Eminent, Belt 480 SC, Idaten.
-                ADHERENTES: Optimizer, Rizo Spray Extremo, Integrum, Fulltecmax, Alquimia, Rizospray Zen, Tropgreen.
-                Responde: Diagnóstico, Producto del Stock y Dosis.
-                """
-                
-                # 3. Intento de Generación
-                response = model.generate_content([instruccion, img])
-                
-                if response:
-                    st.success("✅ DICTAMEN GENERADO:")
-                    st.markdown(response.text)
-                else:
-                    st.warning("La IA no devolvió texto. Intente con una foto más nítida.")
-
-            except Exception as e:
-                # Esto nos dirá el error real (API_KEY_INVALID, etc.)
-                st.error(f"❌ ERROR TÉCNICO: {str(e)}")
-                st.info("Si el error dice 'API_KEY_INVALID', revisá la clave en Streamlit Cloud.")
+        if "GOOGLE_API_KEY" not in st.secrets:
+            st.error("Falta la API KEY en los Secrets de Streamlit.")
+        else:
+            with st.spinner("Analizando..."):
+                try:
+                    # Configuración de IA
+                    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    
+                    # Prompt con tus productos del Excel
+                    productos_stock = "Solomon, Bifentrin, Starkle, Ampligo-Zariva, Lambda, Boomer, Eminent, Belt, Idaten. Coadyuvantes: Optimizer, Rizo Spray, Integrum, Zen."
+                    prompt = f"Sos ingeniero agronomo de La Clementina. Analiza la imagen, identifica el problema y recomienda tratamiento usando SOLO estos productos: {productos_stock}. Se breve."
+                    
+                    # Enviar a la IA
+                    response = model.generate_content([prompt, img])
+                    
+                    if response.text:
+                        st.success("✅ RECOMENDACIÓN TÉCNICA:")
+                        st.write(response.text)
+                    else:
+                        st.error("La IA no pudo procesar la imagen. Intentá de nuevo.")
+                except Exception as e:
+                    st.error(f"Error técnico: {str(e)}")
