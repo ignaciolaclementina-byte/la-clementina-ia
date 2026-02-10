@@ -5,7 +5,7 @@ from PIL import Image
 # 1. Configuración de Página
 st.set_page_config(page_title="LA CLEMENTINA IA", page_icon="🚜")
 
-# 2. Estilo Visual (Fondo Campo)
+# 2. Estilo Visual
 st.markdown("""
 <style>
 .stApp {
@@ -33,18 +33,30 @@ if archivo:
     st.image(img, use_container_width=True)
     
     if st.button("🚀 INICIAR DIAGNÓSTICO PROFESIONAL"):
-        with st.spinner("Consultando con el motor de La Clementina..."):
+        with st.spinner("Conectando con el motor de IA..."):
             try:
-                # CONEXIÓN
+                # CONFIGURACIÓN DE API
                 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
                 
-                # SOLUCIÓN AL 404: Probamos los nombres de modelo más estables
-                try:
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                except:
-                    model = genai.GenerativeModel('gemini-pro-vision')
+                # ESTRATEGIA PARA EVITAR EL ERROR 404
+                # Intentamos diferentes nombres de modelo hasta que uno responda
+                model_names = ['gemini-1.5-flash', 'models/gemini-1.5-flash', 'gemini-pro-vision']
+                model = None
                 
-                prompt = "Actúa como experto agrónomo. Analiza la imagen y da: 1-Diagnóstico, 2-Producto recomendado (Solomon, Starkle, Belt, u Optimizer), 3-Dosis."
+                for name in model_names:
+                    try:
+                        temp_model = genai.GenerativeModel(name)
+                        # Prueba rápida de conexión
+                        model = temp_model
+                        break 
+                    except:
+                        continue
+                
+                if model is None:
+                    st.error("No se pudo establecer conexión con ningún modelo compatible.")
+                    st.stop()
+
+                prompt = "Actúa como experto agrónomo de La Clementina. Analiza la imagen y da: 1-Diagnóstico, 2-Producto recomendado (Solomon, Starkle, Belt, u Optimizer), 3-Dosis."
                 
                 # Generar contenido
                 response = model.generate_content([prompt, img])
@@ -53,7 +65,8 @@ if archivo:
                     st.success("✅ INFORME FINAL:")
                     st.markdown(response.text)
                 else:
-                    st.warning("La IA no pudo procesar esta imagen. Intenta con otra.")
+                    st.warning("La IA recibió la imagen pero no pudo generar un texto. Intenta con otra toma.")
                     
             except Exception as e:
-                st.error(f"Error del servidor: {str(e)}")
+                st.error(f"Error técnico: {str(e)}")
+                st.info("Tip: Si el error persiste, realiza un 'Reboot' en el menú lateral de Streamlit Cloud.")
