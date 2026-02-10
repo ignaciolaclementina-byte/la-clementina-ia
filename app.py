@@ -2,10 +2,10 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# 1. Configuración de página
+# --- CONFIGURACIÓN ---
 st.set_page_config(page_title="LA CLEMENTINA IA", page_icon="🚜")
 
-# 2. Estilos (Fondo de Soja)
+# --- ESTILOS (FONDO SOJA) ---
 st.markdown("""
 <style>
 .stApp {
@@ -25,62 +25,62 @@ h1 { color: #4CAF50 !important; text-align: center; text-shadow: 2px 2px 4px #00
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Sesión de Usuario
-if "entró" not in st.session_state:
-    st.session_state.entró = False
+# --- LOGIN ---
+if "logueado" not in st.session_state:
+    st.session_state.logueado = False
 
-if not st.session_state.entró:
+if not st.session_state.logueado:
     st.title("🔐 Acceso La Clementina")
     clave = st.text_input("Contraseña:", type="password")
     if st.button("INGRESAR"):
         if clave == "clementina2024":
-            st.session_state.entró = True
+            st.session_state.logueado = True
             st.rerun()
         else:
-            st.error("Error de clave")
+            st.error("Clave incorrecta")
     st.stop()
 
-# 4. Interfaz Principal
+# --- INTERFAZ ---
 st.title("🚜 LA CLEMENTINA IA")
-st.write("### Diagnóstico con Stock 2026")
+st.write("### Diagnóstico con Stock Real 2026")
 
-opcion = st.radio("Seleccione origen:", ["📸 Cámara", "📁 Galería"], horizontal=True)
-archivo = None
-
-if opcion == "📸 Cámara":
-    archivo = st.camera_input("Sacar foto")
-else:
-    archivo = st.file_uploader("Subir imagen", type=["jpg", "jpeg", "png"])
+opcion = st.radio("Origen de la imagen:", ["📸 Cámara", "📁 Galería"], horizontal=True)
+archivo = st.camera_input("Capturar") if opcion == "📸 Cámara" else st.file_uploader("Subir", type=["jpg", "png"])
 
 if archivo:
     img = Image.open(archivo)
-    st.image(img, width=400)
+    st.image(img, width=350, caption="Muestra seleccionada")
     
     if st.button("🚀 ANALIZAR AHORA"):
-        with st.spinner("Conectando con el Ingeniero IA..."):
+        with st.spinner("Consultando con el Ingeniero IA..."):
             try:
-                # REVISIÓN DE API KEY
+                # 1. Verificación de Clave
                 if "GOOGLE_API_KEY" not in st.secrets:
-                    st.error("❌ No se encontró la GOOGLE_API_KEY en los Secrets de Streamlit.")
+                    st.error("⚠️ ERROR: No configuraste la clave en 'Secrets' de Streamlit.")
                     st.stop()
                 
                 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-                
-                # Usamos el modelo más estable
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                productos = "STOCK 2026: Solomon, Starkle, Ampligo, Zariva, Lambda, Boomer, Eminent, Belt, Idaten. COADYUVANTES: Optimizer, Rizo Spray Extremo, Integrum, Fulltec, Zen."
-                pedido = f"Sos ingeniero agronomo de La Clementina. Analiza la imagen. Diagnostica el problema. Recomienda solo productos de este stock: {productos}"
+                # 2. Instrucciones basadas en tu Excel
+                instruccion = """
+                Sos ingeniero agrónomo de La Clementina. 
+                Analiza la imagen y recomienda SOLO estos productos de nuestro stock:
+                INSECTICIDAS: Solomon, Bifentrin 25%, Starkle, Ampligo-Zariva, Lambda Microencapsulada, Boomer, Eminent, Belt 480 SC, Idaten.
+                ADHERENTES: Optimizer, Rizo Spray Extremo, Integrum, Fulltecmax, Alquimia, Rizospray Zen, Tropgreen.
+                Responde: Diagnóstico, Producto del Stock y Dosis.
+                """
                 
-                # Generar contenido
-                response = model.generate_content([pedido, img])
+                # 3. Intento de Generación
+                response = model.generate_content([instruccion, img])
                 
-                if response.text:
-                    st.success("✅ DICTAMEN TÉCNICO:")
-                    st.write(response.text)
+                if response:
+                    st.success("✅ DICTAMEN GENERADO:")
+                    st.markdown(response.text)
                 else:
-                    st.warning("La IA no pudo generar una respuesta clara. Intente con otra foto.")
-                    
+                    st.warning("La IA no devolvió texto. Intente con una foto más nítida.")
+
             except Exception as e:
-                st.error(f"❌ Error de conexión: {str(e)}")
-                st.info("Asegurate de que la API KEY sea válida y tenga permisos para Gemini.")
+                # Esto nos dirá el error real (API_KEY_INVALID, etc.)
+                st.error(f"❌ ERROR TÉCNICO: {str(e)}")
+                st.info("Si el error dice 'API_KEY_INVALID', revisá la clave en Streamlit Cloud.")
