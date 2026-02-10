@@ -5,86 +5,79 @@ from PIL import Image
 # Configuración de API
 genai.configure(api_key="AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw")
 
-# --- CONFIGURACIÓN DE PÁGINA ---
+# --- INTERFAZ MODERNA ---
 st.set_page_config(page_title="La Clementina IA", page_icon="🚜", layout="wide")
 
-# --- ESTILOS PERSONALIZADOS (CSS) ---
 st.markdown("""
     <style>
-    .main { background-color: #f0f2f6; }
+    .stApp { background-color: #f8f9f5; }
+    .main-title { color: #1b5e20; text-align: center; font-size: 40px; font-weight: bold; margin-bottom: 0px; }
+    .sub-title { text-align: center; color: #555; margin-bottom: 30px; }
+    .diagnostico-card {
+        background-color: #ffffff;
+        padding: 25px;
+        border-radius: 15px;
+        border-left: 10px solid #2e7d32;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        color: #1a1a1a;
+        font-size: 18px;
+        line-height: 1.6;
+    }
     .stButton>button {
-        width: 100%;
-        border-radius: 8px;
         background-color: #2e7d32;
         color: white;
-        height: 3em;
-        font-size: 18px;
-    }
-    .status-card {
-        background-color: #ffffff;
-        padding: 20px;
+        font-size: 20px;
         border-radius: 10px;
-        border-left: 5px solid #2e7d32;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .header-style {
-        color: #1b5e20;
-        font-family: 'Arial';
-        text-align: center;
+        height: 3.5em;
+        width: 100%;
+        margin-top: 20px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- BARRA LATERAL (Menú de Selección) ---
+st.markdown("<div class='main-title'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-title'>Diagnóstico de Precisión para el Campo</div>", unsafe_allow_html=True)
+
+# --- MENÚ LATERAL ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2950/2950151.png", width=100)
-    st.title("Configuración")
-    opcion = st.radio("Seleccionar Fuente:", ["📸 Cámara", "📁 Galería"])
-    st.info("Sacá la foto bien de cerca a la hoja o síntoma para mejor precisión.")
+    st.header("⚙️ OPCIONES")
+    modo = st.radio("¿Qué vas a usar?", ["📸 Cámara en vivo", "📁 Galería de fotos"])
+    st.divider()
+    st.write("📌 **Consejo:** Asegurate de que haya buena luz sobre la hoja para un mejor resultado.")
 
 # --- CUERPO PRINCIPAL ---
-st.markdown("<h1 class='header-style'>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>Diagnóstico Inteligente de Cultivos</p>", unsafe_allow_html=True)
-st.divider()
+col_foto, col_info = st.columns([1, 1], gap="large")
 
-col_izq, col_der = st.columns([1, 1])
-
-with col_izq:
-    st.subheader("Entrada de Imagen")
-    if opcion == "📸 Cámara":
-        archivo = st.camera_input("Enfocá el síntoma")
+with col_foto:
+    if modo == "📸 Cámara en vivo":
+        foto = st.camera_input("Capturá el problema")
     else:
-        archivo = st.file_uploader("Subí una foto del lote", type=["jpg", "png", "jpeg"])
+        foto = st.file_uploader("Subí tu imagen técnica", type=["jpg", "png", "jpeg"])
 
-with col_der:
-    st.subheader("Resultado del Análisis")
-    if archivo:
-        st.image(archivo, caption="Muestra Seleccionada", use_container_width=True)
-        
-        if st.button('🚀 ANALIZAR AHORA'):
-            with st.spinner('Consultando con el Agrónomo Virtual...'):
+with col_info:
+    if foto:
+        st.image(foto, caption="Imagen a analizar", use_container_width=True)
+        if st.button('🚀 GENERAR DICTAMEN TÉCNICO'):
+            with st.spinner('Analizando síntomas...'):
                 try:
-                    # Lógica de procesamiento
-                    img = Image.open(archivo).convert('RGB')
-                    img.thumbnail((500, 500))
-                    
+                    # Lógica de IA (Buscador automático de modelo)
                     modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                     model = genai.GenerativeModel(modelos[0])
                     
-                    prompt = "Sos un ingeniero agrónomo. Analizá la imagen y respondé por puntos: 1. Qué tiene. 2. Por qué pasó. 3. Qué aplicar."
+                    img = Image.open(foto).convert('RGB')
+                    img.thumbnail((500, 500))
+                    
+                    prompt = "Sos Ingeniero Agrónomo. Analizá la imagen y respondé con este formato: 1. DIAGNÓSTICO, 2. CAUSAS, 3. TRATAMIENTO RECOMENDADO. Sé breve."
                     response = model.generate_content([prompt, img])
                     
-                    # Mostrar en una tarjeta linda
-                    st.markdown(f"""
-                        <div class="status-card">
-                            <h3 style="color: #2e7d32; margin-top:0;">✅ Informe Técnico:</h3>
-                            {response.text.replace("\n", "<br>")}
-                        </div>
-                    """, unsafe_allow_html=True)
+                    # Mostrar resultado sin errores de formato
+                    texto_final = response.text
+                    st.markdown("### 📋 Informe del Especialista:")
+                    st.markdown(f"<div class='diagnostico-card'>{texto_final}</div>", unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"Error técnico: {e}")
     else:
-        st.warning("Esperando que cargues una imagen para empezar...")
+        st.info("👋 Bienvenida/o. Por favor, cargá una foto o activá la cámara para empezar.")
 
 st.divider()
-st.caption("© 2026 La Clementina - Gestión Agrícola Inteligente")
+st.caption("La Clementina IA - Desarrollado para optimizar el rendimiento de tus cultivos.")
