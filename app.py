@@ -2,71 +2,39 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# 1. Configuración de Página
-st.set_page_config(page_title="LA CLEMENTINA IA", page_icon="🚜")
+# 1. Configuración de API (Directa y limpia)
+if "GOOGLE_API_KEY" not in st.secrets:
+    st.error("Falta la clave en Secrets")
+    st.stop()
 
-# 2. Estilo Visual
-st.markdown("""
-<style>
-.stApp {
-    background-image: url("https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2070&auto=format&fit=crop");
-    background-size: cover;
-}
-.block-container {
-    background-color: rgba(0, 0, 0, 0.9);
-    padding: 2rem;
-    border-radius: 15px;
-    border: 2px solid #4CAF50;
-}
-h1, h3, p, label { color: white !important; text-align: center; }
-.stButton>button { background-color: #2e7d32; color: white; width: 100%; height: 50px; font-weight: bold; border-radius: 10px; }
-</style>
-""", unsafe_allow_html=True)
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
-# 3. Interfaz Principal
-st.markdown("<h1>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
+# 2. Interfaz
+st.set_page_config(page_title="LA CLEMENTINA IA")
+st.markdown("<h1 style='text-align: center; color: #4CAF50;'>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
 
-archivo = st.file_uploader("📸 Subir imagen del cultivo", type=['jpg', 'jpeg', 'png'])
+archivo = st.file_uploader("📸 Subir imagen", type=['jpg', 'jpeg', 'png'])
 
 if archivo:
-    img = Image.open(archivo).convert("RGB")
+    img = Image.open(archivo)
     st.image(img, use_container_width=True)
     
-    if st.button("🚀 INICIAR DIAGNÓSTICO PROFESIONAL"):
-        with st.spinner("Conectando con el motor de IA..."):
+    if st.button("🚀 GENERAR DIAGNÓSTICO YA"):
+        with st.spinner("Conectando con Google..."):
             try:
-                # CONFIGURACIÓN DE API
-                genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+                # LA SOLUCIÓN AL 404: Usar el nombre corto sin prefijos
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                # ESTRATEGIA PARA EVITAR EL ERROR 404
-                # Intentamos diferentes nombres de modelo hasta que uno responda
-                model_names = ['gemini-1.5-flash', 'models/gemini-1.5-flash', 'gemini-pro-vision']
-                model = None
+                prompt = "Actúa como experto agrónomo de La Clementina. Analiza la imagen y da: 1-Diagnóstico, 2-Producto (Solomon, Starkle, Belt, u Optimizer), 3-Dosis."
                 
-                for name in model_names:
-                    try:
-                        temp_model = genai.GenerativeModel(name)
-                        # Prueba rápida de conexión
-                        model = temp_model
-                        break 
-                    except:
-                        continue
-                
-                if model is None:
-                    st.error("No se pudo establecer conexión con ningún modelo compatible.")
-                    st.stop()
-
-                prompt = "Actúa como experto agrónomo de La Clementina. Analiza la imagen y da: 1-Diagnóstico, 2-Producto recomendado (Solomon, Starkle, Belt, u Optimizer), 3-Dosis."
-                
-                # Generar contenido
+                # Enviar como lista simple
                 response = model.generate_content([prompt, img])
                 
                 if response.text:
-                    st.success("✅ INFORME FINAL:")
+                    st.success("✅ RESULTADO:")
                     st.markdown(response.text)
                 else:
-                    st.warning("La IA recibió la imagen pero no pudo generar un texto. Intenta con otra toma.")
-                    
+                    st.error("La IA no pudo procesar esta imagen.")
             except Exception as e:
-                st.error(f"Error técnico: {str(e)}")
-                st.info("Tip: Si el error persiste, realiza un 'Reboot' en el menú lateral de Streamlit Cloud.")
+                st.error(f"Error crítico: {str(e)}")
+                st.info("Hacé un 'Reboot' en el panel de Streamlit si el error persiste.")
