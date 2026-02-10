@@ -5,9 +5,10 @@ from PIL import Image
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="LA CLEMENTINA IA", page_icon="🚜", layout="centered")
 
-# CSS CON IMAGEN DE FONDO ESTABLE (Campo de Soja al Atardecer)
+# --- ESTILOS CSS (FONDO SOJA ATARDECER) ---
 st.markdown("""
     <style>
+    /* Imagen de fondo fija y cubierta */
     .stApp {
         background-image: url("https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2232&auto=format&fit=crop");
         background-attachment: fixed;
@@ -15,7 +16,7 @@ st.markdown("""
         background-position: center;
     }
     
-    /* Contenedor del contenido (Fondo oscuro transparente) */
+    /* Contenedor oscuro transparente para leer bien */
     .block-container {
         background-color: rgba(0, 0, 0, 0.85);
         padding: 3rem;
@@ -24,12 +25,12 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
 
-    /* Textos en blanco */
-    h1, h2, h3, p, li, label, .stMarkdown {
+    /* Forzar textos en blanco */
+    h1, h2, h3, p, li, label, .stMarkdown, span {
         color: white !important;
     }
     
-    /* Título Principal */
+    /* Título principal */
     h1 {
         color: #4CAF50 !important;
         text-align: center;
@@ -38,24 +39,20 @@ st.markdown("""
         font-weight: 800;
     }
 
-    /* Botón Personalizado */
+    /* Botón verde */
     .stButton>button {
         width: 100%;
         background-color: #2e7d32;
         color: white;
         border: none;
         padding: 15px 32px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
         font-size: 18px;
         font-weight: bold;
         border-radius: 12px;
-        transition: 0.3s;
     }
     .stButton>button:hover {
         background-color: #45a049;
-        transform: scale(1.02);
+        cursor: pointer;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -67,7 +64,7 @@ if "autenticado" not in st.session_state:
 if not st.session_state["autenticado"]:
     st.markdown("<h1>🔐 Acceso La Clementina</h1>", unsafe_allow_html=True)
     clave = st.text_input("Ingresá la contraseña:", type="password")
-    if st.button("INGRESAR AL SISTEMA"):
+    if st.button("INGRESAR"):
         if clave == "clementina2024":
             st.session_state["autenticado"] = True
             st.rerun()
@@ -79,12 +76,12 @@ if not st.session_state["autenticado"]:
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
-    # Buscador inteligente de modelo
+    # Buscador automático del mejor modelo disponible (evita error 404)
     modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
     modelo_nombre = next((m for m in modelos if 'flash' in m), modelos[0])
     model = genai.GenerativeModel(modelo_nombre)
 except Exception:
-    st.error("⚠️ Error de conexión con el servidor IA.")
+    st.error("⚠️ Error de conexión con el servidor IA. Revisar API Key.")
     st.stop()
 
 # --- INTERFAZ PRINCIPAL ---
@@ -100,6 +97,4 @@ if archivo:
     st.markdown("---")
     
     if st.button("🚀 INICIAR DIAGNÓSTICO"):
-        with st.spinner('⌛ El ingeniero IA está analizando la muestra...'):
-            try:
-                prompt = "Actúa como un ingeniero agrónomo senior. Analiza esta imagen. 1. Identifica el cultivo. 2. Diagnostica el problema (plaga, enfermedad, deficiencia). 3. Recomienda tratamiento
+        with st.spinner('⌛ Anal
