@@ -5,12 +5,13 @@ from PIL import Image
 # 1. Configuración de Página
 st.set_page_config(page_title="LA CLEMENTINA IA", page_icon="🚜")
 
-# 2. Estilo Visual (Fondo Soja)
+# 2. Estilo Visual
 st.markdown("""
 <style>
 .stApp {
     background-image: url("https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2070&auto=format&fit=crop");
     background-size: cover;
+    background-position: center;
 }
 .block-container {
     background-color: rgba(0, 0, 0, 0.85);
@@ -18,72 +19,65 @@ st.markdown("""
     border-radius: 15px;
     border: 2px solid #4CAF50;
 }
-h1, h3, p, label { color: white !important; text-align: center; }
-.stButton>button { background-color: #2e7d32; color: white; width: 100%; height: 50px; font-weight: bold; border-radius: 10px; }
+h1, h3, p, label, span { color: white !important; }
+h1 { color: #4CAF50 !important; text-align: center; text-shadow: 2px 2px 4px #000000; }
+.stButton>button { background-color: #2e7d32; color: white; width: 100%; height: 50px; font-weight: bold; border-radius: 10px; border: none; }
 </style>
 """, unsafe_allow_html=True)
 
 # 3. Login
-if "auth" not in st.session_state:
-    st.session_state.auth = False
+if "entrar" not in st.session_state:
+    st.session_state.entrar = False
 
-if not st.session_state.auth:
-    st.markdown("<h1>🔐 Acceso</h1>", unsafe_allow_html=True)
-    if st.text_input("Clave:", type="password") == "clementina2024":
-        if st.button("INGRESAR"):
-            st.session_state.auth = True
+if not st.session_state.entrar:
+    st.title("🔐 Acceso Privado")
+    passw = st.text_input("Contraseña:", type="password")
+    if st.button("ENTRAR"):
+        if passw == "clementina2024":
+            st.session_state.entrar = True
             st.rerun()
+        else:
+            st.error("Clave incorrecta")
     st.stop()
 
-# 4. Interfaz
-st.markdown("<h1>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
+# 4. Interfaz Principal
+st.title("🚜 LA CLEMENTINA IA")
+st.write("### Diagnóstico y Stock 2026")
 
-archivo = st.camera_input("📸 Sacar foto")
-if not archivo:
-    archivo = st.file_uploader("📁 O subir archivo", type=["jpg", "png", "jpeg"])
+# Entrada de imagen simplificada
+foto = st.camera_input("📸 Tomar foto")
+archivo = st.file_uploader("📁 O subir desde galería", type=["jpg", "png", "jpeg"])
 
-if archivo:
-    img = Image.open(archivo)
-    st.image(img, width=400)
+img_final = foto if foto else archivo
+
+if img_final:
+    img_ready = Image.open(img_final)
+    st.image(img_ready, width=400)
     
-    if st.button("🚀 ANALIZAR AHORA"):
-        with st.spinner("Analizando..."):
+    if st.button("🚀 ANALIZAR MUESTRA"):
+        with st.spinner("Procesando diagnóstico..."):
             try:
-                # Verificación de Key
+                # Verificación de API Key
                 if "GOOGLE_API_KEY" not in st.secrets:
-                    st.error("Error: Falta la clave en Secrets.")
+                    st.error("Error: Falta GOOGLE_API_KEY en Secrets.")
                     st.stop()
                 
                 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                # USAMOS EL MODELO MÁS ESTABLE
-                model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+                # Instrucción basada en tu Excel
+                productos = "INSECTICIDAS: Solomon, Bifentrin, Starkle, Ampligo-Zariva, Lambda, Boomer, Eminent, Belt, Idaten. ADHERENTES: Optimizer, Rizo Spray, Integrum, Fulltec, Alquimia, Zen."
+                prompt = f"Sos ingeniero agrónomo de La Clementina. Identificá el problema en la foto. Recomendá tratamiento SOLO con estos productos de nuestro stock: {productos}. Sé breve y profesional."
                 
-                # Productos de tu Excel
-                prompt = (
-                    "Sos un experto agrónomo de La Clementina. "
-                    "Analizá la imagen y decime qué problema ves. "
-                    "Recomendá SOLO estos productos de nuestro stock: "
-                    "Solomon, Starkle, Ampligo, Zariva, Lambda, Boomer, Eminent, Belt, Idaten. "
-                    "Para mezclas usá: Optimizer, Rizo Spray, Integrum o Zen."
-                )
-                
-                # Generación forzando configuración de seguridad baja para que no se bloquee
-                response = model.generate_content(
-                    [prompt, img],
-                    safety_settings=[
-                        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
-                    ]
-                )
+                # Respuesta de la IA
+                response = model.generate_content([prompt, img_ready])
                 
                 if response.text:
-                    st.success("✅ RECOMENDACIÓN:")
+                    st.success("✅ RECOMENDACIÓN TÉCNICA:")
                     st.markdown(response.text)
                 else:
-                    st.error("La IA no devolvió texto. Probá con otra foto.")
-
+                    st.warning("No se pudo generar texto. Intentá con otra foto.")
+            
             except Exception as e:
                 st.error(f"Error técnico: {str(e)}")
+                st.info("Tip: Revisá que la API Key sea válida y realizá un 'Reboot' en Streamlit Cloud.")
