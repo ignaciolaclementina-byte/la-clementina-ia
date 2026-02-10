@@ -2,18 +2,18 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# Configuración de tu clave de API
+# Configuración de API
 genai.configure(api_key="AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw")
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# --- CSS DEFINITIVO PARA EL CAMPO DE SOJA ---
+# --- CSS PARA FORZAR FONDO DE SOJA Y TEXTO NEGRO ---
 st.markdown("""
     <style>
-    /* 1. Fondo de soja forzado en todas las capas */
+    /* 1. Fondo de soja: Eliminamos el fondo negro de Streamlit */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-        background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), 
+        background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), 
                     url("https://images.unsplash.com/photo-1594751439417-df9a97693661?q=80&w=2070&auto=format&fit=crop") !important;
         background-size: cover !important;
         background-position: center !important;
@@ -21,18 +21,18 @@ st.markdown("""
         background-repeat: no-repeat !important;
     }
 
-    /* 2. Limpieza de capas que generan el fondo negro */
+    /* Transparencia para capas intermedias */
     [data-testid="stMainBlockContainer"] {
         background-color: transparent !important;
     }
 
-    /* 3. Caja de Informe: Texto Negro sobre Blanco Puro */
+    /* 2. Caja de Informe: Texto Negro sobre Blanco Puro */
     .caja-blanca {
         background-color: #ffffff !important;
         padding: 25px;
         border-radius: 15px;
         color: #000000 !important;
-        font-size: 19px;
+        font-size: 18px;
         line-height: 1.6;
         border-left: 15px solid #2E7D32;
         margin-top: 20px;
@@ -43,7 +43,7 @@ st.markdown("""
         color: #000000 !important;
     }
 
-    /* 4. Títulos y Botones */
+    /* 3. Estilo de Títulos y Botones */
     .titulo-principal {
         color: #ffffff;
         text-align: center;
@@ -56,15 +56,14 @@ st.markdown("""
     .stButton>button {
         width: 100%;
         border-radius: 12px;
-        height: 3.8em;
+        height: 3.5em;
         background-color: #2E7D32 !important;
         color: white !important;
         font-weight: bold;
         border: 2px solid #ffffff !important;
-        font-size: 18px;
     }
 
-    /* Etiquetas de los botones de radio y textos sueltos */
+    /* Labels en blanco para que se vean sobre la soja */
     label, p, .stMarkdown {
         color: white !important;
         font-weight: bold !important;
@@ -73,15 +72,30 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- ESTRUCTURA DE LA APP ---
+# --- INTERFAZ ---
 st.markdown("<div class='titulo-principal'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center;'>San Jorge, Santa Fe</p>", unsafe_allow_html=True)
 
-# Selector de origen de imagen
 st.markdown("<br>", unsafe_allow_html=True)
 opcion = st.radio("ORIGEN DE LA IMAGEN:", ["📸 Cámara", "📁 Galería"], horizontal=True)
 
 if opcion == "📸 Cámara":
     archivo = st.camera_input("")
 else:
-    archivo = st.file_uploader("SUBIR FOTO DEL LOTE", type=["jpg",
+    # Corregido: Corchete cerrado correctamente
+    archivo = st.file_uploader("SUBIR FOTO DEL LOTE", type=["jpg", "png", "jpeg"])
+
+if archivo:
+    st.image(archivo, use_container_width=True)
+    
+    if st.button('🚀 GENERAR DIAGNÓSTICO TÉCNICO'):
+        with st.spinner('Analizando muestra...'):
+            try:
+                # Inicialización del modelo
+                modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                model = genai.GenerativeModel(modelos[0])
+                
+                img = Image.open(archivo).convert('RGB')
+                
+                prompt = "Actuá como un Ingeniero Agrónomo experto. Analizá la imagen y dame: 1. Diagnóstico, 2. Causa probable, 3. Tratamiento sugerido."
+                response = model.generate_content([prompt, img])
