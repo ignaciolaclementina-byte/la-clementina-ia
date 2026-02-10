@@ -2,16 +2,16 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# 1. Configuración de API (Directa y limpia)
+# Configuración de la API
 if "GOOGLE_API_KEY" not in st.secrets:
-    st.error("Falta la clave en Secrets")
+    st.error("Error: Cargá la clave en los Secrets de Streamlit.")
     st.stop()
 
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
-# 2. Interfaz
+# Interfaz limpia
 st.set_page_config(page_title="LA CLEMENTINA IA")
-st.markdown("<h1 style='text-align: center; color: #4CAF50;'>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
 
 archivo = st.file_uploader("📸 Subir imagen", type=['jpg', 'jpeg', 'png'])
 
@@ -19,22 +19,20 @@ if archivo:
     img = Image.open(archivo)
     st.image(img, use_container_width=True)
     
-    if st.button("🚀 GENERAR DIAGNÓSTICO YA"):
+    if st.button("🚀 INICIAR DIAGNÓSTICO"):
         with st.spinner("Conectando con Google..."):
             try:
-                # LA SOLUCIÓN AL 404: Usar el nombre corto sin prefijos
+                # LLAMADA DIRECTA (Sin prefijos que causen 404)
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                prompt = "Actúa como experto agrónomo de La Clementina. Analiza la imagen y da: 1-Diagnóstico, 2-Producto (Solomon, Starkle, Belt, u Optimizer), 3-Dosis."
+                prompt = "Sos ingeniero agrónomo. Analizá esta imagen y recomendá tratamiento con Solomon, Belt, Starkle u Optimizer."
                 
-                # Enviar como lista simple
+                # Enviamos la imagen directamente
                 response = model.generate_content([prompt, img])
                 
                 if response.text:
-                    st.success("✅ RESULTADO:")
-                    st.markdown(response.text)
-                else:
-                    st.error("La IA no pudo procesar esta imagen.")
+                    st.success("✅ RECOMENDACIÓN:")
+                    st.write(response.text)
             except Exception as e:
-                st.error(f"Error crítico: {str(e)}")
-                st.info("Hacé un 'Reboot' en el panel de Streamlit si el error persiste.")
+                # Si falla, te damos el error exacto para liquidarlo
+                st.error(f"Error técnico: {str(e)}")
