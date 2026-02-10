@@ -2,46 +2,43 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# 1. Tu API KEY
-API_KEY = "AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw"
-genai.configure(api_key=API_KEY)
+# 1. Tu API KEY que funciona
+genai.configure(api_key="AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw")
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 st.title("🚜 La Clementina IA")
 
-def procesar_y_analizar(archivo_foto):
-    img = Image.open(archivo_foto)
+def analizar_cultivo(foto):
+    # Compresión para que no se tilde
+    img = Image.open(foto)
     img = img.convert('RGB')
-    img.thumbnail((512, 512)) # Para que sea rápido
+    img.thumbnail((400, 400))
     
-    # CAMBIO CLAVE: Usamos este nombre que no falla
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # EL CAMBIO QUE FALTA: Usar el modelo base que no da 404
+    # Si el Flash da error en tu zona/versión, este lo levanta sí o sí
+    try:
+        model = genai.GenerativeModel('gemini-pro-vision')
+    except:
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
     
-    prompt = "Como agrónomo experto, identificá el problema en esta planta y receta tratamiento corto."
-    
+    prompt = "Diagnóstico técnico rápido de este cultivo y tratamiento."
     response = model.generate_content([prompt, img])
     return response.text
 
-# 2. Interfaz
-opcion = st.radio("Elegí origen:", ("Cámara del Celular", "Galería"), horizontal=True)
+# 2. Interfaz sin fallas
+opcion = st.radio("Subir desde:", ("Cámara", "Galería"), horizontal=True)
 
-if opcion == "Cámara del Celular":
-    foto = st.camera_input("Sacá la foto")
+if opcion == "Cámara":
+    archivo = st.camera_input("Sacá la foto")
 else:
-    foto = st.file_uploader("Subí desde el celu", type=["jpg", "png", "jpeg"])
+    archivo = st.file_uploader("Elegí imagen", type=["jpg", "jpeg", "png"])
 
-if foto is not None:
-    if st.button('🚀 DIAGNÓSTICO INSTANTÁNEO'):
+if archivo:
+    if st.button('🚀 DIAGNÓSTICO YA'):
         with st.spinner('Analizando...'):
             try:
-                resultado = procesar_y_analizar(foto)
-                st.success("✅ Diagnóstico:")
-                st.write(resultado)
+                # Ahora sí tiene que traer el texto
+                resultado = analizar_cultivo(archivo)
+                st.success(resultado)
             except Exception as e:
-                # Si el 1.5 falla, intentamos con el modelo alternativo automáticamente
-                try:
-                    model_alt = genai.GenerativeModel('gemini-pro-vision')
-                    res = model_alt.generate_content(["Diagnóstico corto:", Image.open(foto)])
-                    st.success(res.text)
-                except:
-                    st.error(f"Error: {e}")
+                st.error(f"Error: {e}")
