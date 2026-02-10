@@ -2,68 +2,94 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# Tu API Key
+# Configuración de API
 genai.configure(api_key="AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw")
 
+# --- FORZAR DISEÑO DE CAMPO ---
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# --- ESTE BLOQUE MATA EL FONDO NEGRO Y PONE LA SOJA ---
 st.markdown("""
     <style>
-    /* Forzamos el fondo en todos los contenedores posibles */
-    [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {
+    /* Este bloque elimina el fondo negro de Streamlit */
+    .stAppViewContainer {
         background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
-                          url("https://cdn.pixabay.com/photo/2016/09/21/18/00/soy-1685253_1280.jpg");
+                          url("https://images.unsplash.com/photo-1594751439417-df9a97693661?q=80&w=1280&auto=format&fit=crop");
         background-size: cover !important;
         background-position: center !important;
         background-attachment: fixed !important;
-        background-repeat: no-repeat !important;
     }
 
-    /* Caja para que el contenido no flote en el aire */
-    .stMarkdown, .stButton, .stFileUploader {
-        text-shadow: 1px 1px 2px black;
+    /* Limpiamos capas superiores que puedan estar tapando */
+    .stMainBlockContainer, .stAppHeader {
+        background-color: transparent !important;
     }
 
+    /* Estilo del título */
+    .titulo {
+        color: #C5E1A5;
+        text-align: center;
+        font-size: 32px;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px #000000;
+        margin-top: -50px;
+    }
+
+    /* Botones y Radio */
+    .stButton>button {
+        width: 100%;
+        border-radius: 15px;
+        height: 55px;
+        background-color: #33691E;
+        color: white;
+        font-weight: bold;
+        border: 2px solid #ffffff;
+    }
+
+    /* Caja de resultado (Bien legible) */
     .reporte-box {
-        background-color: rgba(255, 255, 255, 0.95);
+        background-color: rgba(255, 255, 255, 0.98);
         padding: 20px;
         border-radius: 15px;
-        color: #1a1a1a;
-        border-left: 8px solid #2e7d32;
-        text-shadow: none !important;
+        color: #1b5e20;
+        font-size: 16px;
+        margin-top: 20px;
+        border-left: 10px solid #33691E;
     }
 
-    h1, h2, h3, p, label {
+    /* Forzar color de texto en labels */
+    label, p, .stMarkdown {
         color: white !important;
+        font-weight: bold !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- CONTENIDO ---
-st.markdown("<h1 style='text-align: center;'>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>Diagnóstico de Precisión - San Jorge</p>", unsafe_allow_html=True)
+# --- INTERFAZ ---
+st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
 
-opcion = st.radio("Seleccioná origen:", ["📸 Cámara", "📁 Galería"], horizontal=True)
+opcion = st.radio("ORIGEN DE LA FOTO:", ["Cámara", "Galería"], horizontal=True)
 
-if opcion == "📸 Cámara":
-    archivo = st.camera_input("")
+if opcion == "Cámara":
+    foto = st.camera_input("")
 else:
-    archivo = st.file_uploader("Subí tu foto", type=["jpg", "png", "jpeg"])
+    foto = st.file_uploader("SUBIR IMAGEN", type=["jpg", "png", "jpeg"])
 
-if archivo:
-    st.image(archivo, use_container_width=True)
+if foto:
+    st.image(foto, use_container_width=True)
     
-    if st.button('🚀 GENERAR DIAGNÓSTICO'):
-        with st.spinner('Analizando...'):
+    if st.button('🚀 ANALIZAR CULTIVO'):
+        with st.spinner('Analizando síntomas...'):
             try:
+                # Detección de modelo
                 modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                 model = genai.GenerativeModel(modelos[0])
-                img = Image.open(archivo).convert('RGB')
                 
-                prompt = "Sos un agrónomo. Analizá la imagen y da: Diagnóstico, Causa y Tratamiento."
+                img = Image.open(foto).convert('RGB')
+                img.thumbnail((500, 500))
+                
+                prompt = "Actuá como agrónomo. Analizá la imagen y da: Diagnóstico, Causa y Tratamiento."
                 response = model.generate_content([prompt, img])
                 
-                st.markdown(f"<div class='reporte-box'><b>📋 INFORME:</b><br><br>{response.text}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='reporte-box'><b>📋 INFORME TÉCNICO:</b><br><br>{response.text}</div>", unsafe_allow_html=True)
             except Exception as e:
                 st.error(f"Error: {e}")
