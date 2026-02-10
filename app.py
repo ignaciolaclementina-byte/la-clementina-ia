@@ -2,69 +2,98 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# Tu clave de API que ya sabemos que vuela
+# Tu clave de API
 genai.configure(api_key="AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw")
 
-st.set_page_config(page_title="La Clementina IA", page_icon="🚜")
+# --- DISEÑO ULTRA-MÓVIL ---
+st.set_page_config(page_title="La Clementina", layout="centered")
 
-# --- ESTILO MEJORADO ---
 st.markdown("""
     <style>
-    .stApp { background-color: #f4f6f0; }
-    .reporte-final {
-        background-color: #ffffff;
+    /* Fondo general */
+    .stApp { background-color: #121212; } 
+    
+    /* Título llamativo */
+    .titulo {
+        color: #4CAF50;
+        text-align: center;
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+    }
+    
+    /* Caja de instrucciones */
+    .instrucciones {
+        color: #bbbbbb;
+        text-align: center;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+
+    /* Botón de Acción Campero */
+    .stButton>button {
+        width: 100%;
+        border-radius: 50px;
+        height: 60px;
+        background-color: #2E7D32;
+        color: white;
+        font-size: 18px;
+        font-weight: bold;
+        border: 2px solid #4CAF50;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
+    }
+
+    /* Caja de Diagnóstico */
+    .reporte-box {
+        background-color: #1e1e1e;
         padding: 20px;
-        border-radius: 10px;
-        border-top: 5px solid #2e7d32;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
-        color: #1a1a1a;
+        border-radius: 15px;
+        border: 1px solid #4CAF50;
+        color: #ffffff;
+        font-size: 16px;
+        line-height: 1.5;
         margin-top: 20px;
     }
-    .stButton>button {
-        background-color: #2e7d32;
-        color: white;
-        font-weight: bold;
-        height: 3.5em;
-        width: 100%;
-    }
+    
+    /* Ocultar elementos innecesarios en móvil */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🚜 LA CLEMENTINA IA")
-st.write("Diagnóstico experto de cultivos al instante.")
+# --- CONTENIDO ---
+st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
+st.markdown("<div class='instrucciones'>Escaneá tu cultivo ahora mismo</div>", unsafe_allow_html=True)
 
-# --- SELECCIÓN DE IMAGEN ---
-with st.sidebar:
-    st.header("Opciones")
-    modo = st.radio("Fuente:", ["📸 Cámara", "📁 Galería"])
+# Selector simple (Menos lugar, más intuitivo)
+opcion = st.segmented_control("Fuente de imagen:", ["Cámara", "Galería"], default="Cámara")
 
-if modo == "📸 Cámara":
-    foto = st.camera_input("Capturá la hoja")
+if opcion == "Cámara":
+    foto = st.camera_input("Enfocá la hoja")
 else:
-    foto = st.file_uploader("Subí tu foto", type=["jpg", "png", "jpeg"])
+    foto = st.file_uploader("Subí desde el celu", type=["jpg", "png", "jpeg"])
 
-# --- PROCESAMIENTO ---
 if foto:
-    st.image(foto, caption="Imagen cargada", use_container_width=True)
+    # Mostrar la foto ocupando el ancho justo
+    st.image(foto, use_container_width=True)
     
-    if st.button('🚀 GENERAR DICTAMEN TÉCNICO'):
-        with st.spinner('Analizando planta...'):
+    if st.button('🚀 OBTENER DIAGNÓSTICO'):
+        with st.spinner('Analizando...'):
             try:
-                # Buscamos el modelo que esté vivo en tu servidor
+                # Buscador de modelos (el que te funcionó antes)
                 modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                 model = genai.GenerativeModel(modelos[0])
                 
                 img = Image.open(foto).convert('RGB')
                 img.thumbnail((600, 600))
                 
-                prompt = "Actuá como agrónomo experto. Analizá la imagen y da: 1- Diagnóstico, 2- Causa, 3- Tratamiento. Sé directo."
+                prompt = "Sos un agrónomo experto. Da un diagnóstico rápido, la causa y el tratamiento para esta planta."
                 response = model.generate_content([prompt, img])
                 
-                # ACÁ ESTÁ LA MAGIA: El reporte sale en una caja limpia
-                st.markdown("### 📋 RESULTADO DEL ANÁLISIS:")
-                st.markdown(f"<div class='reporte-final'>{response.text}</div>", unsafe_allow_html=True)
-                
+                # Resultado en caja oscura para que resalte
+                st.markdown(f"<div class='reporte-box'><b>📋 INFORME TÉCNICO:</b><br><br>{response.text}</div>", unsafe_allow_html=True)
             except Exception as e:
                 st.error(f"Error: {e}")
-else:
-    st.info("Cargá una foto para ver el reporte aquí abajo.")
+
+st.markdown("<br><p style='text-align:center; color:gray; font-size:10px;'>V.2.0 - San Jorge, Santa Fe</p>", unsafe_allow_html=True)
