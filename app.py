@@ -1,44 +1,42 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import io
 
-# 1. Configuración de API (Poné tu clave acá)
+# 1. Tu Clave (Asegurate de que sea la correcta)
 genai.configure(api_key="TU_API_KEY_AQUÍ")
 
-st.set_page_config(page_title="La Clementina IA", layout="centered")
 st.title("🚜 La Clementina IA")
 
+# 2. Función de diagnóstico optimizada para VELOCIDAD
 def get_diagnosis(image):
-    # REDUCCIÓN DE TAMAÑO: El secreto de la velocidad
+    # Achicamos la imagen drásticamente para que viaje rápido
     img = Image.open(image)
-    img.thumbnail((500, 500)) # La hacemos chiquita para que viaje rápido
+    img.thumbnail((400, 400)) # Tamaño pequeño = Análisis veloz
     
     model = genai.GenerativeModel('gemini-1.5-flash')
     
-    # Prompt ultra-corto para respuesta inmediata
-    prompt = "Respuesta técnica rápida: ¿Qué plaga/enfermedad tiene y cómo se cura? Máximo 3 renglones."
+    # Orden ultra-directa
+    prompt = "Respuesta de 1 párrafo: ¿Qué problema tiene la planta y qué producto aplicar?"
     
     response = model.generate_content([prompt, img])
     return response.text
 
-# 2. OPCIONES DE CARGA (Cámara + Archivo)
-opcion = st.radio("¿Cómo querés subir la foto?", ("Usar Cámara del Celular", "Subir Archivo de la Galería"))
+# 3. Interfaz con Cámara
+opcion = st.radio("Seleccioná origen:", ("Cámara del Celular", "Galería de Fotos"))
 
 foto = None
-if opcion == "Usar Cámara del Celular":
-    foto = st.camera_input("Sacá la foto a la planta")
+if opcion == "Cámara del Celular":
+    foto = st.camera_input("Sacá la foto")
 else:
-    foto = st.file_uploader("Elegí una imagen", type=["jpg", "jpeg", "png"])
+    foto = st.file_uploader("Elegí imagen", type=["jpg", "jpeg", "png"])
 
-# 3. EJECUCIÓN
 if foto is not None:
-    if st.button('🚀 DIAGNÓSTICO AL INSTANTE'):
+    if st.button('🚀 DIAGNÓSTICO YA'):
         with st.spinner('Analizando...'):
             try:
-                # El proceso ahora es mucho más liviano
+                # Esto ahora debería tardar menos de 5 segundos
                 resultado = get_diagnosis(foto)
                 st.success("Diagnóstico:")
                 st.write(resultado)
             except Exception as e:
-                st.error(f"Error: {e}. Probá sacar la foto de más lejos.")
+                st.error(f"Error: {e}")
