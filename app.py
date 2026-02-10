@@ -1,42 +1,38 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
+import io
 
-# 1. Tu Clave (Asegurate de que sea la correcta)
+# 1. Tu Clave (Asegurate de pegarla bien)
 genai.configure(api_key="TU_API_KEY_AQUÍ")
 
 st.title("🚜 La Clementina IA")
 
-# 2. Función de diagnóstico optimizada para VELOCIDAD
-def get_diagnosis(image):
-    # Achicamos la imagen drásticamente para que viaje rápido
-    img = Image.open(image)
-    img.thumbnail((400, 400)) # Tamaño pequeño = Análisis veloz
+def fast_diagnosis(image_data):
+    # COMPRESIÓN ULTRA: Reducimos la foto a un tamaño que vuela por la red
+    img = Image.open(image_data)
+    img = img.convert('RGB')
+    img.thumbnail((300, 300)) # Tamaño mínimo para análisis rápido
     
+    # Modelo optimizado para velocidad
     model = genai.GenerativeModel('gemini-1.5-flash')
     
-    # Orden ultra-directa
-    prompt = "Respuesta de 1 párrafo: ¿Qué problema tiene la planta y qué producto aplicar?"
+    # Prompt corto = Procesamiento rápido
+    prompt = "Respuesta de agrónomo en 2 renglones: ¿Qué tiene y qué aplico?"
     
     response = model.generate_content([prompt, img])
     return response.text
 
-# 3. Interfaz con Cámara
-opcion = st.radio("Seleccioná origen:", ("Cámara del Celular", "Galería de Fotos"))
+# 2. Interfaz rápida
+opcion = st.radio("Origen:", ("Cámara", "Galería"))
+foto = st.camera_input("Sacá la foto") if opcion == "Cámara" else st.file_uploader("Subí foto", type=["jpg", "png"])
 
-foto = None
-if opcion == "Cámara del Celular":
-    foto = st.camera_input("Sacá la foto")
-else:
-    foto = st.file_uploader("Elegí imagen", type=["jpg", "jpeg", "png"])
-
-if foto is not None:
-    if st.button('🚀 DIAGNÓSTICO YA'):
-        with st.spinner('Analizando...'):
-            try:
-                # Esto ahora debería tardar menos de 5 segundos
-                resultado = get_diagnosis(foto)
-                st.success("Diagnóstico:")
-                st.write(resultado)
-            except Exception as e:
-                st.error(f"Error: {e}")
+if foto:
+    if st.button('🚀 ANALIZAR AHORA'):
+        # Usamos un mensaje simple para no gastar recursos
+        st.write("⏳ Procesando en segundos...")
+        try:
+            resultado = fast_diagnosis(foto)
+            st.success(resultado)
+        except Exception as e:
+            st.error("Error de conexión. Reintentá.")
