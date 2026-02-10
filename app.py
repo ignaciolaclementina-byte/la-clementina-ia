@@ -5,7 +5,7 @@ from PIL import Image
 # 1. Configuración de página
 st.set_page_config(page_title="LA CLEMENTINA IA", page_icon="🚜")
 
-# 2. Estilos (Fondo de Soja Atardecer)
+# 2. Estilos (Fondo de Soja)
 st.markdown("""
 <style>
 .stApp {
@@ -40,19 +40,10 @@ if not st.session_state.entró:
             st.error("Error de clave")
     st.stop()
 
-# 4. Configuración IA
-try:
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    model = genai.GenerativeModel('gemini-1.5-flash')
-except:
-    st.error("Error en API Key")
-    st.stop()
-
-# 5. Interfaz
+# 4. Interfaz Principal
 st.title("🚜 LA CLEMENTINA IA")
 st.write("### Diagnóstico con Stock 2026")
 
-# Opciones de carga
 opcion = st.radio("Seleccione origen:", ["📸 Cámara", "📁 Galería"], horizontal=True)
 archivo = None
 
@@ -66,14 +57,30 @@ if archivo:
     st.image(img, width=400)
     
     if st.button("🚀 ANALIZAR AHORA"):
-        with st.spinner("Procesando..."):
+        with st.spinner("Conectando con el Ingeniero IA..."):
             try:
-                # Prompt simple para evitar errores de comillas
-                productos = "STOCK 2026: Solomon, Starkle, Ampligo, Zariva, Lambda, Boomer, Eminent, Belt, Idaten. COADYUVANTES: Optimizer, Rizo Spray Extremo, Integrum, Fulltec, Zen."
-                pedido = "Sos ingeniero agronomo de La Clementina. Analiza la imagen. Diagnostica el problema. Recomienda solo productos de este stock: " + productos
+                # REVISIÓN DE API KEY
+                if "GOOGLE_API_KEY" not in st.secrets:
+                    st.error("❌ No se encontró la GOOGLE_API_KEY en los Secrets de Streamlit.")
+                    st.stop()
                 
-                res = model.generate_content([pedido, img])
-                st.success("✅ DICTAMEN TÉCNICO:")
-                st.write(res.text)
+                genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+                
+                # Usamos el modelo más estable
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                
+                productos = "STOCK 2026: Solomon, Starkle, Ampligo, Zariva, Lambda, Boomer, Eminent, Belt, Idaten. COADYUVANTES: Optimizer, Rizo Spray Extremo, Integrum, Fulltec, Zen."
+                pedido = f"Sos ingeniero agronomo de La Clementina. Analiza la imagen. Diagnostica el problema. Recomienda solo productos de este stock: {productos}"
+                
+                # Generar contenido
+                response = model.generate_content([pedido, img])
+                
+                if response.text:
+                    st.success("✅ DICTAMEN TÉCNICO:")
+                    st.write(response.text)
+                else:
+                    st.warning("La IA no pudo generar una respuesta clara. Intente con otra foto.")
+                    
             except Exception as e:
-                st.error("Error al analizar")
+                st.error(f"❌ Error de conexión: {str(e)}")
+                st.info("Asegurate de que la API KEY sea válida y tenga permisos para Gemini.")
