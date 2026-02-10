@@ -16,7 +16,7 @@ st.markdown("""
     }
     .block-container {
         background-color: rgba(0, 0, 0, 0.85);
-        padding: 3rem;
+        padding: 2.5rem;
         border-radius: 20px;
         border: 2px solid #4CAF50;
     }
@@ -43,8 +43,8 @@ if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
 if not st.session_state["autenticado"]:
-    st.markdown("<h1>Acceso La Clementina</h1>", unsafe_allow_html=True)
-    clave = st.text_input("Contrasena:", type="password")
+    st.markdown("<h1>🔐 Acceso La Clementina</h1>", unsafe_allow_html=True)
+    clave = st.text_input("Contraseña:", type="password")
     if st.button("ENTRAR"):
         if clave == "clementina2024":
             st.session_state["autenticado"] = True
@@ -57,43 +57,49 @@ if not st.session_state["autenticado"]:
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
-    modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    modelo_nombre = next((m for m in modelos if 'flash' in m), modelos[0])
-    model = genai.GenerativeModel(modelo_nombre)
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception:
-    st.error("Error de conexion con la IA")
+    st.error("Error de conexión con la IA")
     st.stop()
 
 # --- INTERFAZ ---
-st.markdown("<h1>LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
-st.write("Diagnostico Experto de Cultivos")
+st.markdown("<h1>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
+st.write("### 🌿 Diagnóstico con nuestra Lista de Productos")
 
-# Pestañas para elegir entre Galería o Cámara
-tab1, tab2 = st.tabs(["📸 USAR CAMARA", "📁 SUBIR ARCHIVO"])
-
+tab1, tab2 = st.tabs(["📸 CÁMARA", "📁 GALERÍA"])
 imagen_final = None
 
 with tab1:
-    foto_camara = st.camera_input("Sacar foto al cultivo")
-    if foto_camara:
-        imagen_final = foto_camara
-
+    foto = st.camera_input("Capturar síntoma en el lote")
+    if foto: imagen_final = foto
 with tab2:
-    archivo = st.file_uploader("Elegir foto de la galeria", type=['jpg', 'jpeg', 'png'])
-    if archivo:
-        imagen_final = archivo
+    archivo = st.file_uploader("Subir foto", type=['jpg', 'jpeg', 'png'])
+    if archivo: imagen_final = archivo
 
-# PROCESAMIENTO
 if imagen_final:
     img = Image.open(imagen_final).convert("RGB")
-    st.image(img, use_container_width=True, caption="Imagen para analizar")
+    st.image(img, use_container_width=True)
     
-    if st.button("INICIAR DIAGNOSTICO"):
-        with st.spinner('Analizando muestra...'):
+    if st.button("🚀 ANALIZAR Y BUSCAR PRODUCTOS"):
+        with st.spinner('Analizando y consultando disponibilidad...'):
             try:
-                texto_pedido = "Sos un ingeniero agronomo. Identifica el cultivo y la enfermedad en la foto. Da tratamiento y dosis."
-                res = model.generate_content([texto_pedido, img])
-                st.success("Dictamen Tecnico:")
-                st.write(res.text)
+                # Aquí inyectamos el conocimiento de tu lista de precios/productos
+                prompt = """
+                Sos el ingeniero agrónomo experto de LA CLEMENTINA. 
+                Analizá la imagen y diagnosticá el problema.
+                
+                IMPORTANTE: Para el tratamiento, recomendá EXCLUSIVAMENTE productos que manejamos, como:
+                - Insecticidas: Solomon, Ampligo, Belt, Starkle, Lambda, Boomer, Eminent, Idaten, etc.
+                - Herbicidas y Fungicidas de nuestra lista de stock 2026.
+                - Adherentes: Optimizer, Rizo Spray, Break Thru, etc.
+                
+                Estructura:
+                1. Diagnóstico (Cultivo y problema).
+                2. Recomendación de aplicación (Producto específico de nuestra lista y dosis).
+                3. Sugerencia de adherente si es necesario.
+                """
+                res = model.generate_content([prompt, img])
+                st.success("✅ INFORME TÉCNICO LA CLEMENTINA:")
+                st.markdown(res.text)
             except Exception as e:
-                st.error("Error al procesar el analisis")
+                st.error(f"Error en el análisis: {str(e)}")
