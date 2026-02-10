@@ -6,7 +6,7 @@ import urllib.parse
 # 1. SEGURIDAD Y CONEXIÓN
 genai.configure(api_key="AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw")
 
-# 2. TU LISTA DE PRODUCTOS
+# 2. LISTA DE PRODUCTOS ACTUALIZADA
 VADEMECUM_CLEMENTINA = """
 ADHERENTES: Optimizer, Rizo Spray (Extremo, Integrum, Sulfo Dry, Corrector, Antiespuma), Break Thru, Fulltec, Alquimia, Rizospray Zen, Tropgreen, Powersil.
 BIOESTIMULANTES: YaraVita Croplift Bio, Nutrition Grow, Fosfito de Potasio, Eurofit, Howler, Vitagrow, Taisei, Top Zinc Max, Fertiactyl GZ.
@@ -17,7 +17,7 @@ SILO BOLSA: Ipesa, Silox.
 """
 
 # 3. CONFIGURACIÓN DE PÁGINA
-st.set_page_config(page_title="La Clementina IA - Ignacio Diaz", layout="centered")
+st.set_page_config(page_title="La Clementina IA", layout="centered")
 
 # 4. DISEÑO VISUAL (CSS)
 st.markdown("""
@@ -29,9 +29,7 @@ st.markdown("""
         background-position: center !important;
         background-attachment: fixed !important;
     }
-    .titulo { color: white; text-align: center; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px black; margin-bottom: 0px;}
-    .subtitulo { color: #4CAF50; text-align: center; font-size: 18px; font-weight: bold; margin-top: 0px; text-shadow: 1px 1px 2px black; }
-    
+    .titulo { color: white; text-align: center; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px black; margin-bottom: 5px;}
     .reporte-box {
         background-color: white !important;
         padding: 20px;
@@ -65,17 +63,15 @@ st.markdown("""
         text-align: center;
         margin-top: 15px;
         width: 100%;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.4);
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 5. CABECERA CON TU NOMBRE
+# 5. CABECERA
 st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitulo'>By Ignacio Diaz</div>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 14px; opacity: 0.8;'>San Jorge, Santa Fe</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 14px;'>San Jorge, Santa Fe</p>", unsafe_allow_html=True)
 
-# 6. LÓGICA DE CARGA
+# 6. INTERFAZ
 opcion = st.radio("SELECCIONÁ ORIGEN:", ["📸 Cámara", "📁 Galería"], horizontal=True)
 
 if opcion == "📸 Cámara":
@@ -87,7 +83,7 @@ if foto:
     st.image(foto, use_container_width=True)
     
     if st.button('🚀 ANALIZAR Y RECETAR'):
-        with st.spinner('Ignacio Diaz está procesando tu consulta...'):
+        with st.spinner('Analizando muestra...'):
             try:
                 modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                 model = genai.GenerativeModel(modelos[0])
@@ -95,9 +91,8 @@ if foto:
                 img = Image.open(foto).convert('RGB')
                 
                 prompt = f"""
-                Actuá como un Ingeniero Agrónomo experto de San Jorge.
-                Diagnóstico y receta comercial usando: {VADEMECUM_CLEMENTINA}.
-                Sé breve y vendedora.
+                Actuá como un Ingeniero Agrónomo experto de San Jorge. 
+                Diagnóstico y receta comercial usando prioritariamente: {VADEMECUM_CLEMENTINA}.
                 """
                 
                 response = model.generate_content([prompt, img])
@@ -118,7 +113,7 @@ if foto:
 
 # 7. BOTÓN WHATSAPP
 if 'reporte_actual' in st.session_state:
-    texto_wa = urllib.parse.quote(f"🚜 *CONSULTA LA CLEMENTINA IA*\n*Asesor:* Ignacio Diaz\n\n{st.session_state['reporte_actual']}")
+    texto_wa = urllib.parse.quote(f"🚜 *CONSULTA LA CLEMENTINA IA*\n\n{st.session_state['reporte_actual']}")
     link_wa = f"https://wa.me/?text={texto_wa}"
     
     st.markdown(f"""
@@ -127,12 +122,12 @@ if 'reporte_actual' in st.session_state:
         </a>
     """, unsafe_allow_html=True)
 
-# 8. PIE DE PÁGINA CON TU NOMBRE
-st.markdown("<br><br>")
+# 8. FIRMA FINAL (Sin <br> de texto)
+st.markdown("<div style='margin-top: 50px;'></div>", unsafe_allow_html=True)
 st.markdown("""
     <div style='text-align: center; padding: 20px; border-top: 1px solid rgba(255,255,255,0.2);'>
-        <p style='color: white; font-size: 13px; margin: 0; opacity: 0.8;'>Creado y desarrollado por</p>
-        <p style='color: #4CAF50; font-size: 18px; font-weight: bold; margin: 0; letter-spacing: 1px;'>IGNACIO DIAZ</p>
-        <p style='color: gray; font-size: 11px;'>Tecnología Agrícola • San Jorge, Santa Fe</p>
+        <p style='color: white; font-size: 12px; margin: 0; opacity: 0.8;'>Creado y desarrollado por</p>
+        <p style='color: #4CAF50; font-size: 18px; font-weight: bold; margin: 0;'>IGNACIO DIAZ</p>
+        <p style='color: gray; font-size: 10px;'>Tecnología Agrícola • San Jorge, Santa Fe</p>
     </div>
     """, unsafe_allow_html=True)
