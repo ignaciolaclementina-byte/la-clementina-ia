@@ -5,7 +5,7 @@ from PIL import Image
 # 1. Configuración de Página
 st.set_page_config(page_title="LA CLEMENTINA IA", page_icon="🚜")
 
-# 2. Estilo Visual
+# 2. Estilo Visual (Fondo Campo)
 st.markdown("""
 <style>
 .stApp {
@@ -23,51 +23,37 @@ h1, h3, p, label { color: white !important; text-align: center; }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Login
-if "auth" not in st.session_state: st.session_state.auth = False
-if not st.session_state.auth:
-    st.markdown("<h1>🔐 Acceso</h1>", unsafe_allow_html=True)
-    if st.text_input("Contraseña:", type="password") == "clementina2024":
-        if st.button("INGRESAR"):
-            st.session_state.auth = True
-            st.rerun()
-    st.stop()
-
-# 4. Aplicación
+# 3. Interfaz Principal
 st.markdown("<h1>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
 
-archivo = st.file_uploader("📸 Subir foto del cultivo", type=['jpg', 'jpeg', 'png'])
+archivo = st.file_uploader("📸 Subir imagen del cultivo", type=['jpg', 'jpeg', 'png'])
 
 if archivo:
-    img = Image.open(archivo)
+    img = Image.open(archivo).convert("RGB")
     st.image(img, use_container_width=True)
     
-    if st.button("🚀 INICIAR DIAGNÓSTICO"):
+    if st.button("🚀 INICIAR DIAGNÓSTICO PROFESIONAL"):
         with st.spinner("Consultando con el motor de La Clementina..."):
             try:
-                # CONEXIÓN CORREGIDA
+                # CONEXIÓN
                 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
                 
-                # CAMBIO CLAVE: Quitamos el prefijo 'models/' que está dando el error 404
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # SOLUCIÓN AL 404: Probamos los nombres de modelo más estables
+                try:
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                except:
+                    model = genai.GenerativeModel('gemini-pro-vision')
                 
-                prompt = "Sos un experto agrónomo. Analizá esta imagen de cultivo y da: 1-Diagnóstico, 2-Producto recomendado (Solomon, Starkle, Belt, u Optimizer), 3-Dosis."
+                prompt = "Actúa como experto agrónomo. Analiza la imagen y da: 1-Diagnóstico, 2-Producto recomendado (Solomon, Starkle, Belt, u Optimizer), 3-Dosis."
                 
                 # Generar contenido
                 response = model.generate_content([prompt, img])
                 
                 if response.text:
-                    st.success("✅ RECOMENDACIÓN TÉCNICA:")
-                    st.write(response.text)
+                    st.success("✅ INFORME FINAL:")
+                    st.markdown(response.text)
                 else:
-                    st.error("La IA no devolvió una respuesta clara.")
+                    st.warning("La IA no pudo procesar esta imagen. Intenta con otra.")
                     
             except Exception as e:
-                # Si el error persiste, probamos con el nombre alternativo del modelo
-                try:
-                    model = genai.GenerativeModel('gemini-pro-vision')
-                    response = model.generate_content([prompt, img])
-                    st.success("✅ RECOMENDACIÓN (Vía Pro Vision):")
-                    st.write(response.text)
-                except:
-                    st.error(f"Error técnico detallado: {str(e)}")
+                st.error(f"Error del servidor: {str(e)}")
