@@ -8,6 +8,7 @@ genai.configure(api_key="AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw")
 # --- DISEÑO DE INTERFAZ (CSS) ---
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
+# CORRECCIÓN AQUÍ: unsafe_allow_html=True
 st.markdown("""
     <style>
     .main {
@@ -22,78 +23,45 @@ st.markdown("""
         font-weight: bold;
         border: none;
     }
-    .stButton>button:hover {
-        background-color: #1b5e20;
-        color: #e8f5e9;
-    }
-    .reportview-container .main .block-container {
-        padding-top: 2rem;
-    }
     h1 {
         color: #1b5e20;
         text-align: center;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     .diagnostico-box {
         background-color: #ffffff;
         padding: 20px;
         border-radius: 15px;
         border-left: 8px solid #2e7d32;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+        color: #333;
     }
     </style>
-    """, unsafe_allow_stdio=True)
+    """, unsafe_allow_html=True)
 
-# --- CABECERA ---
 st.markdown("<h1>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #555;'>Asistente Inteligente para Diagnóstico de Cultivos</p>", unsafe_allow_html=True)
-st.divider()
+st.markdown("<p style='text-align: center;'>Asistente Inteligente para Diagnóstico de Cultivos</p>", unsafe_allow_html=True)
 
-# --- LÓGICA DE ANÁLISIS ---
 def obtener_diagnostico(foto):
     img = Image.open(foto).convert('RGB')
-    img.thumbnail((600, 600))
+    img.thumbnail((500, 500))
     
-    # Buscador de modelos para evitar errores 404
+    # Usamos el buscador automático que ya probamos que funciona
     modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
     model = genai.GenerativeModel(modelos[0])
     
-    prompt = """Sos un Ingeniero Agrónomo experto. 
-    Analizá la imagen y respondé con este formato:
-    1. DIAGNÓSTICO: Qué problema tiene.
-    2. CAUSA: Por qué ocurrió.
-    3. TRATAMIENTO: Qué producto o acción aplicar.
-    Sé directo y profesional."""
-    
+    prompt = "Como agrónomo experto, analizá la imagen. 1- Diagnóstico, 2- Causa, 3- Tratamiento corto."
     response = model.generate_content([prompt, img])
     return response.text
 
-# --- ENTRADA DE DATOS ---
-col1, col2 = st.columns(2)
+# Interfaz
+archivo = st.camera_input("Sacá la foto")
+if not archivo:
+    archivo = st.file_uploader("O cargá de galería", type=["jpg", "png", "jpeg"])
 
-with col1:
-    st.subheader("📸 Captura")
-    archivo_cam = st.camera_input("Sacar foto ahora")
-
-with col2:
-    st.subheader("📂 Galería")
-    archivo_gal = st.file_uploader("Cargar imagen", type=["jpg", "png", "jpeg"])
-
-# Usar el archivo que esté disponible
-archivo = archivo_cam if archivo_cam else archivo_gal
-
-# --- RESULTADOS ---
 if archivo:
-    st.image(archivo, caption="Muestra cargada", use_container_width=True)
-    
-    if st.button('🚀 INICIAR ANÁLISIS TÉCNICO'):
-        with st.spinner('Procesando datos del lote...'):
+    if st.button('🚀 INICIAR ANÁLISIS'):
+        with st.spinner('Analizando...'):
             try:
                 res = obtener_diagnostico(archivo)
-                st.markdown("### ✅ Resultados del Análisis")
                 st.markdown(f"<div class='diagnostico-box'>{res}</div>", unsafe_allow_html=True)
             except Exception as e:
-                st.error(f"Error en la conexión: {e}")
-
-st.divider()
-st.caption("La Clementina IA - Potenciado por Gemini 1.5 Flash")
+                st.error(f"Error: {e}")
