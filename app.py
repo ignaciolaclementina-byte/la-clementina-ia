@@ -3,10 +3,10 @@ import google.generativeai as genai
 from PIL import Image
 import urllib.parse
 
-# Configuración de tu clave de API
+# 1. SEGURIDAD Y CONEXIÓN
 genai.configure(api_key="AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw")
 
-# --- LISTA DE PRODUCTOS (VADEMÉCUM) ---
+# 2. TU LISTA DE PRODUCTOS
 VADEMECUM_CLEMENTINA = """
 ADHERENTES: Optimizer, Rizo Spray (Extremo, Integrum, Sulfo Dry, Corrector, Antiespuma), Break Thru, Fulltec, Alquimia, Rizospray Zen, Tropgreen, Powersil.
 BIOESTIMULANTES: YaraVita Croplift Bio, Nutrition Grow, Fosfito de Potasio, Eurofit, Howler, Vitagrow, Taisei, Top Zinc Max, Fertiactyl GZ.
@@ -16,9 +16,10 @@ INSECTICIDAS: Abamectina, Solomon, Bifentrin, Starkle, Ampligo, Lambda Microenca
 SILO BOLSA: Ipesa, Silox.
 """
 
-st.set_page_config(page_title="La Clementina IA", layout="centered")
+# 3. CONFIGURACIÓN DE PÁGINA
+st.set_page_config(page_title="La Clementina IA - Ignacio Diaz", layout="centered")
 
-# --- DISEÑO VISUAL PARA TRABAJO DE CAMPO ---
+# 4. DISEÑO VISUAL (CSS)
 st.markdown("""
     <style>
     .stApp {
@@ -28,7 +29,9 @@ st.markdown("""
         background-position: center !important;
         background-attachment: fixed !important;
     }
-    .titulo { color: white; text-align: center; font-size: 30px; font-weight: bold; text-shadow: 2px 2px 4px black; }
+    .titulo { color: white; text-align: center; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px black; margin-bottom: 0px;}
+    .subtitulo { color: #4CAF50; text-align: center; font-size: 18px; font-weight: bold; margin-top: 0px; text-shadow: 1px 1px 2px black; }
+    
     .reporte-box {
         background-color: white !important;
         padding: 20px;
@@ -67,10 +70,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- INTERFAZ ---
+# 5. CABECERA CON TU NOMBRE
 st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>Asesoría y Venta - San Jorge, Santa Fe</p>", unsafe_allow_html=True)
+st.markdown("<div class='subtitulo'>By Ignacio Diaz</div>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 14px; opacity: 0.8;'>San Jorge, Santa Fe</p>", unsafe_allow_html=True)
 
+# 6. LÓGICA DE CARGA
 opcion = st.radio("SELECCIONÁ ORIGEN:", ["📸 Cámara", "📁 Galería"], horizontal=True)
 
 if opcion == "📸 Cámara":
@@ -82,48 +87,38 @@ if foto:
     st.image(foto, use_container_width=True)
     
     if st.button('🚀 ANALIZAR Y RECETAR'):
-        with st.spinner('El especialista está analizando la muestra...'):
+        with st.spinner('Ignacio Diaz está procesando tu consulta...'):
             try:
-                # Buscamos el modelo disponible
                 modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                 model = genai.GenerativeModel(modelos[0])
                 
                 img = Image.open(foto).convert('RGB')
                 
-                # --- PROMPT MODO VENDEDOR ---
                 prompt = f"""
-                Actuá como un Ingeniero Agrónomo y Asesor Comercial experto en la zona de San Jorge, Santa Fe.
-                Tu objetivo es diagnosticar el problema pero también cerrar la venta de nuestros productos.
-                
-                Analizá la imagen y respondé de forma directa:
-                1. DIAGNÓSTICO: Qué plaga, hongo o deficiencia ves (hablá claro, para el productor).
-                2. ACCIÓN RECOMENDADA: Por qué es importante aplicar YA para no perder rinde.
-                3. RECETA COMERCIAL: Recomendá EXCLUSIVAMENTE productos de esta lista que tenemos en stock:
-                {VADEMECUM_CLEMENTINA}
-                
-                Enfocate en la efectividad de estas marcas líderes (Round Up, Cripton, Coragen, etc.) que tenemos disponibles.
+                Actuá como un Ingeniero Agrónomo experto de San Jorge.
+                Diagnóstico y receta comercial usando: {VADEMECUM_CLEMENTINA}.
+                Sé breve y vendedora.
                 """
                 
                 response = model.generate_content([prompt, img])
                 texto_puro = response.text
                 texto_html = texto_puro.replace('\n', '<br>')
                 
-                # Guardar resultado para WhatsApp
                 st.session_state['reporte_actual'] = texto_puro
                 
                 st.markdown(f"""
                     <div class='reporte-box'>
-                        <b style='font-size: 20px; color: #2E7D32 !important;'>📋 INFORME COMERCIAL Y TÉCNICO:</b><br><br>
+                        <b style='font-size: 20px; color: #2E7D32 !important;'>📋 INFORME TÉCNICO:</b><br><br>
                         {texto_html}
                     </div>
                 """, unsafe_allow_html=True)
 
             except Exception as e:
-                st.error(f"Error en el análisis: {e}")
+                st.error(f"Error: {e}")
 
-# Botón de WhatsApp persistente si hay informe
+# 7. BOTÓN WHATSAPP
 if 'reporte_actual' in st.session_state:
-    texto_wa = urllib.parse.quote(f"🚜 *CONSULTA LA CLEMENTINA IA*\n\n{st.session_state['reporte_actual']}")
+    texto_wa = urllib.parse.quote(f"🚜 *CONSULTA LA CLEMENTINA IA*\n*Asesor:* Ignacio Diaz\n\n{st.session_state['reporte_actual']}")
     link_wa = f"https://wa.me/?text={texto_wa}"
     
     st.markdown(f"""
@@ -132,4 +127,12 @@ if 'reporte_actual' in st.session_state:
         </a>
     """, unsafe_allow_html=True)
 
-st.markdown("<br><p style='text-align:center; color:white; font-size:10px; opacity:0.7;'>v6.0 - San Jorge, Santa Fe</p>", unsafe_allow_html=True)
+# 8. PIE DE PÁGINA CON TU NOMBRE
+st.markdown("<br><br>")
+st.markdown("""
+    <div style='text-align: center; padding: 20px; border-top: 1px solid rgba(255,255,255,0.2);'>
+        <p style='color: white; font-size: 13px; margin: 0; opacity: 0.8;'>Creado y desarrollado por</p>
+        <p style='color: #4CAF50; font-size: 18px; font-weight: bold; margin: 0; letter-spacing: 1px;'>IGNACIO DIAZ</p>
+        <p style='color: gray; font-size: 11px;'>Tecnología Agrícola • San Jorge, Santa Fe</p>
+    </div>
+    """, unsafe_allow_html=True)
