@@ -17,7 +17,7 @@ INSECTICIDAS: Solomon, Bifentrin, Starkle, Ampligo, Belt, Coragen.
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. DISEÑO Y TRADUCCIÓN (CSS)
+# 2. DISEÑO Y TRADUCCIÓN DE BOTONES (CSS)
 st.markdown("""
     <style>
     .stApp {
@@ -27,11 +27,15 @@ st.markdown("""
     }
     .titulo { color: white; text-align: center; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px black; }
     
-    /* TRADUCCIÓN DE TEXTOS DE CARGA */
+    /* TRADUCCIÓN BOTÓN GALERÍA */
     section[data-testid="stFileUploadDropzone"] button { font-size: 0px !important; }
     section[data-testid="stFileUploadDropzone"] button:after { content: "BUSCAR IMAGEN"; font-size: 16px !important; }
     section[data-testid="stFileUploadDropzone"] span { display: none; }
     section[data-testid="stFileUploadDropzone"]:before { content: "Arrastrá tu foto acá o"; color: white; font-weight: bold; margin-bottom: 10px; }
+
+    /* TRADUCCIÓN BOTÓN CÁMARA */
+    div[data-testid="stCameraInput"] button { font-size: 0px !important; }
+    div[data-testid="stCameraInput"] button:after { content: "TOMAR FOTO"; font-size: 16px !important; }
 
     .reporte-box {
         background-color: white !important;
@@ -72,9 +76,9 @@ st.markdown("<p style='text-align: center;'>San Jorge, Santa Fe</p>", unsafe_all
 opcion = st.radio("SELECCIONÁ ORIGEN:", ["📸 CÁMARA", "📁 GALERÍA"], horizontal=True)
 
 if opcion == "📸 CÁMARA":
-    foto = st.camera_input("Sacá la foto del lote")
+    foto = st.camera_input("") # Dejamos vacío para que el CSS ponga el texto
 else:
-    foto = st.file_uploader("Subí una imagen (JPG, PNG o JPEG)", type=["jpg", "png", "jpeg"])
+    foto = st.file_uploader("Subí una imagen del lote", type=["jpg", "png", "jpeg"])
 
 if foto:
     st.image(foto, use_container_width=True)
@@ -92,32 +96,31 @@ if foto:
                 informe = response.text
                 st.session_state['reporte_actual'] = informe
                 
-                # REEMPLAZO SEGURO DE SALTOS DE LÍNEA
-                informe_html = informe.replace('\n', '<br>')
+                informe_limpio = informe.replace('\n', '<br>')
                 
                 st.markdown(f"""
                     <div class='reporte-box'>
                         <b style='font-size: 20px;'>📋 INFORME TÉCNICO:</b><br><br>
-                        {informe_html}
+                        {informe_limpio}
                     </div>
                 """, unsafe_allow_html=True)
 
             except Exception as e:
                 st.error(f"Error: {e}")
 
-# 5. WHATSAPP (LÓGICA EXTERNA A LA F-STRING PARA EVITAR ERRORES)
+# 5. WHATSAPP
 if 'reporte_actual' in st.session_state:
     texto_puro = st.session_state['reporte_actual']
-    texto_wa = urllib.parse.quote(f"🚜 *CONSULTA LA CLEMENTINA IA*\n\n{texto_puro}")
-    link_wa = f"https://wa.me/?text={texto_wa}"
+    texto_codificado = urllib.parse.quote(f"🚜 *CONSULTA LA CLEMENTINA IA*\n\n{texto_puro}")
+    link_wa = f"https://wa.me/?text={texto_codificado}"
     st.markdown(f"<a href='{link_wa}' target='_blank' class='btn-whatsapp'>📲 ENVIAR POR WHATSAPP</a>", unsafe_allow_html=True)
 
-# 6. FIRMA IGNACIO DIAZ
+# 6. FIRMA FINAL IGNACIO DIAZ
 st.markdown("<div style='margin-top: 50px;'></div>", unsafe_allow_html=True)
 st.markdown("""
     <div style='text-align: center; padding: 20px; border-top: 1px solid rgba(255,255,255,0.2);'>
         <p style='color: white; font-size: 12px; margin: 0;'>Creado y desarrollado por</p>
         <p style='color: #4CAF50; font-size: 18px; font-weight: bold; margin: 0;'>IGNACIO DIAZ</p>
-        <p style='color: gray; font-size: 10px;'>San Jorge, Santa Fe</p>
+        <p style='color: gray; font-size: 10px;'>Tecnología Agrícola • San Jorge, Santa Fe</p>
     </div>
     """, unsafe_allow_html=True)
