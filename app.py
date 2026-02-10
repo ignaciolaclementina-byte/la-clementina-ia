@@ -2,8 +2,8 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# CLAVE NUEVA EXTRAÍDA DE TU CAPTURA (image_0404f2.jpg)
-# Asegurate de que sea exactamente esta sin espacios al final
+# 1. CLAVE NUEVA (De tu captura image_0404f2.jpg)
+# La pongo directo acá para que no dependas de los Secrets
 API_KEY = "AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw"
 
 genai.configure(api_key=API_KEY)
@@ -19,12 +19,17 @@ if archivo:
     
     if st.button("🚀 INICIAR DIAGNÓSTICO"):
         try:
+            # CAMBIO CLAVE: Quitamos el 'models/' para evitar el error 404
             model = genai.GenerativeModel('gemini-1.5-flash')
-            # Prompt ultra directo
-            response = model.generate_content(["Analizá esta planta y recomendá: Solomon, Belt, Starkle u Optimizer.", img])
+            
+            # Pedido directo
+            response = model.generate_content([
+                "Sos un ingeniero agrónomo. Mirá la foto y recomendá uno de estos productos: Solomon, Belt, Starkle u Optimizer. Da una dosis técnica.", 
+                img
+            ])
             
             if response.text:
-                st.success("✅ RECOMENDACIÓN:")
+                st.success("✅ RECOMENDACIÓN TÉCNICA:")
                 st.write(response.text)
         except Exception as e:
-            st.error(f"Error de Google: {str(e)}")
+            st.error(f"Error: {str(e)}")
