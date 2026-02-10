@@ -1,9 +1,8 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import io
 
-# 1. Tu API KEY (Ya integrada)
+# 1. Tu API KEY
 API_KEY = "AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw"
 genai.configure(api_key=API_KEY)
 
@@ -11,23 +10,19 @@ st.set_page_config(page_title="La Clementina IA", layout="centered")
 st.title("🚜 La Clementina IA")
 
 def procesar_y_analizar(archivo_foto):
-    # COMPRESIÓN AGRESIVA: Para que no tarde nada
     img = Image.open(archivo_foto)
     img = img.convert('RGB')
+    img.thumbnail((512, 512)) # Para que sea rápido
     
-    # Si la foto es gigante, la bajamos a un tamaño web estándar
-    img.thumbnail((512, 512))
-    
-    # Usamos el modelo más rápido
+    # CAMBIO CLAVE: Usamos este nombre que no falla
     model = genai.GenerativeModel('gemini-1.5-flash')
     
-    # Prompt corto y seco
-    prompt = "Como agrónomo, identificá el problema en esta planta y receta tratamiento. Máximo 3 renglones."
+    prompt = "Como agrónomo experto, identificá el problema en esta planta y receta tratamiento corto."
     
     response = model.generate_content([prompt, img])
     return response.text
 
-# 2. Interfaz Limpia
+# 2. Interfaz
 opcion = st.radio("Elegí origen:", ("Cámara del Celular", "Galería"), horizontal=True)
 
 if opcion == "Cámara del Celular":
@@ -35,15 +30,18 @@ if opcion == "Cámara del Celular":
 else:
     foto = st.file_uploader("Subí desde el celu", type=["jpg", "png", "jpeg"])
 
-# 3. Ejecución
 if foto is not None:
     if st.button('🚀 DIAGNÓSTICO INSTANTÁNEO'):
         with st.spinner('Analizando...'):
             try:
-                # El proceso ahora es liviano, debería tardar 4-5 segundos
                 resultado = procesar_y_analizar(foto)
                 st.success("✅ Diagnóstico:")
                 st.write(resultado)
             except Exception as e:
-                # Si hay error, te lo va a decir claro acá
-                st.error(f"Hubo un problema: {e}")
+                # Si el 1.5 falla, intentamos con el modelo alternativo automáticamente
+                try:
+                    model_alt = genai.GenerativeModel('gemini-pro-vision')
+                    res = model_alt.generate_content(["Diagnóstico corto:", Image.open(foto)])
+                    st.success(res.text)
+                except:
+                    st.error(f"Error: {e}")
