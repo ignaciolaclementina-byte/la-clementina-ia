@@ -1,38 +1,43 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import io
 
-# 1. Tu Clave (Asegurate de pegarla bien)
+# 1. Configuración (Pegá tu clave acá)
 genai.configure(api_key="TU_API_KEY_AQUÍ")
 
+st.set_page_config(page_title="La Clementina IA", layout="centered")
 st.title("🚜 La Clementina IA")
 
-def fast_diagnosis(image_data):
-    # COMPRESIÓN ULTRA: Reducimos la foto a un tamaño que vuela por la red
-    img = Image.open(image_data)
+# 2. Función de análisis directo
+def analizar_planta(foto):
+    # COMPRESIÓN: Reducimos la foto al mínimo para que no tarde nada
+    img = Image.open(foto)
     img = img.convert('RGB')
-    img.thumbnail((300, 300)) # Tamaño mínimo para análisis rápido
+    img.thumbnail((300, 300)) # Tamaño ultra-liviano
     
-    # Modelo optimizado para velocidad
     model = genai.GenerativeModel('gemini-1.5-flash')
     
-    # Prompt corto = Procesamiento rápido
-    prompt = "Respuesta de agrónomo en 2 renglones: ¿Qué tiene y qué aplico?"
+    # Prompt corto para que la IA responda al toque
+    prompt = "Respuesta corta y técnica: ¿Qué tiene la planta y qué producto aplicar?"
     
     response = model.generate_content([prompt, img])
     return response.text
 
-# 2. Interfaz rápida
-opcion = st.radio("Origen:", ("Cámara", "Galería"))
-foto = st.camera_input("Sacá la foto") if opcion == "Cámara" else st.file_uploader("Subí foto", type=["jpg", "png"])
+# 3. Interfaz con Cámara
+opcion = st.radio("Origen de la foto:", ("Cámara del Celular", "Galería"))
 
-if foto:
-    if st.button('🚀 ANALIZAR AHORA'):
-        # Usamos un mensaje simple para no gastar recursos
-        st.write("⏳ Procesando en segundos...")
-        try:
-            resultado = fast_diagnosis(foto)
-            st.success(resultado)
-        except Exception as e:
-            st.error("Error de conexión. Reintentá.")
+if opcion == "Cámara del Celular":
+    archivo = st.camera_input("Sacá la foto a la planta")
+else:
+    archivo = st.file_uploader("Subí desde galería", type=["jpg", "png", "jpeg"])
+
+if archivo:
+    if st.button('🚀 DIAGNÓSTICO YA'):
+        with st.spinner('Analizando...'):
+            try:
+                # El secreto: proceso liviano
+                resultado = analizar_planta(archivo)
+                st.success("✅ Resultado:")
+                st.write(resultado)
+            except Exception as e:
+                st.error("Servidor ocupado. Probá de nuevo en 5 segundos.")
