@@ -8,114 +8,101 @@ genai.configure(api_key="AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw")
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# --- CSS MEJORADO PARA CONTRASTE ALTO ---
+# --- CSS AGRESIVO PARA FONDO Y TEXTO NEGRO ---
 st.markdown("""
     <style>
-    /* 1. Fondo de pantalla: Campo de soja con oscurecimiento fuerte para resaltar el frente */
+    /* 1. FUERZA EL FONDO DE SOJA (Mata el fondo negro) */
     [data-testid="stAppViewContainer"] {
-        background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
-                          url("https://images.unsplash.com/photo-1594751439417-df9a97693661?q=80&w=2070&auto=format&fit=crop");
+        background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), 
+                    url("https://images.unsplash.com/photo-1594751439417-df9a97693661?q=80&w=2070&auto=format&fit=crop") !important;
         background-size: cover !important;
         background-position: center !important;
         background-attachment: fixed !important;
     }
 
+    /* Limpieza de capas de Streamlit */
     [data-testid="stHeader"], [data-testid="stMainBlockContainer"] {
         background-color: transparent !important;
     }
 
-    /* 2. Título de la App */
-    .titulo-app {
-        color: #ffffff;
-        text-align: center;
-        font-size: 36px;
-        font-weight: bold;
-        text-shadow: 3px 3px 6px #000000;
-        margin-top: -30px;
-    }
-
-    /* 3. Estilo de los Botones: Verde Agrónomo */
-    .stButton>button {
-        width: 100%;
-        border-radius: 12px;
-        height: 3.8em;
-        background-color: #2E7D32 !important;
-        color: white !important;
-        font-weight: bold;
-        font-size: 18px;
-        border: 2px solid #ffffff !important;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
-    }
-
-    /* 4. LA CLAVE: CAJA DE RESULTADO (Letra negra, fondo blanco puro) */
-    .caja-informe {
+    /* 2. TEXTO DEL INFORME: NEGRO SOBRE BLANCO */
+    .caja-blanca {
         background-color: #ffffff !important;
-        padding: 30px;
+        padding: 25px;
         border-radius: 15px;
-        color: #000000 !important; /* NEGRO PURO */
-        font-size: 19px; /* Un poco más grande para el campo */
+        color: #000000 !important; /* TEXTO NEGRO AZABACHE */
+        font-size: 18px;
         line-height: 1.6;
-        border-left: 15px solid #1B5E20;
-        margin-top: 25px;
-        box-shadow: 0px 10px 30px rgba(0,0,0,0.6);
+        border-left: 15px solid #2E7D32;
+        margin-top: 20px;
+        box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
     }
-
-    /* Títulos dentro de la caja blanca */
-    .caja-informe b, .caja-informe strong {
+    
+    /* Forzar que todo lo de adentro de la caja sea negro */
+    .caja-blanca * {
         color: #000000 !important;
     }
 
-    /* Etiquetas de control en blanco con sombra */
+    /* 3. TÍTULOS Y BOTONES */
+    .titulo-app {
+        color: #ffffff;
+        text-align: center;
+        font-size: 32px;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px #000000;
+    }
+
+    .stButton>button {
+        width: 100%;
+        border-radius: 12px;
+        height: 3.5em;
+        background-color: #2E7D32 !important;
+        color: white !important;
+        font-weight: bold;
+        border: 2px solid #ffffff !important;
+    }
+
     label, p {
         color: white !important;
         font-weight: bold !important;
-        text-shadow: 2px 2px 4px black;
-        font-size: 17px !important;
+        text-shadow: 1px 1px 2px black;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- CONTENIDO DE LA APP ---
+# --- INTERFAZ ---
 st.markdown("<div class='titulo-app'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 18px;'>Diagnóstico Experto - San Jorge, Santa Fe</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>San Jorge, Santa Fe</p>", unsafe_allow_html=True)
 
-# Selector de origen con estilo
-st.markdown("<br>", unsafe_allow_html=True)
-modo = st.radio("SELECCIONÁ CÓMO CARGAR LA MUESTRA:", ["📸 Cámara", "📁 Galería"], horizontal=True)
+modo = st.radio("SELECCIONÁ ORIGEN:", ["📸 Cámara", "📁 Galería"], horizontal=True)
 
 if modo == "📸 Cámara":
     foto = st.camera_input("")
 else:
-    foto = st.file_uploader("CARGAR FOTO DEL LOTE", type=["jpg", "png", "jpeg"])
+    foto = st.file_uploader("SUBIR FOTO DEL LOTE", type=["jpg", "png", "jpeg"])
 
 if foto:
-    st.image(foto, use_container_width=True, caption="Imagen seleccionada")
+    st.image(foto, use_container_width=True)
     
-    if st.button('🚀 GENERAR DIAGNÓSTICO TÉCNICO'):
-        with st.spinner('Consultando al especialista virtual...'):
+    if st.button('🚀 ANALIZAR CULTIVOHORA'):
+        with st.spinner('Procesando datos...'):
             try:
-                # Inicialización del modelo
                 modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                 model = genai.GenerativeModel(modelos[0])
-                
                 img = Image.open(foto).convert('RGB')
                 
-                # Prompt optimizado para respuestas claras
-                prompt = "Sos un Ingeniero Agrónomo experto de Argentina. Analizá esta imagen de cultivo y entregá: 1. DIAGNÓSTICO CLARO, 2. CAUSA DEL PROBLEMA, 3. TRATAMIENTO SUGERIDO."
+                prompt = "Actuá como un Ingeniero Agrónomo. Analizá la imagen y dame: DIAGNÓSTICO, CAUSA y TRATAMIENTO."
                 response = model.generate_content([prompt, img])
                 
-                # Despliegue con reemplazo de saltos de línea para HTML
-                resultado_formateado = response.text.replace('\n', '<br>')
-                
+                # Despliegue con letra negra sobre fondo blanco
                 st.markdown(f"""
-                    <div class='caja-informe'>
-                        <h2 style='color: #1B5E20; margin-top:0; font-size:24px;'>✅ INFORME DEL ESPECIALISTA</h2>
-                        <hr style='border: 1px solid #eee;'>
-                        {resultado_formateado}
+                    <div class='caja-blanca'>
+                        <h3 style='color: #2E7D32;'>📋 RESULTADO TÉCNICO:</h3>
+                        {response.text.replace('\n', '<br>')}
                     </div>
                 """, unsafe_allow_html=True)
                 
             except Exception as e:
-                st.error(f"Error técnico: {e}")
+                st.error(f"Error: {e}")
 
-st.markdown("<br><hr style='opacity:0.3;'><p style='text-align:center; opacity:0.8; font-size:12px;'>La Clementina v5.0 - San Jorge</p>", unsafe_allow_html=True)
+st.markdown("<br><p style='text-align:center; opacity:0.8; font-size:12px;'>La Clementina v5.0</p>", unsafe_allow_html=True)
