@@ -8,14 +8,14 @@ genai.configure(api_key="AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw")
 # 1. Configuración de página
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. CSS para fondo de soja y texto negro (Corregido)
+# 2. CSS para fondo de soja y texto negro
 st.markdown("""
     <style>
     .stApp {
         background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
-                    url("https://images.unsplash.com/photo-1594751439417-df9a97693661?q=80&w=2070&auto=format&fit=crop");
+                    url("https://images.unsplash.com/photo-1594751439417-df9a97693661?q=80&w=2070&auto=format&fit=crop") !important;
         background-size: cover !important;
-        background-attachment: fixed;
+        background-attachment: fixed !important;
     }
     [data-testid="stHeader"], [data-testid="stMainBlockContainer"] {
         background-color: transparent !important;
@@ -29,13 +29,16 @@ st.markdown("""
     }
     .reporte-blanco {
         background-color: white !important;
-        color: black !important;
         padding: 20px;
         border-radius: 15px;
         border-left: 10px solid #2E7D32;
-        font-size: 18px;
+        margin-top: 20px;
     }
-    .reporte-blanco * { color: black !important; }
+    .texto-negro {
+        color: black !important;
+        font-size: 18px;
+        font-weight: normal;
+    }
     label, p { color: white !important; font-weight: bold; text-shadow: 1px 1px 2px black; }
     </style>
     """, unsafe_allow_html=True)
@@ -55,22 +58,21 @@ if archivo is not None:
     st.image(archivo, use_container_width=True)
     
     if st.button("🚀 OBTENER DIAGNÓSTICO"):
-        with st.spinner("Analizando..."):
+        with st.spinner("El agrónomo virtual está analizando..."):
             try:
-                # Selección de modelo
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 img = Image.open(archivo)
                 
-                # Prompt y Generación
-                prompt = "Como agrónomo, analizá la imagen y da: 1. Diagnóstico, 2. Causa, 3. Tratamiento."
+                prompt = "Como agrónomo experto, analizá la imagen y da: 1. Diagnóstico, 2. Causa, 3. Tratamiento."
                 response = model.generate_content([prompt, img])
                 
-                # Mostrar resultado con letra negra sobre blanco
-                st.markdown(f"""
-                <div class='reporte-blanco'>
-                    <strong>✅ INFORME TÉCNICO:</strong><br><br>
-                    {response.text.replace('\n', '<br>')}
-                </div>
-                """, unsafe_allow_html=True)
+                # CORRECCIÓN DEFINITIVA: Separamos el texto para evitar SyntaxError
+                texto_final = response.text.replace('\n', '<br>')
+                
+                html_reporte = f"<div class='reporte-blanco'><b style='color: #2E7D32;'>✅ INFORME TÉCNICO:</b><br><br><div class='texto-negro'>{texto_final}</div></div>"
+                
+                st.markdown(html_reporte, unsafe_allow_html=True)
             except Exception as e:
                 st.error(f"Error: {e}")
+
+st.markdown("<br><p style='text-align:center; opacity:0.8; font-size:12px;'>San Jorge, Santa Fe - v6.5</p>", unsafe_allow_html=True)
