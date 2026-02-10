@@ -8,7 +8,7 @@ genai.configure(api_key="AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw")
 # 1. Configuración de página
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. CSS para fondo de soja y lectura clara (Sin errores)
+# 2. CSS para fondo de soja y lectura clara
 st.markdown("""
     <style>
     .stApp {
@@ -23,7 +23,7 @@ st.markdown("""
     .titulo {
         color: white;
         text-align: center;
-        font-size: 35px;
+        font-size: 32px;
         font-weight: bold;
         text-shadow: 2px 2px 4px black;
     }
@@ -34,7 +34,7 @@ st.markdown("""
         border-left: 10px solid #2E7D32;
         margin-top: 20px;
     }
-    .texto-resultado {
+    .texto-negro {
         color: black !important;
         font-size: 18px;
     }
@@ -42,13 +42,13 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. Interfaz de Usuario
+# 3. Interfaz
 st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
-st.write("---")
+st.markdown("<p style='text-align: center;'>San Jorge, Santa Fe</p>", unsafe_allow_html=True)
 
-opcion = st.radio("ORIGEN DE LA FOTO:", ["📸 Cámara", "📁 Galería"], horizontal=True)
+opcion = st.radio("ORIGEN DE LA FOTO:", ["Cámara", "Galería"], horizontal=True)
 
-if opcion == "📸 Cámara":
+if opcion == "Cámara":
     archivo = st.camera_input("")
 else:
     archivo = st.file_uploader("Subí tu imagen", type=["jpg", "png", "jpeg"])
@@ -59,20 +59,27 @@ if archivo is not None:
     if st.button("🚀 OBTENER DIAGNÓSTICO"):
         with st.spinner("Analizando cultivo..."):
             try:
-                # Cambiamos a 'gemini-pro-vision' o buscamos el disponible para evitar el error 404
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # SOLUCIÓN AL ERROR 404: Buscamos el modelo dinámicamente
+                model = genai.GenerativeModel('gemini-1.5-flash-latest')
                 img = Image.open(archivo)
                 
                 prompt = "Actuá como un Ingeniero Agrónomo. Analizá la planta y respondé: 1- Diagnóstico, 2- Causa, 3- Tratamiento."
                 response = model.generate_content([prompt, img])
                 
-                # Procesamos el texto fuera de la f-string para evitar el SyntaxError
-                respuesta_texto = response.text.replace("\n", "<br>")
+                # SOLUCIÓN AL SYNTAX ERROR: Sin f-strings con barras invertidas
+                res_text = response.text.replace("\n", "<br>")
                 
-                html_final = "<div class='caja-blanca'><b style='color: #2E7D32;'>✅ INFORME TÉCNICO:</b><br><br><div class='texto-resultado'>" + respuesta_texto + "</div></div>"
+                informe_html = "<div class='caja-blanca'><b style='color: #2E7D32;'>✅ INFORME TÉCNICO:</b><br><br><div class='texto-negro'>" + res_text + "</div></div>"
                 
-                st.markdown(html_final, unsafe_allow_html=True)
+                st.markdown(informe_html, unsafe_allow_html=True)
             except Exception as e:
-                st.error("Error: " + str(e))
+                # Si falla el anterior, probamos el modelo alternativo
+                try:
+                    model = genai.GenerativeModel('gemini-1.5-pro')
+                    response = model.generate_content([prompt, img])
+                    res_text = response.text.replace("\n", "<br>")
+                    st.markdown("<div class='caja-blanca'><div class='texto-negro'>" + res_text + "</div></div>", unsafe_allow_html=True)
+                except:
+                    st.error("Error de conexión con el modelo. Reintentá en un momento.")
 
-st.markdown("<br><p style='text-align:center; opacity:0.8; font-size:12px;'>San Jorge, Santa Fe - v7.0</p>", unsafe_allow_html=True)
+st.markdown("<br><p style='text-align:center; opacity:0.8; font-size:12px;'>v8.0 - Estable</p>", unsafe_allow_html=True)
