@@ -5,7 +5,7 @@ from PIL import Image
 # --- CONFIGURACION DE PAGINA ---
 st.set_page_config(page_title="LA CLEMENTINA IA", page_icon="🚜", layout="centered")
 
-# --- ESTILOS CSS ---
+# --- ESTILOS CSS (FONDO SOJA AL ATARDECER) ---
 st.markdown("""
     <style>
     .stApp {
@@ -20,21 +20,10 @@ st.markdown("""
         border-radius: 20px;
         border: 2px solid #4CAF50;
     }
-    h1, h2, h3, p, li, label, .stMarkdown, span {
-        color: white !important;
-    }
-    h1 {
-        color: #4CAF50 !important;
-        text-align: center;
-        text-shadow: 2px 2px 4px #000000;
-    }
-    .stButton>button {
-        width: 100%;
-        background-color: #2e7d32;
-        color: white;
-        border-radius: 12px;
-        font-weight: bold;
-    }
+    h1, h3, p, label, .stMarkdown, span { color: white !important; }
+    h1 { color: #4CAF50 !important; text-align: center; text-shadow: 2px 2px 4px #000000; font-weight: bold; }
+    .stButton>button { width: 100%; background-color: #2e7d32; color: white; border-radius: 12px; font-weight: bold; height: 3em; border: none; }
+    .stButton>button:hover { background-color: #45a049; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -44,7 +33,7 @@ if "autenticado" not in st.session_state:
 
 if not st.session_state["autenticado"]:
     st.markdown("<h1>🔐 Acceso La Clementina</h1>", unsafe_allow_html=True)
-    clave = st.text_input("Contraseña:", type="password")
+    clave = st.text_input("Contraseña del sistema:", type="password")
     if st.button("ENTRAR"):
         if clave == "clementina2024":
             st.session_state["autenticado"] = True
@@ -59,47 +48,49 @@ try:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception:
-    st.error("Error de conexión con la IA")
+    st.error("Error de conexión con el motor de IA")
     st.stop()
 
 # --- INTERFAZ ---
 st.markdown("<h1>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
-st.write("### 🌿 Diagnóstico con nuestra Lista de Productos")
+st.write("### 🌿 Diagnóstico con Stock La Clementina 2026")
 
-tab1, tab2 = st.tabs(["📸 CÁMARA", "📁 GALERÍA"])
-imagen_final = None
+tab1, tab2 = st.tabs(["📸 USAR CÁMARA", "📁 SUBIR ARCHIVO"])
+img_input = None
 
 with tab1:
-    foto = st.camera_input("Capturar síntoma en el lote")
-    if foto: imagen_final = foto
+    foto = st.camera_input("Sacar foto al síntoma")
+    if foto: img_input = foto
 with tab2:
-    archivo = st.file_uploader("Subir foto", type=['jpg', 'jpeg', 'png'])
-    if archivo: imagen_final = archivo
+    archivo = st.file_uploader("O cargar desde galería", type=['jpg', 'jpeg', 'png'])
+    if archivo: img_input = archivo
 
-if imagen_final:
-    img = Image.open(imagen_final).convert("RGB")
-    st.image(img, use_container_width=True)
+if img_input:
+    img = Image.open(img_input).convert("RGB")
+    st.image(img, use_container_width=True, caption="Imagen para análisis")
     
-    if st.button("🚀 ANALIZAR Y BUSCAR PRODUCTOS"):
-        with st.spinner('Analizando y consultando disponibilidad...'):
+    if st.button("🚀 GENERAR DIAGNÓSTICO Y RECETA"):
+        with st.spinner('Analizando cultivo y consultando stock...'):
             try:
-                # Aquí inyectamos el conocimiento de tu lista de precios/productos
+                # Definimos el contexto con los productos de tu excel
+                # Priorizando insecticidas y adherentes del stock 2026
                 prompt = """
-                Sos el ingeniero agrónomo experto de LA CLEMENTINA. 
-                Analizá la imagen y diagnosticá el problema.
+                Actúa como un ingeniero agrónomo experto de la empresa 'La Clementina'.
+                Tu objetivo es diagnosticar el problema en la imagen y recomendar un tratamiento.
                 
-                IMPORTANTE: Para el tratamiento, recomendá EXCLUSIVAMENTE productos que manejamos, como:
-                - Insecticidas: Solomon, Ampligo, Belt, Starkle, Lambda, Boomer, Eminent, Idaten, etc.
-                - Herbicidas y Fungicidas de nuestra lista de stock 2026.
-                - Adherentes: Optimizer, Rizo Spray, Break Thru, etc.
+                REGLA DE ORO: Solo podés recomendar productos de nuestra lista de stock 2026:
+                - INSECTICIDAS: Solomon, Starkle, Ampligo, Zariva, Lambda Microencapsulada, Boomer, Eminent, Bifentrin, Belt, Idaten.
+                - ADHERENTES/COADYUVANTES: Optimizer, Rizo Spray Extremo, Integrum, Fulltec Max, Rizo Spray Corrector, Alquimia, Rizospray Zen, Tropgreen.
+                - HERBICIDAS Y FUNGICIDAS generales.
                 
-                Estructura:
-                1. Diagnóstico (Cultivo y problema).
-                2. Recomendación de aplicación (Producto específico de nuestra lista y dosis).
-                3. Sugerencia de adherente si es necesario.
+                Formato de respuesta:
+                1. DIAGNÓSTICO: (Qué planta es y qué problema tiene).
+                2. TRATAMIENTO RECOMENDADO: (Menciona el producto específico de nuestra lista anterior).
+                3. DOSIS Y MEZCLA: (Sugerencia técnica de aplicación y coadyuvante de nuestra lista).
                 """
+                
                 res = model.generate_content([prompt, img])
-                st.success("✅ INFORME TÉCNICO LA CLEMENTINA:")
+                st.success("✅ DICTAMEN TÉCNICO FINALIZADO")
                 st.markdown(res.text)
-            except Exception as e:
-                st.error(f"Error en el análisis: {str(e)}")
+            except Exception:
+                st.error("No se pudo procesar el análisis. Intente nuevamente.")
