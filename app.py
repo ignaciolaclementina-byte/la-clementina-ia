@@ -5,7 +5,7 @@ from PIL import Image
 # --- CONFIGURACION DE PAGINA ---
 st.set_page_config(page_title="LA CLEMENTINA IA", page_icon="🚜", layout="centered")
 
-# --- ESTILOS CSS (FONDO CAMPO DE SOJA) ---
+# --- ESTILOS CSS ---
 st.markdown("""
     <style>
     .stApp {
@@ -68,19 +68,32 @@ except Exception:
 st.markdown("<h1>LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
 st.write("Diagnostico Experto de Cultivos")
 
-archivo = st.file_uploader("Cargar foto aqui:", type=['jpg', 'jpeg', 'png'])
+# Pestañas para elegir entre Galería o Cámara
+tab1, tab2 = st.tabs(["📸 USAR CAMARA", "📁 SUBIR ARCHIVO"])
 
-if archivo:
-    img = Image.open(archivo).convert("RGB")
-    st.image(img, use_container_width=True)
+imagen_final = None
+
+with tab1:
+    foto_camara = st.camera_input("Sacar foto al cultivo")
+    if foto_camara:
+        imagen_final = foto_camara
+
+with tab2:
+    archivo = st.file_uploader("Elegir foto de la galeria", type=['jpg', 'jpeg', 'png'])
+    if archivo:
+        imagen_final = archivo
+
+# PROCESAMIENTO
+if imagen_final:
+    img = Image.open(imagen_final).convert("RGB")
+    st.image(img, use_container_width=True, caption="Imagen para analizar")
     
     if st.button("INICIAR DIAGNOSTICO"):
-        with st.spinner('Analizando...'):
+        with st.spinner('Analizando muestra...'):
             try:
-                # Prompt simple para evitar errores de comillas
                 texto_pedido = "Sos un ingeniero agronomo. Identifica el cultivo y la enfermedad en la foto. Da tratamiento y dosis."
                 res = model.generate_content([texto_pedido, img])
                 st.success("Dictamen Tecnico:")
                 st.write(res.text)
             except Exception as e:
-                st.error("Error al procesar la imagen")
+                st.error("Error al procesar el analisis")
