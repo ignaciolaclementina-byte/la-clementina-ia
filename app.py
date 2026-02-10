@@ -2,48 +2,35 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# 1. Tu Clave (Reemplazala entre las comillas)
-API_KEY = "TU_API_KEY_AQUÍ"
-genai.configure(api_key=API_KEY)
+# 1. Configuración (Asegurate de que tu API KEY sea la correcta)
+genai.configure(api_key="TU_API_KEY_AQUÍ")
 
-st.set_page_config(page_title="La Clementina IA", layout="centered")
 st.title("🚜 La Clementina IA")
 
-# 2. Configuración para que responda RÁPIDO
 def get_diagnosis(image):
-    # Forzamos una respuesta corta y directa para ganar velocidad
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    # Reducimos la calidad de la imagen para que vuele por internet
+    image.thumbnail((800, 800)) 
     
-    # Configuramos la IA para que no de vueltas
-    config = genai.types.GenerationConfig(
-        candidate_count=1,
-        stop_sequences=['x'],
-        max_output_tokens=500, # Respuesta corta = respuesta rápida
-        temperature=0.4, # Menos "creatividad" para que no dude
-    )
+    model = genai.GenerativeModel('gemini-1.5-flash')
     
-    prompt = "Analizá rápido esta planta. Identificá el problema y dame una solución corta en 3 puntos."
+    # Prompt ultra directo para que no pierda tiempo pensando
+    prompt = "Respuesta corta: ¿Qué plaga o enfermedad tiene esta planta y cómo se cura?"
     
-    # Enviamos la imagen
-    response = model.generate_content([prompt, image], generation_config=config)
+    response = model.generate_content([prompt, image])
     return response.text
 
-# 3. La Interfaz (Lo que ya te funcionaba)
-uploaded_file = st.file_uploader("Subí la foto del cultivo", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Subí tu foto", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption='Imagen cargada', use_column_width=True)
+    img = Image.open(uploaded_file)
+    st.image(img, caption='Foto cargada', width=300)
     
-    if st.button('🚀 INICIAR DIAGNÓSTICO'):
-        # Usamos una barra de progreso para que sepas que está trabajando
-        progress_bar = st.progress(0)
-        with st.spinner('Conectando con el experto...'):
+    if st.button('🚀 DIAGNÓSTICO INSTANTÁNEO'):
+        with st.spinner('Procesando...'):
             try:
-                progress_bar.progress(50)
-                resultado = get_diagnosis(image)
-                progress_bar.progress(100)
-                st.success("✅ Diagnóstico:")
+                # El secreto está en la velocidad
+                resultado = get_diagnosis(img)
+                st.success("Resultado:")
                 st.write(resultado)
             except Exception as e:
-                st.error(f"Se agotó el tiempo: {e}")
+                st.error(f"Error: {e}")
