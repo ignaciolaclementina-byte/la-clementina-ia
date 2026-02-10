@@ -1,11 +1,12 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
+import io
 
 # 1. Configuración de Página
-st.set_page_config(page_title="LA CLEMENTINA IA", page_icon="🚜")
+st.set_page_config(page_title="LA CLEMENTINA IA", page_icon="🚜", layout="centered")
 
-# 2. Estilos (Fondo de Soja Garantizado)
+# 2. Estilo Visual (Fondo Soja Atardecer)
 st.markdown("""
 <style>
 .stApp {
@@ -20,7 +21,7 @@ st.markdown("""
     border-radius: 15px;
 }
 h1, h3, p, label, .stMarkdown { color: white !important; }
-h1 { color: #4CAF50 !important; text-align: center; text-shadow: 2px 2px 4px #000000; }
+h1 { color: #4CAF50 !important; text-align: center; text-shadow: 2px 2px 4px #000000; font-weight: bold; }
 .stButton>button { background-color: #2e7d32; color: white; width: 100%; height: 50px; font-weight: bold; border-radius: 10px; border: none; }
 </style>
 """, unsafe_allow_html=True)
@@ -42,38 +43,42 @@ if not st.session_state.auth:
 
 # 4. Interfaz Principal
 st.title("🚜 LA CLEMENTINA IA")
-st.write("### Diagnóstico con Stock 2026")
+st.write("### Diagnóstico con Stock Real 2026")
 
-archivo = st.camera_input("Sacar foto al cultivo")
+# Selector de entrada simple
+archivo = st.camera_input("📸 Sacar foto al cultivo")
 if not archivo:
-    archivo = st.file_uploader("O subir desde galería", type=["jpg", "png", "jpeg"])
+    archivo = st.file_uploader("📁 O subir desde galería", type=["jpg", "png", "jpeg"])
 
 if archivo:
-    # Mostramos la imagen
+    # Procesamiento de imagen para que no sea pesada
     img = Image.open(archivo)
-    st.image(img, width=400)
+    st.image(img, width=400, caption="Imagen cargada")
     
-    if st.button("🚀 ANALIZAR AHORA"):
+    if st.button("🚀 INICIAR DIAGNÓSTICO"):
         if "GOOGLE_API_KEY" not in st.secrets:
-            st.error("Falta la API KEY en los Secrets de Streamlit.")
+            st.error("Falta configurar la GOOGLE_API_KEY en Secrets.")
         else:
-            with st.spinner("Analizando..."):
+            with st.spinner("Analizando muestra..."):
                 try:
-                    # Configuración de IA
+                    # Configuración IA
                     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
                     model = genai.GenerativeModel('gemini-1.5-flash')
                     
-                    # Prompt con tus productos del Excel
-                    productos_stock = "Solomon, Bifentrin, Starkle, Ampligo-Zariva, Lambda, Boomer, Eminent, Belt, Idaten. Coadyuvantes: Optimizer, Rizo Spray, Integrum, Zen."
-                    prompt = f"Sos ingeniero agronomo de La Clementina. Analiza la imagen, identifica el problema y recomienda tratamiento usando SOLO estos productos: {productos_stock}. Se breve."
+                    # Productos de tu lista
+                    productos = "Insecticidas: Solomon, Starkle, Ampligo, Zariva, Lambda, Boomer, Eminent, Belt, Idaten. Adherentes: Optimizer, Rizo Spray, Integrum, Fulltec, Zen."
                     
-                    # Enviar a la IA
+                    prompt = f"Sos ingeniero agrónomo de La Clementina S.A. Identificá el cultivo y la plaga/enfermedad en la foto. Recomendá tratamiento con estos productos: {productos}."
+                    
+                    # Enviar a la IA (con manejo de errores de seguridad)
                     response = model.generate_content([prompt, img])
                     
                     if response.text:
                         st.success("✅ RECOMENDACIÓN TÉCNICA:")
-                        st.write(response.text)
+                        st.markdown(response.text)
                     else:
-                        st.error("La IA no pudo procesar la imagen. Intentá de nuevo.")
+                        st.warning("La IA no pudo generar una respuesta. Probá con otra foto más clara.")
+                
                 except Exception as e:
                     st.error(f"Error técnico: {str(e)}")
+                    st.info("Revisá que la clave API sea válida y tenga facturación activa o cuota disponible.")
