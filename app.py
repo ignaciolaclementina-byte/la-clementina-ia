@@ -2,86 +2,75 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 import urllib.parse
-import re
 
-# 1. LLAVE Y DATOS (Tu API Key está OK)
+# 1. CONFIGURACIÓN ÚNICA
 API_KEY = "AIzaSyAk1b1J69Nvsmzbbr5BZyW8UZlVpAtOgmo"
-PRECIOS_USD = {
+
+# Diccionario de precios
+PRECIOS = {
     "Round Up": 9.0, "2,4-D": 11.5, "Cripton": 48.0, 
     "Ampligo": 52.0, "Solomon": 40.0, "Optimizer": 6.5, 
     "Rizo Spray": 5.0, "YaraVita": 14.0
 }
-PRODUCTOS = ", ".join(PRECIOS_USD.keys())
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. DISEÑO DE LA APP
+# 2. ESTILO LIMPIO
 st.markdown("""
     <style>
-    .stApp { background: url("https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop") no-repeat center center fixed; background-size: cover; }
-    [data-testid="stAppViewContainer"] { background-color: rgba(0, 0, 0, 0.6); }
-    .informe-box { background-color: white; padding: 25px; border-radius: 15px; color: #1e1e1e !important; border-left: 10px solid #1b5e20; margin-top: 20px; }
-    h1, label, p, span { color: white !important; font-weight: bold; }
-    .stButton>button { width: 100%; background: #1b5e20 !important; color: white !important; border-radius: 12px; height: 50px; font-size: 18px; }
+    .stApp { background: #0e1117; }
+    .reporte { background-color: white; padding: 20px; border-radius: 10px; color: black; border-left: 10px solid #1b5e20; }
+    h1, label { color: white !important; }
+    .stButton>button { width: 100%; background: #1b5e20 !important; color: white !important; font-weight: bold; height: 50px; }
     </style>
     """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center;'>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
 
-# 3. ENTRADA DE DATOS
-c1, c2, c3 = st.columns(3)
-with c1: cul = st.selectbox("CULTIVO", ["Soja", "Maíz", "Trigo", "Alfalfa", "Barbecho"])
-with c2: est = st.text_input("ESTADO", "R3")
-with c3: has = st.number_input("HAS", min_value=1.0, value=100.0)
+# 3. INTERFAZ DE USUARIO
+col1, col2 = st.columns(2)
+with col1:
+    cultivo = st.selectbox("CULTIVO", ["Soja", "Maíz", "Trigo", "Alfalfa", "Barbecho"])
+with col2:
+    hectareas = st.number_input("HECTÁREAS", min_value=1.0, value=100.0)
 
-foto = st.camera_input("") or st.file_uploader("Cargar imagen", type=["jpg", "png", "jpeg"])
+foto = st.camera_input("Captura o subí foto del lote") or st.file_uploader("O seleccioná un archivo", type=["jpg", "png", "jpeg"])
 
 if foto:
-    img = Image.open(foto).convert('RGB')
-    st.image(img, use_container_width=True)
+    imagen = Image.open(foto).convert('RGB')
+    st.image(imagen, caption="Imagen cargada")
     
     if st.button("🚀 INICIAR ANÁLISIS"):
-        with st.spinner("El Ingeniero IA está analizando el lote..."):
+        with st.spinner("Analizando con IA..."):
             try:
-                # CONFIGURACIÓN ESTABLE (Solución al 404)
+                # CONFIGURACIÓN SIN 'v1beta' (Elimina el Error 404)
                 genai.configure(api_key=API_KEY)
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                prompt = f"Analiza la foto de {cul} en {est}. Diagnostica plagas/malezas y receta solo: {PRODUCTOS}. Formato: 'Producto: Dosis l/ha'."
+                vademecum = ", ".join(PRECIOS.keys())
+                prompt = f"Sos ingeniero agrónomo. Analiza este {cultivo}. Recetá productos de: {vademecum}. Formato: 'Producto: Dosis l/ha'."
                 
-                # Proceso de la IA (Corregido error de corchetes [])
-                res = model.generate_content([prompt, img])
-                informe = res.text
+                # Ejecución de la IA
+                respuesta = model.generate_content([prompt, imagen])
+                texto = respuesta.text
                 
-                # Cálculo de costos
-                costo_ha = 0.0
-                lista_compra = []
-                for p, precio in PRECIOS_USD.items():
-                    if p.lower() in informe.lower():
-                        match = re.search(rf"{p}.*?(\d+[.,]?\d*)", informe, re.IGNORECASE)
-                        if match:
-                            d = float(match.group(1).replace(',', '.'))
-                            if d > 10: d /= 1000 # cm3 a litros
-                            costo_ha += (d * precio)
-                            lista_compra.append(f"• {p}: {d*has:.1f} lts")
-
-                # MOSTRAR RESULTADOS
-                st.markdown("<div class='informe-box'>", unsafe_allow_html=True)
-                st.markdown("<h3 style='color:#1b5e20; margin-top:0;'>📋 REPORTE AGRONÓMICO</h3>", unsafe_allow_html=True)
-                st.write(f"<div style='color:black;'>{informe}</div>", unsafe_allow_html=True)
+                # Mostrar resultados
+                st.markdown("<div class='reporte'>", unsafe_allow_html=True)
+                st.subheader("📋 REPORTE DEL LOTE")
+                st.write(texto)
                 
-                if lista_compra:
-                    st.markdown("<hr style='border: 0.5px solid #ccc;'>")
-                    st.markdown("<b style='color:black;'>INSUMOS TOTALES PARA EL LOTE:</b>", unsafe_allow_html=True)
-                    for item in lista_compra:
-                        st.write(f"<div style='color:black;'>{item}</div>", unsafe_allow_html=True)
-                    st.markdown(f"<h2 style='text-align:right; color:#1b5e20;'>INVERSIÓN: USD {costo_ha * has:.2f}</h2>", unsafe_allow_html=True)
+                # Cálculo rápido de inversión
+                costo_total = 0.0
+                for prod, precio in PRECIOS.items():
+                    if prod.lower() in texto.lower():
+                        costo_total += (precio * 0.5 * hectareas) # Estimación base
+                
+                st.markdown(f"### 💰 Inversión estimada: USD {costo_total:.2f}")
                 st.markdown("</div>", unsafe_allow_html=True)
                 
-                st.session_state['wa_msg'] = f"🚜 *LA CLEMENTINA IA*\n🌱 {cul} ({has} ha)\n\n{informe}\n\n💰 *Inversión: USD {costo_ha * has:.2f}*"
+                # Link de WhatsApp
+                msg = urllib.parse.quote(f"🚜 *LA CLEMENTINA IA*\n🌱 {cultivo}: {hectareas} ha\n\n{texto}\n\n💰 Total: USD {costo_total:.2f}")
+                st.markdown(f'<a href="https://wa.me/543406649346?text={msg}" target="_blank"><button style="width:100%; background:#25D366; color:white; border:none; padding:15px; border-radius:10px; cursor:pointer; font-weight:bold; margin-top:10px;">📲 ENVIAR POR WHATSAPP</button></a>', unsafe_allow_html=True)
 
             except Exception as e:
-                # Corregido el error de la línea 93 (unterminated string)
-                st.error(f"Error técnico: {e}")
-
-# 4. BOTÓN WHATSAPP
+                st.error(f"Error técnico: {str(e)}")
