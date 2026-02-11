@@ -4,89 +4,84 @@ from PIL import Image
 import urllib.parse
 import re
 
-# 1. PARÁMETROS FIJOS (CON TU CLAVE PROPIA)
-CLAVE = "AIzaSyAk1b1J69Nvsmzbbr5BZyW8UZlVpAtOgmo"
+# 1. CONFIGURACIÓN DE SEGURIDAD Y API
+# Tu clave actual ya está integrada aquí
+CLAVE_API = "AIzaSyAk1b1J69Nvsmzbbr5BZyW8UZlVpAtOgmo"
+
+# Lista de precios para el cálculo automático
 PRECIOS = {
     "Round Up": 9.0, "2,4-D": 11.5, "Cripton": 48.0, 
     "Ampligo": 52.0, "Solomon": 40.0, "Optimizer": 6.5, 
     "Rizo Spray": 5.0, "YaraVita": 14.0
 }
-VADEMECUM = "Optimizer, Rizo Spray, YaraVita, Cripton, Round Up, 2,4-D, Solomon, Ampligo"
+VADEMECUM = ", ".join(PRECIOS.keys())
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. ESTILO VISUAL (FONDO NÍTIDO)
+# 2. DISEÑO DE LA INTERFAZ
 st.markdown("""
     <style>
     .stApp { background: url("https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop") no-repeat center center fixed; background-size: cover; }
-    [data-testid="stAppViewContainer"] { background-color: rgba(0, 0, 0, 0.5); }
-    .card { background-color: white; padding: 25px; border-radius: 15px; color: black !important; border-left: 10px solid #1b5e20; box-shadow: 0px 10px 30px rgba(0,0,0,0.5); }
-    label, p, span { color: white !important; font-weight: bold !important; }
-    .stButton>button { width: 100%; background: #1b5e20 !important; color: white !important; font-weight: bold; border-radius: 10px; height: 50px; border: none; }
+    [data-testid="stAppViewContainer"] { background-color: rgba(0, 0, 0, 0.6); }
+    .card { background-color: white; padding: 20px; border-radius: 15px; color: black !important; border-left: 8px solid #1b5e20; }
+    h1, label, p { color: white !important; font-weight: bold !important; }
+    .stButton>button { width: 100%; background: #1b5e20 !important; color: white !important; height: 50px; border-radius: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center; color:white;'>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
 
-# Controles de usuario
-c1, c2, c3 = st.columns(3)
-with c1: cul = st.selectbox("CULTIVO", ["Soja", "Maíz", "Trigo", "Alfalfa", "Barbecho"])
-with c2: est = st.text_input("ESTADO", "R3")
-with c3: has = st.number_input("HAS", min_value=1.0, value=100.0)
+# 3. ENTRADA DE DATOS
+col1, col2, col3 = st.columns(3)
+with col1: cultivo = st.selectbox("CULTIVO", ["Soja", "Maíz", "Trigo", "Alfalfa", "Barbecho"])
+with col2: estado = st.text_input("ESTADO", "R3")
+with col3: hectareas = st.number_input("HAS", min_value=1.0, value=100.0)
 
-foto = st.camera_input("") or st.file_uploader("Subir foto", type=["jpg", "png", "jpeg"])
+foto = st.camera_input("") or st.file_uploader("Subir imagen de la hoja", type=["jpg", "png", "jpeg"])
 
 if foto:
     img = Image.open(foto).convert('RGB')
-    st.image(img, use_container_width=True)
+    st.image(img, caption="Imagen cargada", use_container_width=True)
     
     if st.button("🚀 ANALIZAR AHORA"):
-        with st.spinner("Conectando con el Ingeniero IA..."):
+        with st.spinner("El Ingeniero IA está revisando el lote..."):
             try:
-                # CONFIGURACIÓN DEFINITIVA PARA EVITAR 404
-                genai.configure(api_key=CLAVE)
-                # Forzamos el modelo estable
+                # CONFIGURACIÓN SIN ERRORES 404
+                genai.configure(api_key=CLAVE_API)
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                prompt = f"Actúa como agrónomo. Analiza esta foto de {cul} en {est}. Diagnóstico de plagas y manchas. Receta solo: {VADEMECUM}. Usa 'Dosis: X l/ha'."
-                res = model.generate_content([prompt, img])
-                informe = res.text
+                # Instrucción para la IA
+                prompt = f"Sos un experto agrónomo. Analizá esta foto de {cultivo} en estado {estado}. Identificá plagas o enfermedades. Recetá productos de esta lista: {VADEMECUM}. Especificá 'Dosis: X l/ha' para cada uno."
                 
-                # Cálculo de costos
-                costo_ha = 0.0
-                compra = []
-                for p, prec in PRECIOS.items():
-                    if p.lower() in informe.lower():
-                        match = re.search(rf"{p}.*?(\d+[.,]?\d*)", informe, re.IGNORECASE)
+                respuesta = model.generate_content([prompt, img])
+                texto_informe = respuesta.text
+                
+                # Cálculo de costos y dosis
+                costo_total = 0.0
+                detalle_compra = []
+                
+                for producto, precio in PRECIOS.items():
+                    if producto.lower() in texto_informe.lower():
+                        match = re.search(rf"{producto}.*?(\d+[.,]?\d*)", texto_informe, re.IGNORECASE)
                         if match:
-                            d = float(match.group(1).replace(',', '.'))
-                            if d > 10: d = d / 1000 # Convierte cm3 a litros
-                            costo_ha += (d * prec)
-                            compra.append(f"• {p}: {d*has:.1f} lts totales")
+                            dosis = float(match.group(1).replace(',', '.'))
+                            if dosis > 10: dosis /= 1000 # Ajuste de cm3 a lts
+                            costo_total += (dosis * precio * hectareas)
+                            detalle_compra.append(f"• {producto}: {dosis * hectareas:.1f} lts totales")
 
-                # Resultado en pantalla
+                # Mostrar Resultados
                 st.markdown("<div class='card'>", unsafe_allow_html=True)
-                st.markdown(f"<h3 style='color:#1b5e20;'>📋 INFORME {cul}</h3>", unsafe_allow_html=True)
-                st.write(informe)
-                st.markdown("<hr>", unsafe_allow_html=True)
-                if compra:
-                    st.markdown("<b>COMPRA RECOMENDADA:</b>", unsafe_allow_html=True)
-                    for item in compra: st.write(item)
-                st.markdown(f"<h2 style='text-align:right; color:#1b5e20;'>TOTAL: USD {costo_ha*has:.2f}</h2>", unsafe_allow_html=True)
+                st.markdown(f"<h3 style='color:#1b5e20;'>📋 REPORTE TÉCNICO: {cultivo.upper()}</h3>", unsafe_allow_html=True)
+                st.write(texto_informe)
+                st.markdown("---")
+                if detalle_compra:
+                    st.markdown("**INSUMOS NECESARIOS:**")
+                    for item in detalle_compra: st.write(item)
+                    st.markdown(f"<h2 style='text-align:right; color:#1b5e20;'>TOTAL: USD {costo_total:.2f}</h2>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
-                st.session_state['msg'] = f"🚜 *LA CLEMENTINA IA*\n📍 {cul} ({has} ha)\n\n{informe}\n\n💰 *TOTAL: USD {costo_ha*has:.2f}*"
+                # Guardar para WhatsApp
+                st.session_state['reporte_wa'] = f"🚜 *INFORME LA CLEMENTINA*\n🌱 Cultivo: {cultivo}\n📍 Lote: {hectareas} ha\n\n{texto_informe}\n\n💰 *Inversión Total: USD {costo_total:.2f}*"
                 
             except Exception as e:
-                st.error(f"Error técnico: {e}. Reintentá en un momento.")
-
-# Botón WhatsApp
-if 'msg' in st.session_state:
-    url_wa = f"https://wa.me/543406649346?text={urllib.parse.quote(st.session_state['msg'])}"
-    st.markdown(f"""
-        <a href="{url_wa}" target="_blank" style="text-decoration:none;">
-            <div style="background-color:#25D366; color:white; padding:15px; border-radius:10px; text-align:center; font-weight:bold; margin-top:10px; border:2px solid white;">
-                📲 ENVIAR AL WHATSAPP
-            </div>
-        </a>
-    """, unsafe_allow_html=True)
+                st.error(f"Hubo un problema
