@@ -3,64 +3,147 @@ import google.generativeai as genai
 from PIL import Image
 import urllib.parse
 
-# 1. TU LLAVE MAESTRA
-NUEVA_KEY = "AIzaSyAvgxhXGnDNWiD9VatHcekC0R9DQIBf77I"
-VADEMECUM = "ADHERENTES: Optimizer, Rizo Spray. BIOESTIMULANTES: YaraVita. FUNGICIDAS: Cripton SC, Cripton Xpro. HERBICIDAS: Round Up, 2,4-D. INSECTICIDAS: Solomon, Ampligo."
-MI_NUMERO = "543406649346"
+# 1. TUS DOS LLAVES DE API (SISTEMA DE RESPALDO)
+CLAVES = [
+    "AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw", # Clave 1
+    "AIzaSyDxGWtHwsXp_dzsg6YnnU7OmPFBCU-_nEU"  # Clave 2
+]
+
+# VADEMÉCUM
+VADEMECUM_CLEMENTINA = """
+ADHERENTES: Optimizer, Rizo Spray, Break Thru, Fulltec, Alquimia, Tropgreen.
+BIOESTIMULANTES: YaraVita, Nutrition Grow, Fosfito, Howler, Vitagrow.
+FUNGICIDAS: Cripton SC, Cripton Xpro.
+HERBICIDAS: Round Up, 2,4-D, Atrazina, Paraquat, Harness, Fierce, Cletodim.
+INSECTICIDAS: Solomon, Bifentrin, Starkle, Ampligo, Belt, Coragen.
+"""
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. DISEÑO LIMPIO
+# 2. DISEÑO Y TRADUCCIÓN DE BOTONES (CSS)
 st.markdown("""
     <style>
     .stApp {
-        background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+        background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), 
                           url("https://images.unsplash.com/photo-1594751439417-df9a97693661?q=80&w=2070&auto=format&fit=crop");
-        background-size: cover;
+        background-size: cover !important;
     }
     .titulo { color: white; text-align: center; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px black; }
-    .reporte-box { background: white; padding: 25px; border-radius: 15px; color: black !important; border-left: 10px solid #2e7d32; }
-    .stButton>button { width: 100%; border-radius: 25px; background-color: #2e7d32 !important; color: white !important; font-weight: bold; height: 50px; }
-    label, p { color: white !important; }
+    
+    /* TRADUCCIÓN BOTÓN GALERÍA */
+    section[data-testid="stFileUploadDropzone"] button { font-size: 0px !important; }
+    section[data-testid="stFileUploadDropzone"] button:after { content: "BUSCAR IMAGEN"; font-size: 16px !important; }
+    section[data-testid="stFileUploadDropzone"] span { display: none; }
+    section[data-testid="stFileUploadDropzone"]:before { content: "Arrastrá tu foto acá o"; color: white; font-weight: bold; margin-bottom: 10px; }
+
+    /* TRADUCCIÓN BOTÓN CÁMARA */
+    div[data-testid="stCameraInput"] button { font-size: 0px !important; }
+    div[data-testid="stCameraInput"] button:after { content: "TOMAR FOTO"; font-size: 16px !important; }
+
+    .reporte-box {
+        background-color: white !important;
+        padding: 20px;
+        border-radius: 15px;
+        color: black !important;
+        border-left: 12px solid #2E7D32;
+    }
+    .reporte-box * { color: black !important; }
+    
+    .stButton>button {
+        width: 100%;
+        border-radius: 30px;
+        background-color: #2E7D32 !important;
+        color: white !important;
+        font-weight: bold;
+    }
+
+    .btn-whatsapp {
+        display: inline-block;
+        background-color: #25D366;
+        color: white !important;
+        padding: 15px;
+        border-radius: 30px;
+        text-decoration: none;
+        text-align: center;
+        font-weight: bold;
+        width: 100%;
+    }
     </style>
     """, unsafe_allow_html=True)
 
+# 3. CABECERA
 st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>San Jorge, Santa Fe</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: white;'>San Jorge, Santa Fe</p>", unsafe_allow_html=True)
 
-# 3. ENTRADA DE DATOS
-has = st.number_input("HECTÁREAS:", min_value=1.0, value=100.0)
-foto = st.file_uploader("Subí foto del lote", type=["jpg", "png", "jpeg"])
+# 4. INTERFAZ
+opcion = st.radio("SELECCIONÁ ORIGEN:", ["📸 CÁMARA", "📁 GALERÍA"], horizontal=True)
+
+if opcion == "📸 CÁMARA":
+    foto = st.camera_input("") 
+else:
+    foto = st.file_uploader("Subí una imagen del lote", type=["jpg", "png", "jpeg"])
 
 if foto:
-    img = Image.open(foto).convert('RGB')
-    st.image(img, use_container_width=True)
+    img_ready = Image.open(foto).convert('RGB')
+    st.image(img_ready, use_container_width=True)
     
-    if st.button('🚀 INICIAR ANÁLISIS'):
-        with st.spinner('El Ingeniero IA está redactando...'):
-            try:
-                genai.configure(api_key=NUEVA_KEY)
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                
-                prompt = f"Actuá como Ingeniero Agrónomo. Analizá esta foto de cultivo. Identificá la enfermedad o plaga y recetá productos de: {VADEMECUM}. Sé técnico."
-                
-                res = model.generate_content([prompt, img])
-                st.session_state['reporte_final'] = res.text
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+    if st.button('🚀 GENERAR DIAGNÓSTICO'):
+        with st.spinner('Analizando muestra...'):
+            exito = False
+            # BUCLE DE INTENTOS (ROTACIÓN DE CLAVES)
+            for api_key in CLAVES:
+                try:
+                    # Configuramos la clave actual
+                    genai.configure(api_key=api_key)
+                    
+                    # 1. BUSCAMOS QUÉ MODELO ESTÁ DISPONIBLE
+                    modelos_disponibles = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                    if not modelos_disponibles:
+                        continue 
+                        
+                    model = genai.GenerativeModel(modelos_disponibles[0])
+                    
+                    # 2. GENERAMOS EL CONTENIDO
+                    prompt = f"Actuá como un Ingeniero Agrónomo de San Jorge. Diagnóstico y receta comercial usando: {VADEMECUM_CLEMENTINA}. Respuesta en español."
+                    
+                    response = model.generate_content([prompt, img_ready])
+                    informe = response.text
+                    
+                    # SI LLEGAMOS ACÁ, FUE UN ÉXITO
+                    st.session_state['reporte_actual'] = informe
+                    informe_html = informe.replace('\n', '<br>')
+                    
+                    st.markdown(f"""
+                        <div class='reporte-box'>
+                            <b style='font-size: 20px;'>📋 INFORME TÉCNICO:</b><br><br>
+                            {informe_html}
+                        </div>
+                    """, unsafe_allow_html=True)
+                    exito = True
+                    break 
+                    
+                except Exception as e:
+                    if "429" in str(e):
+                        continue
+                    else:
+                        continue
 
-# 4. RESULTADO (Sin errores de comillas triples)
-if 'reporte_final' in st.session_state:
-    informe = st.session_state['reporte_final']
-    
-    # Caja de texto blanca
-    st.markdown("<div class='reporte-box'><b>📋 INFORME TÉCNICO:</b><br><br>" + informe.replace("\n", "<br>") + "</div>", unsafe_allow_html=True)
-    
-    # Botón WhatsApp
-    texto_wa = urllib.parse.quote(f"🚜 *REPORTE LA CLEMENTINA*\n\n{informe}")
-    link_wa = f"https://wa.me/{MI_NUMERO}?text={texto_wa}"
-    
-    st.markdown(f"<a href='{link_wa}' target='_blank' style='text-decoration:none;'><div style='background:#25D366; color:white; padding:15px; border-radius:25px; text-align:center; font-weight:bold; margin-top:20px;'>📲 ENVIAR POR WHATSAPP</div></a>", unsafe_allow_html=True)
+            if not exito:
+                st.error("⚠️ Sistema saturado temporalmente o cuota agotada en ambas claves. Esperá 1 minuto.")
 
-# Firma
-st.markdown("<p style='text-align:center; font-size:10px; color:gray; margin-top:50px;'>Desarrollado por Ignacio Diaz</p>", unsafe_allow_html=True)
+# 5. WHATSAPP
+if 'reporte_actual' in st.session_state:
+    texto_wa = urllib.parse.quote(f"🚜 *CONSULTA LA CLEMENTINA IA*\n\n{st.session_state['reporte_actual']}")
+    # Agregamos tu número de teléfono para que el mensaje te llegue directo a vos o al cliente
+    link_wa = f"https://wa.me/543406649346?text={texto_wa}"
+    st.markdown(f"<a href='{link_wa}' target='_blank' class='btn-whatsapp'>📲 ENVIAR POR WHATSAPP</a>", unsafe_allow_html=True)
+
+# 6. FIRMA FINAL IGNACIO DIAZ
+st.markdown("<div style='margin-top: 50px;'></div>", unsafe_allow_html=True)
+st.markdown("""
+    <div style='text-align: center; padding: 20px; border-top: 1px solid rgba(255,255,255,0.2);'>
+        <p style='color: white; font-size: 12px; margin: 0;'>Creado y desarrollado por</p>
+        <p style='color: #4CAF50; font-size: 18px; font-weight: bold; margin: 0;'>IGNACIO DIAZ</p>
+        <p style='color: gray; font-size: 10px;'>Tecnología Agrícola • San Jorge, Santa Fe</p>
+    </div>
+    """, unsafe_allow_html=True)
