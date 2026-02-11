@@ -4,7 +4,7 @@ from PIL import Image
 import urllib.parse
 import re
 
-# 1. PARÁMETROS FIJOS
+# 1. PARÁMETROS FIJOS (CON TU CLAVE PROPIA)
 CLAVE = "AIzaSyAk1b1J69Nvsmzbbr5BZyW8UZlVpAtOgmo"
 PRECIOS = {
     "Round Up": 9.0, "2,4-D": 11.5, "Cripton": 48.0, 
@@ -28,7 +28,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
 
-# Controles
+# Controles de usuario
 c1, c2, c3 = st.columns(3)
 with c1: cul = st.selectbox("CULTIVO", ["Soja", "Maíz", "Trigo", "Alfalfa", "Barbecho"])
 with c2: est = st.text_input("ESTADO", "R3")
@@ -45,20 +45,7 @@ if foto:
             try:
                 # CONFIGURACIÓN DEFINITIVA PARA EVITAR 404
                 genai.configure(api_key=CLAVE)
-                # Seleccionamos el modelo de la forma más compatible
+                # Llamada al modelo sin prefijos problemáticos
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                prompt = f"Actúa como agrónomo. Analiza {cul} en {est}. Diagnóstico de plagas/manchas. Receta solo: {VADEMECUM}. Usa 'Dosis: X l/ha'."
-                res = model.generate_content([prompt, img])
-                informe = res.text
-                
-                # Cálculo de costos
-                costo_ha = 0.0
-                compra = []
-                for p, prec in PRECIOS.items():
-                    if p.lower() in informe.lower():
-                        match = re.search(rf"{p}.*?(\d+[.,]?\d*)", informe, re.IGNORECASE)
-                        if match:
-                            d = float(match.group(1).replace(',', '.'))
-                            if d > 10: d = d / 1000 # cm3 a litros
-                            costo_
+                prompt = f"Actúa como agrónomo. Analiza {cul} en {est}. Diagnóstico de
