@@ -15,7 +15,7 @@ VADEMECUM = "Optimizer, Rizo Spray, YaraVita, Cripton, Round Up, 2,4-D, Solomon,
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. ESTILO VISUAL (FONDO NÍTIDO)
+# 2. ESTILO VISUAL NITIDO
 st.markdown("""
     <style>
     .stApp { background: url("https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop") no-repeat center center fixed; background-size: cover; }
@@ -28,7 +28,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
 
-# Controles de usuario
+# Controles
 c1, c2, c3 = st.columns(3)
 with c1: cul = st.selectbox("CULTIVO", ["Soja", "Maíz", "Trigo", "Alfalfa", "Barbecho"])
 with c2: est = st.text_input("ESTADO", "R3")
@@ -43,9 +43,13 @@ if foto:
     if st.button("🚀 ANALIZAR AHORA"):
         with st.spinner("Conectando con el Ingeniero IA..."):
             try:
-                # CONFIGURACIÓN DEFINITIVA PARA EVITAR 404
+                # CONFIGURACIÓN DEFINITIVA
                 genai.configure(api_key=CLAVE)
-                # Llamada al modelo sin prefijos problemáticos
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # Forzamos el modelo de la forma más estable posible
+                model = genai.GenerativeModel(model_name='gemini-1.5-flash')
                 
-                prompt = f"Actúa como agrónomo. Analiza {cul} en {est}. Diagnóstico de
+                # Definimos el pedido a la IA
+                prompt = f"Analiza esta foto de {cul} en {est}. Diagnóstico de plagas y manchas. Receta solo: {VADEMECUM}. Usa 'Dosis: X l/ha'."
+                
+                res = model.generate_content([prompt, img])
+                informe = res.
