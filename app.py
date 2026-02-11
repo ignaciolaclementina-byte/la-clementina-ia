@@ -9,61 +9,77 @@ VADEMECUM = "ADHERENTES: Optimizer, Rizo Spray. BIOESTIMULANTES: YaraVita. FUNGI
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. SKIN "CARBONO AGRO" (Elegante y Moderno)
+# 2. EL SKIN DE CAMPO REAL
 st.markdown("""
     <style>
-    /* Fondo Oscuro Elegante */
+    /* Ponemos la imagen del campo de fondo */
     .stApp {
-        background-color: #0e1117 !important;
+        background: url("https://images.unsplash.com/photo-1594904351111-a072f80b1a71?q=80&w=1920&auto=format&fit=crop") no-repeat center center fixed !important;
+        background-size: cover !important;
     }
     
-    /* Contenedor con borde verde neón */
+    /* Capa para que el fondo no tape el texto */
     [data-testid="stAppViewContainer"] {
-        border-top: 5px solid #2ecc71;
+        background-color: rgba(255, 255, 255, 0.3) !important;
     }
 
-    /* Títulos Impactantes */
-    .titulo { 
-        color: #2ecc71; text-align: center; font-size: 38px; font-weight: 800; 
-        letter-spacing: 1px; margin-bottom: 0px; 
+    /* Títulos en un verde monte fuerte */
+    .titulo { color: #1B5E20; text-align: center; font-size: 38px; font-weight: bold; text-shadow: 2px 2px 4px white; }
+    .sub { color: #2E7D32; text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 30px; text-shadow: 1px 1px 2px white; }
+    
+    /* Controles y etiquetas en NEGRO para que los veas claritos */
+    label, p, span, .stMarkdown { color: black !important; font-weight: bold !important; }
+
+    /* Botones y Cajas */
+    .stButton>button { 
+        width: 100%; border-radius: 12px; background-color: #1B5E20 !important; 
+        color: white !important; height: 55px; font-size: 18px; border: 2px solid white;
     }
-    .sub { 
-        color: #888; text-align: center; font-size: 16px; margin-bottom: 30px; 
-        text-transform: uppercase; letter-spacing: 2px;
+    .btn-wa { 
+        display: block; background-color: #25D366; color: white !important; padding: 15px; 
+        border-radius: 12px; text-decoration: none; text-align: center; font-weight: bold; border: 2px solid white;
     }
     
-    /* Estilo de los controles */
-    label, p, span { color: #ffffff !important; font-weight: 500 !important; }
-
-    /* Botón de Acción Principal */
-    .stButton>button {
-        width: 100%; border-radius: 8px; background-color: #2ecc71 !important;
-        color: #0e1117 !important; height: 55px; font-size: 18px; border: none; 
-        font-weight: bold; transition: 0.3s;
-    }
-    .stButton>button:hover { transform: scale(1.02); background-color: #27ae60 !important; }
-
-    /* Botón WhatsApp */
-    .btn-wa {
-        display: block; background-color: transparent; color: #25D366 !important; 
-        padding: 15px; border-radius: 8px; text-decoration: none; text-align: center; 
-        font-weight: bold; border: 2px solid #25D366; font-size: 18px;
-    }
-    
-    /* Caja de Informe (Estilo Papel Técnico) */
+    /* Caja de resultados blanca y prolija */
     .reporte-box {
-        background-color: #1c2128 !important; padding: 25px; border-radius: 12px;
-        color: #e6edf3 !important; border-left: 5px solid #2ecc71;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.5); margin-top: 20px;
-        line-height: 1.6;
+        background-color: white !important; padding: 25px; border-radius: 15px; 
+        color: black !important; border-left: 10px solid #1B5E20; box-shadow: 0px 4px 15px rgba(0,0,0,0.2);
     }
-    .reporte-box b { color: #2ecc71 !important; }
+    .reporte-box * { color: black !important; }
     </style>
     """, unsafe_allow_html=True)
 
 # 3. INTERFAZ
-st.markdown("<div class='titulo'>LA CLEMENTINA IA</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub'>Tecnología para el Agro • San Jorge</div>", unsafe_allow_html=True)
+st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub'>San Jorge, Santa Fe</div>", unsafe_allow_html=True)
 
-with st.container():
-    opcion = st.radio("SELECCIONÁ ORIGEN:", ["📸 USAR CÁMARA", "📁 SUBIR ARCHIVO"], horizontal=True)
+opcion = st.radio("SELECCIONÁ:", ["📸 CÁMARA", "📁 GALERÍA"], horizontal=True)
+
+if opcion == "📸 CÁMARA":
+    foto = st.camera_input("")
+else:
+    foto = st.file_uploader("Subí tu imagen", type=["jpg", "png", "jpeg"])
+
+if foto:
+    img = Image.open(foto).convert('RGB')
+    st.image(img, use_container_width=True)
+    
+    if st.button('🚀 ANALIZAR AHORA'):
+        with st.spinner('Escaneando cultivo...'):
+            exito = False
+            for key in CLAVES:
+                try:
+                    genai.configure(api_key=key)
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    prompt = f"Ingeniero Agrónomo San Jorge. Diagnóstico y receta: {VADEMECUM}. Respuesta técnica en español."
+                    res = model.generate_content([prompt, img])
+                    st.session_state['rep'] = res.text
+                    st.markdown(f"<div class='reporte-box'><b>📋 INFORME:</b><br><br>{res.text.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
+                    exito = True
+                    break
+                except: continue
+            if not exito: st.error("Límite de Google. Intentá de nuevo.")
+
+if 'rep' in st.session_state:
+    link = urllib.parse.quote(f"🚜 *CONSULTA CLEMENTINA*\n\n{st.session_state['rep']}")
+    st.markdown(f"<a href='https://wa.me/?text={link}' target='_blank' class='btn-wa'>📲 ENVIAR POR WHATSAPP</a>", unsafe_allow_html=True)
