@@ -4,7 +4,7 @@ from PIL import Image
 import urllib.parse
 import re
 
-# 1. PARÁMETROS FIJOS
+# 1. PARÁMETROS FIJOS (CON TU CLAVE NUEVA)
 CLAVE = "AIzaSyAk1b1J69Nvsmzbbr5BZyW8UZlVpAtOgmo"
 PRECIOS = {
     "Round Up": 9.0, "2,4-D": 11.5, "Cripton": 48.0, 
@@ -15,7 +15,7 @@ VADEMECUM = "Optimizer, Rizo Spray, YaraVita, Cripton, Round Up, 2,4-D, Solomon,
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. ESTILO VISUAL (FONDO NÍTIDO)
+# 2. ESTILO VISUAL NITIDO
 st.markdown("""
     <style>
     .stApp { background: url("https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop") no-repeat center center fixed; background-size: cover; }
@@ -38,3 +38,49 @@ foto = st.camera_input("") or st.file_uploader("Subir foto", type=["jpg", "png",
 
 if foto:
     img = Image.open(foto).convert('RGB')
+    st.image(img, use_container_width=True)
+    
+    if st.button("🚀 ANALIZAR AHORA"):
+        with st.spinner("Conectando con el Ingeniero IA..."):
+            try:
+                # CONFIGURACIÓN PARA EVITAR EL ERROR 404
+                genai.configure(api_key=CLAVE)
+                # Usamos generativelanguage.v1beta si el estándar falla
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                
+                prompt = f"Actúa como agrónomo. Analiza {cul} en {est}. Diagnóstico de plagas y manchas. Receta solo productos de esta lista: {VADEMECUM}. Usa el formato 'Dosis: X l/ha'."
+                res = model.generate_content([prompt, img])
+                informe = res.text
+                
+                # Cálculo de costos y litros
+                costo_ha = 0.0
+                compra = []
+                for p, prec in PRECIOS.items():
+                    if p.lower() in informe.lower():
+                        match = re.search(rf"{p}.*?(\d+[.,]?\d*)", informe, re.IGNORECASE)
+                        if match:
+                            d = float(match.group(1).replace(',', '.'))
+                            if d > 10: d = d / 1000 # cm3 a litros
+                            costo_ha += (d * prec)
+                            compra.append(f"• {p}: {d*has:.1f} lts totales")
+
+                # Resultado en pantalla
+                st.markdown("<div class='card'>", unsafe_allow_html=True)
+                st.markdown(f"<h3 style='color:#1b5e20;'>📋 INFORME {cul}</h3>", unsafe_allow_html=True)
+                st.write(informe)
+                st.markdown("<hr>", unsafe_allow_html=True)
+                if compra:
+                    st.markdown("<b>COMPRA RECOMENDADA PARA EL LOTE:</b>", unsafe_allow_html=True)
+                    for item in compra: st.write(item)
+                st.markdown(f"<h2 style='text-align:right; color:#1b5e20;'>TOTAL: USD {costo_ha*has:.2f}</h2>", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+                st.session_state['msg'] = f"🚜 *LA CLEMENTINA IA*\n📍 {cul} ({has} ha)\n\n{informe}\n\n💰 *TOTAL LOTE: USD {costo_ha*has:.2f}*"
+                
+            except Exception as e:
+                st.error(f"Error técnico: {e}")
+
+# Botón WhatsApp
+if 'msg' in st.session_state:
+    url_wa = f"https://wa.me/543406649346?text={urllib.parse.quote(st.session_state['msg'])}"
+    st.markdown(f"<a href='{url_wa}' target='_blank' style='text-decoration:none;'><div style='background-color:#25D366; color:white; padding:15px; border-radius:10px; text-align:center; font-weight:bold; margin-top:10px; border:2px solid white;'>📲 ENVIAR AL WHATSAPP</div></a>", unsafe_allow_html=True)
