@@ -5,16 +5,11 @@ import urllib.parse
 from datetime import datetime
 import re
 
-# 1. LISTA DE PRECIOS (Editá los valores en USD según tu agronomía)
+# 1. LISTA DE PRECIOS (USD)
 PRECIOS = {
-    "Round Up": 9.0, 
-    "2,4-D": 11.5, 
-    "Cripton": 48.0, 
-    "Ampligo": 52.0, 
-    "Solomon": 40.0, 
-    "Optimizer": 6.5, 
-    "Rizo Spray": 5.0, 
-    "YaraVita": 14.0
+    "Round Up": 9.0, "2,4-D": 11.5, "Cripton": 48.0, 
+    "Ampligo": 52.0, "Solomon": 40.0, "Optimizer": 6.5, 
+    "Rizo Spray": 5.0, "YaraVita": 14.0
 }
 
 CLAVES = ["AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw", "AIzaSyDxGWtHwsXp_dzsg6YnnU7OmPFBCU-_nEU"]
@@ -23,96 +18,78 @@ MI_NUMERO = "543406649346"
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. DISEÑO AGRO-MODERNO
+# 2. DISEÑO
 st.markdown("""
     <style>
-    .stApp {
-        background: url("https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop") no-repeat center center fixed;
-        background-size: cover;
-    }
+    .stApp { background: url("https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop") no-repeat center center fixed; background-size: cover; }
     [data-testid="stAppViewContainer"] { background-color: rgba(0, 0, 0, 0.45); }
-    .titulo { color: #ffffff; text-align: center; font-size: 42px; font-weight: 900; text-shadow: 3px 3px 6px #000000; }
-    .sub-txt { color: #2ecc71 !important; text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 25px; }
+    .titulo { color: #ffffff; text-align: center; font-size: 40px; font-weight: 900; text-shadow: 2px 2px 4px #000; }
     label, p, span { color: #ffffff !important; font-weight: 700 !important; }
-    .stButton>button { 
-        width: 100%; border-radius: 15px; background: linear-gradient(145deg, #1b5e20, #2e7d32) !important; 
-        color: white !important; height: 60px; font-size: 22px; border: none;
-    }
-    .btn-wa { 
-        display: block; background-color: #25D366; color: white !important; padding: 18px; 
-        border-radius: 15px; text-decoration: none; text-align: center; font-weight: bold; font-size: 18px;
-    }
-    .reporte-box { background-color: white; padding: 25px; border-radius: 15px; border-left: 12px solid #1b5e20; color: black !important; box-shadow: 0px 10px 30px rgba(0,0,0,0.5); }
+    .reporte-box { background-color: white; padding: 25px; border-radius: 15px; color: black !important; border-left: 12px solid #1b5e20; }
+    .stButton>button { width: 100%; background: linear-gradient(145deg, #1b5e20, #2e7d32) !important; color: white !important; height: 60px; font-size: 20px; border-radius: 15px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. CUERPO DE LA APP
+# 3. INTERFAZ DE ENTRADA
 st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-txt'>San Jorge • Gestión de Insumos</div>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#2ecc71 !important;'>San Jorge • Inteligencia y Gestión</p>", unsafe_allow_html=True)
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 with col1:
-    cultivo = st.selectbox("CULTIVO:", ["Soja", "Maíz", "Trigo", "Alfalfa", "Barbecho"])
+    cultivo = st.selectbox("CULTIVO:", ["Soja", "Maíz", "Trigo", "Barbecho"])
 with col2:
-    estado = st.text_input("ESTADO (Ej: V4, R2):", "V-Indefinido")
+    estado = st.text_input("ESTADO:", "V4")
+with col3:
+    has = st.number_input("HECTÁREAS:", min_value=1.0, value=50.0, step=1.0)
 
-foto = st.camera_input("") or st.file_uploader("Subir imagen", type=["jpg", "png", "jpeg"])
+foto = st.camera_input("") or st.file_uploader("Subir foto", type=["jpg", "png", "jpeg"])
 
 if foto:
     img = Image.open(foto).convert('RGB')
     st.image(img, use_container_width=True)
     
-    if st.button('🚀 ANALIZAR Y COTIZAR AHORA'):
-        with st.spinner('Analizando cultivo y calculando costos...'):
+    if st.button('🚀 ANALIZAR LOTE Y CALCULAR COMPRA'):
+        with st.spinner('Calculando logística y costos...'):
             for key in CLAVES:
                 try:
                     genai.configure(api_key=key)
                     model = genai.GenerativeModel('gemini-1.5-flash')
-                    
-                    prompt = f"""Sos un Agrónomo senior. Analizá esta foto de {cultivo} en {estado}.
-                    1. Da diagnóstico técnico.
-                    2. Recetá productos de: {VADEMECUM}.
-                    3. IMPORTANTE: Para cada producto poné la dosis exacta como 'Dosis: X l/ha' o 'Dosis: X cm3/ha'."""
-                    
+                    prompt = f"Agrónomo de San Jorge. Analizá {cultivo} {estado}. Diagnóstico y receta de: {VADEMECUM}. Poné: 'Dosis: X l/ha' o 'Dosis: X cm3/ha'."
                     res = model.generate_content([prompt, img])
                     informe = res.text
                     
-                    # Lógica de Costos
-                    costo_total = 0.0
-                    items_costo = []
+                    # Lógica de cálculos
+                    costo_ha = 0.0
+                    detalles_compra = []
                     
                     for prod, precio in PRECIOS.items():
                         if prod.lower() in informe.lower():
-                            # Busca el número más cercano a la palabra del producto
-                            regex = rf"{prod}.*?(\d+[.,]?\d*)"
-                            match = re.search(regex, informe, re.IGNORECASE)
+                            match = re.search(rf"{prod}.*?(\d+[.,]?\d*)", informe, re.IGNORECASE)
                             if match:
                                 dosis = float(match.group(1).replace(',', '.'))
-                                # Ajuste si la dosis es en cm3 (pasa a lts para el cálculo)
-                                if dosis > 10: dosis = dosis / 1000
-                                subtotal = dosis * precio
-                                costo_total += subtotal
-                                items_costo.append(f"• {prod}: {dosis:.3f} l/ha -> **USD {subtotal:.2f}**")
+                                if dosis > 10: dosis = dosis / 1000 # de cm3 a lts
+                                
+                                total_prod = dosis * has
+                                subtotal_usd = dosis * precio
+                                costo_ha += subtotal_usd
+                                items_compra = f"• **{prod}**: {total_prod:.1f} lts totales (USD {subtotal_usd * has:.2f})"
+                                detalles_compra.append(items_compra)
 
                     st.markdown(f"""
                         <div class="reporte-box">
-                            <h3 style="color: #1b5e20; margin-top:0;">📋 INFORME TÉCNICO</h3>
+                            <h3 style="color: #1b5e20;">📋 INFORME Y LOGÍSTICA ({has} ha)</h3>
                             <p style="color: #333 !important;">{informe.replace(chr(10), '<br>')}</p>
                             <hr>
-                            <h4 style="color: #c0392b;">💰 PRESUPUESTO ESTIMADO (USD/ha)</h4>
-                            <p style="color: #333 !important;">{"<br>".join(items_costo)}</p>
-                            <h3 style="color: #1b5e20; text-align:right;">TOTAL: USD {costo_total:.2f}/ha</h3>
+                            <h4 style="color: #c0392b;">🛒 NECESIDAD DE COMPRA TOTAL:</h4>
+                            <p style="color: #333 !important;">{"<br>".join(detalles_compra)}</p>
+                            <h2 style="color: #1b5e20; text-align:right; margin-top:10px;">TOTAL LOTE: USD {(costo_ha * has):.2f}</h2>
+                            <p style="text-align:right; color: #666 !important;">Costo por Ha: USD {costo_ha:.2f}</p>
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    st.session_state['rep'] = informe
-                    st.session_state['costo'] = f"TOTAL ESTIMADO: USD {costo_total:.2f}/ha"
+                    st.session_state['rep_full'] = f"{informe}\n\n🛒 *COMPRA PARA {has} HA:*\n" + "\n".join(detalles_compra) + f"\n\n💰 *TOTAL LOTE: USD {(costo_ha * has):.2f}*"
                     break
-                except:
-                    continue
+                except: continue
 
-if 'rep' in st.session_state:
-    txt_wa = urllib.parse.quote(f"🚜 *LA CLEMENTINA IA*\n📍 {cultivo} ({estado})\n\n{st.session_state['rep']}\n\n💵 *{st.session_state['costo']}*")
-    st.markdown(f"<a href='https://wa.me/{MI_NUMERO}?text={txt_wa}' target='_blank' class='btn-wa'>📲 ENVIAR REPORTE COMPLETO</a>", unsafe_allow_html=True)
-
-st.markdown("<br><p style='text-align:center; opacity:0.6; color:white;'>Ignacio Diaz - Gestión Agronómica</p>", unsafe_allow_html=True)
+if 'rep_full' in st.session_state:
+    txt_wa = urllib.parse.quote(f"🚜 *LA CLEMENTINA IA*\n📍 {cultivo} ({has} ha)\n\n{st.session_state['rep_full
