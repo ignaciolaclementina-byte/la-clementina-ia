@@ -1,7 +1,7 @@
 import streamlit as st
 import urllib.parse
 
-# 1. ESTILOS Y CONFIGURACIÓN
+# 1. ESTILOS (Mantenemos tu estética pro)
 st.set_page_config(page_title="Retorno Match - San Jorge", layout="centered")
 
 st.markdown("""
@@ -25,7 +25,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. INICIALIZACIÓN DE DATOS
+# 2. DATOS
 if 'cargas' not in st.session_state:
     st.session_state.cargas = [
         {"id": 1, "origen": "Rosario", "item": "Repuestos", "pago": 45000},
@@ -36,53 +36,51 @@ if 'camiones' not in st.session_state:
 
 # 3. CABECERA
 st.markdown("<h1 style='text-align: center; color: white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #ffcc00;'>Logística Inteligente - San Jorge</p>", unsafe_allow_html=True)
 
-tab1, tab2, tab3 = st.tabs(["🛣️ VER CARGAS", "📦 PUBLICAR CARGA", "🚛 PUBLICAR MI CAMIÓN"])
+tab1, tab2, tab3 = st.tabs(["🛣️ BUSCAR CARGA", "📦 PUBLICAR CARGA", "🚛 PUBLICAR CAMIÓN"])
 
-# --- TAB 1: VISTA PARA EL CHOFER (BUSCAR CARGA) ---
+# --- TAB 1: BUSCADOR PARA EL CHOFER ---
 with tab1:
-    st.write("### Cargas disponibles para traer a San Jorge:")
+    filtro_origen = st.selectbox("¿Desde dónde buscás carga?", ["Todos", "Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
+    
     for c in st.session_state.cargas:
-        st.markdown(f"""
-        <div class='card-blanca'>
-            <strong>📍 DESDE: {c['origen']} → San Jorge</strong><br>
-            <span>📦 PRODUCTO: {c['item']}</span><br>
-            <strong style='color: #2E7D32 !important; font-size: 18px;'>PAGO: ${c['pago']}</strong>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        msg_carga = f"Hola! Me interesa la carga de {c['item']} desde {c['origen']} para San Jorge."
-        link_carga = f"https://wa.me/543406649346?text={urllib.parse.quote(msg_carga)}"
-        
-        st.markdown(f'<a href="{link_carga}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366;color:white;padding:10px;border-radius:20px;text-align:center;font-weight:bold;margin-bottom:20px;">📲 CONTACTAR POR ESTA CARGA</div></a>', unsafe_allow_html=True)
+        if filtro_origen == "Todos" or c['origen'] == filtro_origen:
+            st.markdown(f"""
+            <div class='card-blanca'>
+                <strong>📍 {c['origen']} → San Jorge</strong><br>
+                <span>📦 Mercadería: {c['item']}</span><br>
+                <strong style='color: #2E7D32 !important;'>PAGO: ${c['pago']}</strong>
+            </div>
+            """, unsafe_allow_html=True)
+            msg = f"Hola! Me interesa la carga de {c['item']} desde {c['origen']}."
+            link = f"https://wa.me/543406649346?text={urllib.parse.quote(msg)}"
+            st.markdown(f'<a href="{link}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366;color:white;padding:10px;border-radius:20px;text-align:center;font-weight:bold;margin-bottom:20px;">📲 CONTACTAR</div></a>', unsafe_allow_html=True)
 
-# --- TAB 2: VISTA PARA EL CLIENTE (PUBLICAR MERCADERÍA) ---
+# --- TAB 2: PUBLICAR CARGA (Igual que antes) ---
 with tab2:
-    st.write("### Publicar pedido de transporte")
-    with st.form("form_carga"):
-        prod = st.text_input("¿Qué necesitás traer?")
-        orig = st.selectbox("Desde dónde", ["Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
-        pago = st.number_input("Pago ofrecido ($)", min_value=1000, step=1000)
-        if st.form_submit_button("🚀 PUBLICAR PEDIDO"):
-            st.session_state.cargas.append({"id": len(st.session_state.cargas)+1, "origen": orig, "item": prod, "pago": pago})
-            st.success("¡Pedido publicado!")
+    with st.form("f1"):
+        p = st.text_input("¿Qué mercadería?")
+        o = st.selectbox("Origen", ["Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
+        pa = st.number_input("Pago ($)", min_value=1000)
+        if st.form_submit_button("🚀 PUBLICAR"):
+            st.session_state.cargas.append({"id": len(st.session_state.cargas)+1, "origen": o, "item": p, "pago": pa})
+            st.success("¡Publicado!")
 
-# --- TAB 3: VISTA PARA EL CHOFER (PUBLICAR CAMIÓN VACÍO) ---
+# --- TAB 3: PUBLICAR CAMIÓN Y BUSCADOR DE CAMIONES ---
 with tab3:
-    st.write("### Avisá que volvés vacío para que te llamen")
-    with st.form("form_camion"):
-        nombre = st.text_input("Tu Nombre / Empresa")
-        desde_vuelto = st.selectbox("¿De dónde volvés?", ["Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
-        tipo = st.selectbox("Tipo de camión", ["Chasis solo", "Acoplado", "Sider", "Térmico"])
+    with st.form("f2"):
+        n = st.text_input("Tu Nombre")
+        d = st.selectbox("¿De dónde volvés?", ["Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
+        t = st.selectbox("Tipo", ["Chasis solo", "Acoplado", "Sider", "Térmico"])
         if st.form_submit_button("📢 PUBLICAR MI VUELTA"):
-            st.session_state.camiones.append({"nombre": nombre, "origen": desde_vuelto, "tipo": tipo})
-            st.success("¡Camión publicado! Ahora figurás en la lista de disponibles.")
+            st.session_state.camiones.append({"nombre": n, "origen": d, "tipo": t})
+            st.success("¡Camión en lista!")
 
-    if st.session_state.camiones:
-        st.write("---")
-        st.write("### Camiones volviendo ahora a San Jorge:")
-        for cam in st.session_state.camiones:
+    st.write("---")
+    filtro_camion = st.selectbox("Ver camiones volviendo desde:", ["Todos", "Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"], key="filtro_cam")
+    
+    for cam in st.session_state.camiones:
+        if filtro_camion == "Todos" or cam['origen'] == filtro_camion:
             st.markdown(f"""
             <div class='card-blanca'>
                 <strong>🚛 {cam['nombre']}</strong><br>
@@ -90,8 +88,6 @@ with tab3:
                 <span>⚙️ Tipo: {cam['tipo']}</span>
             </div>
             """, unsafe_allow_html=True)
-            
-            msg_camion = f"Hola {cam['nombre']}! Vi que volvés de {cam['origen']} con un {cam['tipo']}. Tengo una carga para traerte."
-            link_camion = f"https://wa.me/543406649346?text={urllib.parse.quote(msg_camion)}"
-            
-            st.markdown(f'<a href="{link_camion}" target="_blank" style="text-decoration:none;"><div style="background-color:#1e3a8a;color:white;padding:10px;border-radius:20px;text-align:center;font-weight:bold;margin-bottom:20px;">📲 LLAMAR AL CAMIONERO</div></a>', unsafe_allow_html=True)
+            msg_c = f"Hola {cam['nombre']}! Tengo una carga desde {cam['origen']}."
+            link_c = f"https://wa.me/543406649346?text={urllib.parse.quote(msg_c)}"
+            st.markdown(f'<a href="{link_c}" target="_blank" style="text-decoration:none;"><div style="background-color:#1e3a8a;color:white;padding:10px;border-radius:20px;text-align:center;font-weight:bold;margin-bottom:20px;">📲 LLAMAR AL CAMIONERO</div></a>', unsafe_allow_html=True)
