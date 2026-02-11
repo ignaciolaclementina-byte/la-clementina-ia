@@ -28,7 +28,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚜 LA CLEMENTINA IA</h1>", unsafe_allow_html=True)
 
-# Controles
+# Controles de usuario
 c1, c2, c3 = st.columns(3)
 with c1: cul = st.selectbox("CULTIVO", ["Soja", "Maíz", "Trigo", "Alfalfa", "Barbecho"])
 with c2: est = st.text_input("ESTADO", "R3")
@@ -43,12 +43,12 @@ if foto:
     if st.button("🚀 ANALIZAR AHORA"):
         with st.spinner("Conectando con el Ingeniero IA..."):
             try:
-                # CONFIGURACIÓN DEFINITIVA
+                # CONFIGURACIÓN PARA EVITAR EL ERROR 404
                 genai.configure(api_key=CLAVE)
-                # Forzamos el modelo estable para evitar el error 404
-                model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+                # Forzamos la versión estable del modelo
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                # Pedido a la IA (Asegurando cierre de comillas)
+                # Pedido a la IA (Comillas bien cerradas)
                 prompt = f"Actúa como agrónomo. Analiza esta foto de {cul} en {est}. Diagnóstico de plagas y manchas. Receta solo: {VADEMECUM}. Usa 'Dosis: X l/ha'."
                 
                 res = model.generate_content([prompt, img])
@@ -77,7 +77,7 @@ if foto:
                 st.markdown(f"<h2 style='text-align:right; color:#1b5e20;'>TOTAL: USD {costo_ha*has:.2f}</h2>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
-                # Guardamos el mensaje para WhatsApp
+                # Mensaje para WhatsApp
                 st.session_state['msg'] = f"🚜 *LA CLEMENTINA IA*\n📍 {cul} ({has} ha)\n\n{informe}\n\n💰 *TOTAL: USD {costo_ha*has:.2f}*"
                 
             except Exception as e:
