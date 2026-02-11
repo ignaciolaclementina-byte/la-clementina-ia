@@ -3,7 +3,7 @@ import google.generativeai as genai
 from PIL import Image
 import urllib.parse
 
-# 1. CONFIGURACIÓN DE APIS (SISTEMA DE RESPALDO)
+# 1. CONFIGURACIÓN DE APIS
 CLAVES = [
     "AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw", 
     "AIzaSyDxGWtHwsXp_dzsg6YnnU7OmPFBCU-_nEU"
@@ -31,17 +31,17 @@ st.markdown("""
     }
     .titulo { color: white; text-align: center; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px black; }
     
-    /* Traducción de botones de carga */
     section[data-testid="stFileUploadDropzone"] button { font-size: 0px !important; }
     section[data-testid="stFileUploadDropzone"] button:after { content: "BUSCAR IMAGEN"; font-size: 16px !important; }
     section[data-testid="stFileUploadDropzone"] span { display: none; }
     
     .reporte-box {
         background-color: white !important;
-        padding: 20px;
+        padding: 25px;
         border-radius: 15px;
         color: black !important;
         border-left: 12px solid #2E7D32;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
     }
     .reporte-box * { color: black !important; }
     
@@ -51,6 +51,7 @@ st.markdown("""
         background-color: #2E7D32 !important;
         color: white !important;
         font-weight: bold;
+        height: 50px;
     }
     .btn-whatsapp {
         display: block;
@@ -89,12 +90,23 @@ if foto:
             for api_key in CLAVES:
                 try:
                     genai.configure(api_key=api_key)
-                    # Detectar modelo dinámicamente para evitar el error 404
                     modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                     if not modelos: continue
                     
                     model = genai.GenerativeModel(modelos[0])
-                    prompt = f"Actuá como un Ingeniero Agrónomo de San Jorge. Diagnóstico y receta comercial usando: {VADEMECUM_CLEMENTINA}. Respuesta en español."
+                    
+                    # PROMPT CON EL NUEVO AGREGADO COMERCIAL
+                    prompt = f"""
+                    Actuá como un Ingeniero Agrónomo senior de San Jorge, Santa Fe. 
+                    Analizá la imagen y generá un informe con este formato:
+
+                    1. **DIAGNÓSTICO**: Sé directo y profesional.
+                    2. **RECETA CLEMENTINA**: Mezcla de tanque sugerida usando: {VADEMECUM_CLEMENTINA}.
+                    3. **RECOMENDACIÓN TÉCNICA**: Consejo de aplicación.
+
+                    Al final de tu respuesta, debés incluir SIEMPRE la siguiente frase:
+                    "📌 Recordá que todos los productos mencionados están disponibles para compra en **LA CLEMENTINA - San Jorge, Santa Fe**."
+                    """
                     
                     response = model.generate_content([prompt, img_ready])
                     informe = response.text
@@ -102,7 +114,7 @@ if foto:
                     st.session_state['reporte_actual'] = informe
                     informe_html = informe.replace('\n', '<br>')
                     
-                    st.markdown(f"<div class='reporte-box'><b>📋 INFORME TÉCNICO:</b><br><br>{informe_html}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='reporte-box'><b>📋 INFORME PARA EL PRODUCTOR:</b><br><br>{informe_html}</div>", unsafe_allow_html=True)
                     exito = True
                     break 
                 except Exception:
@@ -113,9 +125,9 @@ if foto:
 
 # 5. WHATSAPP
 if 'reporte_actual' in st.session_state:
-    texto_wa = urllib.parse.quote(f"🚜 *LA CLEMENTINA IA*\n\n{st.session_state['reporte_actual']}")
-    link_wa = f"https://wa.me/?text={texto_wa}"
+    texto_wa = urllib.parse.quote(f"🚜 *LA CLEMENTINA IA - INFORME TÉCNICO*\n\n{st.session_state['reporte_actual']}")
+    link_wa = f"https://wa.me/543406649346?text={texto_wa}"
     st.markdown(f"<a href='{link_wa}' target='_blank' class='btn-whatsapp'>📲 ENVIAR POR WHATSAPP</a>", unsafe_allow_html=True)
 
 # 6. FIRMA
-st.markdown("<br><br><div style='text-align: center; color: white; font-size: 14px;'>Creado por <b>IGNACIO DIAZ</b></div>", unsafe_allow_html=True)
+st.markdown("<br><br><div style='text-align: center; color: white; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;'>Desarrollado por <b>IGNACIO DIAZ</b></div>", unsafe_allow_html=True)
