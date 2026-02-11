@@ -3,13 +3,13 @@ import google.generativeai as genai
 from PIL import Image
 import urllib.parse
 
-# 1. CONFIGURACIÓN DE APIS
+# 1. TUS LLAVES DE API
 CLAVES = [
     "AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw", 
     "AIzaSyDxGWtHwsXp_dzsg6YnnU7OmPFBCU-_nEU"
 ]
 
-# VADEMÉCUM
+# VADEMÉCUM DE PRODUCTOS
 VADEMECUM_CLEMENTINA = """
 ADHERENTES: Optimizer, Rizo Spray, Break Thru, Fulltec, Alquimia, Tropgreen.
 BIOESTIMULANTES: YaraVita, Nutrition Grow, Fosfito, Howler, Vitagrow.
@@ -20,7 +20,7 @@ INSECTICIDAS: Solomon, Bifentrin, Starkle, Ampligo, Belt, Coragen.
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. DISEÑO Y ESTILOS (CSS)
+# 2. ESTILOS VISUALES
 st.markdown("""
     <style>
     .stApp {
@@ -31,9 +31,9 @@ st.markdown("""
     }
     .titulo { color: white; text-align: center; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px black; }
     
+    /* Botones de carga en español */
     section[data-testid="stFileUploadDropzone"] button { font-size: 0px !important; }
     section[data-testid="stFileUploadDropzone"] button:after { content: "BUSCAR IMAGEN"; font-size: 16px !important; }
-    section[data-testid="stFileUploadDropzone"] span { display: none; }
     
     .reporte-box {
         background-color: white !important;
@@ -72,7 +72,7 @@ st.markdown("""
 st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center;'>San Jorge, Santa Fe</p>", unsafe_allow_html=True)
 
-# 4. INTERFAZ
+# 4. INTERFAZ DE CARGA
 opcion = st.radio("SELECCIONÁ ORIGEN:", ["📸 CÁMARA", "📁 GALERÍA"], horizontal=True)
 
 if opcion == "📸 CÁMARA":
@@ -95,17 +95,17 @@ if foto:
                     
                     model = genai.GenerativeModel(modelos[0])
                     
-                    # PROMPT CON EL NUEVO AGREGADO COMERCIAL
+                    # PROMPT OPTIMIZADO CON EL MENSAJE COMERCIAL
                     prompt = f"""
                     Actuá como un Ingeniero Agrónomo senior de San Jorge, Santa Fe. 
-                    Analizá la imagen y generá un informe con este formato:
+                    Analizá la imagen y generá un informe profesional con este formato:
 
-                    1. **DIAGNÓSTICO**: Sé directo y profesional.
-                    2. **RECETA CLEMENTINA**: Mezcla de tanque sugerida usando: {VADEMECUM_CLEMENTINA}.
-                    3. **RECOMENDACIÓN TÉCNICA**: Consejo de aplicación.
+                    1. **DIAGNÓSTICO**: Explicación técnica de lo observado.
+                    2. **RECETA CLEMENTINA**: Mezcla de tanque recomendada usando productos de: {VADEMECUM_CLEMENTINA}.
+                    3. **RECOMENDACIÓN TÉCNICA**: Consejos de aplicación (clima, boquillas o calidad de agua).
 
-                    Al final de tu respuesta, debés incluir SIEMPRE la siguiente frase:
-                    "📌 Recordá que todos los productos mencionados están disponibles para compra en **LA CLEMENTINA - San Jorge, Santa Fe**."
+                    Finalizá SIEMPRE con esta frase exacta:
+                    "📌 Recordá que todos los productos mencionados se pueden comprar en **LA CLEMENTINA - SAN JORGE, SANTA FE**."
                     """
                     
                     response = model.generate_content([prompt, img_ready])
@@ -121,11 +121,12 @@ if foto:
                     continue
 
             if not exito:
-                st.error("⚠️ Sistema saturado. Reintentá en un minuto.")
+                st.error("⚠️ Sistema saturado. Por favor, reintentá en un minuto.")
 
-# 5. WHATSAPP
+# 5. BOTÓN WHATSAPP CON NÚMERO DIRECTO
 if 'reporte_actual' in st.session_state:
     texto_wa = urllib.parse.quote(f"🚜 *LA CLEMENTINA IA - INFORME TÉCNICO*\n\n{st.session_state['reporte_actual']}")
+    # Enlace directo a tu número
     link_wa = f"https://wa.me/543406649346?text={texto_wa}"
     st.markdown(f"<a href='{link_wa}' target='_blank' class='btn-whatsapp'>📲 ENVIAR POR WHATSAPP</a>", unsafe_allow_html=True)
 
