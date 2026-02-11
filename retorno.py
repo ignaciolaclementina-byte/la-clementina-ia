@@ -25,7 +25,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. INICIALIZACIÓN DE DATOS
+# 2. INICIALIZACIÓN DE DATOS (Manejamos el historial)
 if 'cargas' not in st.session_state:
     st.session_state.cargas = [
         {"id": 1, "origen": "Rosario", "item": "Repuestos", "pago": 45000},
@@ -45,7 +45,6 @@ with tab1:
     for c in st.session_state.cargas:
         if filtro_origen == "Todos" or c['origen'] == filtro_origen:
             st.markdown(f"<div class='card-blanca'><strong>📍 {c['origen']} → San Jorge</strong><br><span>📦 Mercadería: {c['item']}</span><br><strong style='color: #2E7D32 !important;'>PAGO: ${c['pago']}</strong></div>", unsafe_allow_html=True)
-            # Este mensaje sigue yendo a vos como administrador
             msg = f"Hola! Me interesa la carga de {c['item']} desde {c['origen']}."
             link = f"https://wa.me/543406649346?text={urllib.parse.quote(msg)}"
             st.markdown(f'<a href="{link}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366;color:white;padding:10px;border-radius:20px;text-align:center;font-weight:bold;margin-bottom:20px;">📲 CONTACTAR LOGÍSTICA</div></a>', unsafe_allow_html=True)
@@ -62,31 +61,26 @@ with tab2:
 
 # --- TAB 3: PUBLICAR CAMIÓN (CON NÚMERO DE TELÉFONO) ---
 with tab3:
-    st.write("### Registrá tu camión vacío")
     with st.form("f2"):
         n = st.text_input("Tu Nombre")
-        tel = st.text_input("Tu WhatsApp (Ej: 3406444555)", help="Sin el 0 y sin el 15")
+        tel = st.text_input("Tu WhatsApp (Ej: 3406444555)")
         d = st.selectbox("¿De dónde volvés?", ["Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
         t = st.selectbox("Tipo de camión", ["Chasis solo", "Acoplado", "Sider", "Térmico"])
         if st.form_submit_button("📢 PUBLICAR MI VUELTA"):
             if n and tel:
-                # Limpiamos el teléfono por si ponen espacios o guiones
-                tel_clean = tel.replace(" ", "").replace("-", "")
-                st.session_state.camiones.append({"nombre": n, "tel": tel_clean, "origen": d, "tipo": t})
-                st.success("¡Tu camión ya figura en la lista!")
+                st.session_state.camiones.append({"nombre": n, "tel": tel.replace(" ", ""), "origen": d, "tipo": t})
+                st.success("¡Camión en lista!")
             else:
-                st.error("Por favor completá tu nombre y teléfono.")
+                st.warning("Completá nombre y teléfono")
 
     st.write("---")
-    st.write("### Camiones volviendo ahora:")
     filtro_cam = st.selectbox("Filtrar camiones por origen:", ["Todos", "Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"], key="fcam")
     
     for cam in st.session_state.camiones:
-        if filtro_cam == "Todos" or cam['origen'] == filtro_cam:
-            st.markdown(f"<div class='card-blanca'><strong>🚛 {cam['nombre']}</strong><br><span>📍 Viene desde: {cam['origen']}</span><br><span>⚙️ Tipo: {cam['tipo']}</span></div>", unsafe_allow_html=True)
-            
-            # EL BOTÓN AHORA USA EL NÚMERO DEL CAMIONERO
-            msg_c = f"Hola {cam['nombre']}! Vi en Retorno Match que venís de {cam['origen']}. Tengo una carga para vos."
-            link_c = f"https://wa.me/54{cam['tel']}?text={urllib.parse.quote(msg_c)}"
-            
-            st.markdown(f'<a href="{link_c}" target="_blank" style="text-decoration:none;"><div style="background-color:#1e3a8a;color:white;padding:10px;border-radius:20px;text-align:center;font-weight:bold;margin-bottom:20px;">📲 LLAMAR AL CAMIONERO DIRECTO</div></a>', unsafe_allow_html=True)
+        # SEGURIDAD: Solo mostramos el botón si el camión tiene teléfono guardado
+        if 'tel' in cam:
+            if filtro_cam == "Todos" or cam['origen'] == filtro_cam:
+                st.markdown(f"<div class='card-blanca'><strong>🚛 {cam['nombre']}</strong><br><span>📍 Origen: {cam['origen']}</span><br><span>⚙️ {cam['tipo']}</span></div>", unsafe_allow_html=True)
+                msg_c = f"Hola {cam['nombre']}! Tengo una carga desde {cam['origen']}."
+                link_c = f"https://wa.me/54{cam['tel']}?text={urllib.parse.quote(msg_c)}"
+                st.markdown(f'<a href="{link_c}" target="_blank" style="text-decoration:none;"><div style="background-color:#1e3a8a;color:white;padding:10px;border-radius:20px;text-align:center;font-weight:bold;margin-bottom:20px;">📲 LLAMAR AL CAMIONERO</div></a>', unsafe_allow_html=True)
