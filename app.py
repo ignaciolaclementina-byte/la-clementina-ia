@@ -20,7 +20,7 @@ INSECTICIDAS: Solomon, Bifentrin, Starkle, Ampligo, Belt, Coragen.
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. DISEÑO Y TRADUCCIÓN (CSS)
+# 2. DISEÑO Y ESTILOS (CSS)
 st.markdown("""
     <style>
     .stApp {
@@ -31,7 +31,7 @@ st.markdown("""
     }
     .titulo { color: white; text-align: center; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px black; }
     
-    /* Traducción botones */
+    /* Traducción de botones */
     section[data-testid="stFileUploadDropzone"] button { font-size: 0px !important; }
     section[data-testid="stFileUploadDropzone"] button:after { content: "BUSCAR IMAGEN"; font-size: 16px !important; }
     section[data-testid="stFileUploadDropzone"] span { display: none; }
@@ -46,7 +46,6 @@ st.markdown("""
         border-radius: 15px;
         color: black !important;
         border-left: 12px solid #2E7D32;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
     }
     .reporte-box * { color: black !important; }
     
@@ -79,7 +78,7 @@ st.markdown("""
 st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center;'>Asesoría Agronómica Digital • San Jorge</p>", unsafe_allow_html=True)
 
-# 4. INTERFAZ DE USUARIO
+# 4. INTERFAZ
 opcion = st.radio("SELECCIONÁ MÉTODO:", ["📸 CÁMARA", "📁 GALERÍA"], horizontal=True)
 
 if opcion == "📸 CÁMARA":
@@ -98,7 +97,22 @@ if foto:
                 try:
                     genai.configure(api_key=api_key)
                     
-                    # Selección dinámica de modelo
+                    # Selección dinámica de modelo para evitar error 404
                     modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                     if not modelos: continue
-                    model = genai.GenerativeModel(modelos
+                    model = genai.GenerativeModel(modelos[0])
+                    
+                    # PROMPT PROFESIONAL INTEGRADO
+                    prompt = f"""
+                    Actuá como un Ingeniero Agrónomo senior de San Jorge, Santa Fe. 
+                    Analizá la imagen y generá un informe con este formato:
+
+                    1. **DIAGNÓSTICO**: Sé directo (ej: "Presencia de Roya detectada"). Explicá brevemente por qué (pústulas, color).
+                    2. **RECETA CLEMENTINA (Mezcla de Tanque)**: Armá una combinación lógica usando: {VADEMECUM_CLEMENTINA}. 
+                       - Incluí: Fungicida/Insecticida + Adherente recomendado + Bioestimulante para recuperar el cultivo.
+                    3. **RECOMENDACIÓN TÉCNICA**: Un consejo de aplicación para la zona de San Jorge (clima, calidad de agua o urgencia).
+
+                    Usá un tono profesional pero cercano, de colega a productor.
+                    """
+                    
+                    response = model.generate
