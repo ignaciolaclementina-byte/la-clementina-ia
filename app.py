@@ -4,8 +4,10 @@ from PIL import Image
 import urllib.parse
 import re
 
-# 1. LLAVE Y PRECIOS (Tu API Key está OK)
+# 1. CONFIGURACIÓN (Tu API Key está OK)
 API_KEY = "AIzaSyAk1b1J69Nvsmzbbr5BZyW8UZlVpAtOgmo"
+
+# Lista de precios para el cálculo automático
 PRECIOS_USD = {
     "Round Up": 9.0, "2,4-D": 11.5, "Cripton": 48.0, 
     "Ampligo": 52.0, "Solomon": 40.0, "Optimizer": 6.5, 
@@ -15,7 +17,7 @@ VADEMECUM = ", ".join(PRECIOS_USD.keys())
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. DISEÑO DE LA APP
+# 2. DISEÑO VISUAL
 st.markdown("""
     <style>
     .stApp { background: url("https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop") no-repeat center center fixed; background-size: cover; }
@@ -32,7 +34,7 @@ st.markdown("<h1 style='text-align:center;'>🚜 LA CLEMENTINA IA</h1>", unsafe_
 c1, c2, c3 = st.columns(3)
 with c1: cul = st.selectbox("CULTIVO", ["Soja", "Maíz", "Trigo", "Alfalfa", "Barbecho"])
 with c2: est = st.text_input("ESTADO", "R3")
-with c3: has = st.number_input("HAS", min_value=1.0, value=100.0)
+with c3: has = st.number_input("HECTÁREAS", min_value=1.0, value=100.0)
 
 foto = st.camera_input("") or st.file_uploader("Subir foto del lote", type=["jpg", "png", "jpeg"])
 
@@ -43,17 +45,17 @@ if foto:
     if st.button("🚀 INICIAR ANÁLISIS"):
         with st.spinner("El Ingeniero IA está analizando..."):
             try:
-                # SOLUCIÓN AL 404: Conexión directa
+                # SOLUCIÓN AL 404: Conexión directa a la versión estable
                 genai.configure(api_key=API_KEY)
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                prompt = f"Como agrónomo experto, analiza esta foto de {cul} en {est}. Diagnostica problemas y receta solo: {VADEMECUM}. Usa el formato 'Producto: Dosis l/ha'."
+                prompt = f"Como agrónomo experto, analiza esta foto de {cul} en {est}. Diagnostica problemas y receta solo productos de esta lista: {VADEMECUM}. Formato: 'Producto: Dosis l/ha'."
                 
                 # Generar respuesta (Corregido el error de corchetes y comillas)
                 res = model.generate_content([prompt, img])
                 informe = res.text
                 
-                # Cálculo de costos e insumos
+                # Cálculo de inversión
                 costo_ha = 0.0
                 compra = []
                 for p, precio in PRECIOS_USD.items():
@@ -72,13 +74,13 @@ if foto:
                 
                 if compra:
                     st.markdown("<hr>")
-                    st.markdown("<b style='color:black;'>INSUMOS NECESARIOS:</b>", unsafe_allow_html=True)
+                    st.markdown("<b style='color:black;'>INSUMOS PARA EL LOTE:</b>", unsafe_allow_html=True)
                     for item in compra:
                         st.write(f"<p style='color:black;'>{item}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<h2 style='text-align:right; color:#1b5e20;'>INVERSIÓN: USD {costo_ha * has:.2f}</h2>", unsafe_allow_html=True)
+                    st.markdown(f"<h2 style='text-align:right; color:#1b5e20;'>INVERSIÓN: USD {(costo_ha * has):.2f}</h2>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
-                st.session_state['msg_wa'] = f"🚜 *LA CLEMENTINA IA*\n🌱 {cul} ({has} ha)\n\n{informe}\n\n💰 *Total: USD {costo_ha * has:.2f}*"
+                st.session_state['msg_wa'] = f"🚜 *LA CLEMENTINA IA*\n🌱 {cul} ({has} ha)\n\n{informe}\n\n💰 *Total: USD {(costo_ha * has):.2f}*"
 
             except Exception as e:
                 # Cierre de bloque corregido (except obligatorio)
@@ -89,4 +91,8 @@ if 'msg_wa' in st.session_state:
     texto = urllib.parse.quote(st.session_state['msg_wa'])
     st.markdown(f"""
         <a href="https://wa.me/543406649346?text={texto}" target="_blank" style="text-decoration:none;">
-            <div style="background-color:#25D366; color:white; padding:15px; border-radius:10px; text
+            <div style="background-color:#25D366; color:white; padding:15px; border-radius:10px; text-align:center; font-weight:bold; margin-top:15px; border: 2px solid white;">
+                📲 ENVIAR INFORME POR WHATSAPP
+            </div>
+        </a>
+    """, unsafe_allow_html=True)
