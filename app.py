@@ -61,32 +61,4 @@ if foto:
                         if match:
                             d = float(match.group(1).replace(',', '.'))
                             if d > 10: d = d / 1000 # Convierte cm3 a litros
-                            costo_ha += (d * prec)
-                            compra.append(f"• {p}: {d*has:.1f} lts totales")
-
-                # Resultado en pantalla
-                st.markdown("<div class='card'>", unsafe_allow_html=True)
-                st.markdown(f"<h3 style='color:#1b5e20;'>📋 INFORME {cul.upper()}</h3>", unsafe_allow_html=True)
-                st.write(informe)
-                st.markdown("<hr>", unsafe_allow_html=True)
-                if compra:
-                    st.markdown("<b style='color:black;'>COMPRA RECOMENDADA:</b>", unsafe_allow_html=True)
-                    for item in compra: st.write(f"<span style='color:black;'>{item}</span>", unsafe_allow_html=True)
-                    st.markdown(f"<h2 style='text-align:right; color:#1b5e20;'>TOTAL: USD {costo_ha*has:.2f}</h2>", unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-                
-                st.session_state['msg'] = f"🚜 *LA CLEMENTINA IA*\n📍 {cul} ({has} ha)\n\n{informe}\n\n💰 *TOTAL: USD {costo_ha*has:.2f}*"
-                
-            except Exception as e:
-                st.error(f"Error técnico: {e}. Reintentá en un momento.")
-
-# Botón WhatsApp
-if 'msg' in st.session_state:
-    url_wa = f"https://wa.me/543406649346?text={urllib.parse.quote(st.session_state['msg'])}"
-    st.markdown(f"""
-        <a href="{url_wa}" target="_blank" style="text-decoration:none;">
-            <div style="background-color:#25D366; color:white; padding:15px; border-radius:10px; text-align:center; font-weight:bold; margin-top:10px; border:2px solid white;">
-                📲 ENVIAR AL WHATSAPP
-            </div>
-        </a>
-    """, unsafe_allow_html=True)
+                            costo_ha
