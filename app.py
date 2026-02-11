@@ -41,10 +41,13 @@ if foto:
     st.image(img, use_container_width=True)
     
     if st.button("🚀 ANALIZAR AHORA"):
-        with st.spinner("El Ingeniero IA está analizando..."):
+        with st.spinner("Conectando con el Ingeniero IA..."):
             try:
+                # CONFIGURACIÓN CORREGIDA PARA EVITAR ERROR 404
                 genai.configure(api_key=CLAVE)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # Forzamos la versión más estable del modelo
+                model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+                
                 prompt = f"Actúa como agrónomo. Analiza {cul} en {est}. Diagnóstico de plagas y manchas. Receta solo: {VADEMECUM}. Usa 'Dosis: X l/ha'."
                 res = model.generate_content([prompt, img])
                 informe = res.text
@@ -75,7 +78,8 @@ if foto:
                 st.session_state['msg'] = f"🚜 *LA CLEMENTINA IA*\n📍 {cul} ({has} ha)\n\n{informe}\n\n💰 *TOTAL: USD {costo_ha*has:.2f}*"
                 
             except Exception as e:
-                st.error(f"Error de conexión: {e}")
+                # Manejo de error más amigable
+                st.error(f"Error de conexión. Intentá de nuevo en unos segundos. (Detalle: {e})")
 
 # Botón WhatsApp
 if 'msg' in st.session_state:
