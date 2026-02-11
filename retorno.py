@@ -1,7 +1,7 @@
 import streamlit as st
 import urllib.parse
 
-# 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS
+# 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS PROFESIONALES
 st.set_page_config(page_title="Retorno Match - San Jorge", layout="centered")
 
 st.markdown("""
@@ -32,7 +32,7 @@ st.markdown("""
         font-weight: bold;
     }
     
-    label, p { color: white !important; }
+    label, p { color: white !important; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -40,15 +40,14 @@ st.markdown("""
 if 'cargas' not in st.session_state:
     st.session_state.cargas = [
         {"id": 1, "origen": "Rosario", "item": "Repuestos Maquinaria", "pago": 55000},
-        {"id": 2, "origen": "Santa Fe", "item": "Materiales Construcción", "pago": 42000},
-        {"id": 3, "origen": "Córdoba", "item": "Insumos Agro", "pago": 85000}
+        {"id": 2, "origen": "Santa Fe", "item": "Materiales Construcción", "pago": 42000}
     ]
 
 # 3. CABECERA
 st.markdown("<div class='titulo'>🚛 RETORNO MATCH</div>", unsafe_allow_html=True)
 st.markdown("<div class='subtitulo'>Logística Inteligente - San Jorge, SF</div>", unsafe_allow_html=True)
 
-# 4. PESTAÑAS
+# 4. PESTAÑAS DE NAVEGACIÓN
 tab1, tab2 = st.tabs(["🛣️ VISTA CHOFER", "📦 PUBLICAR CARGA"])
 
 # --- VISTA PARA EL CAMIONERO ---
@@ -60,28 +59,14 @@ with tab1:
             st.markdown(f"""
             <div class='card-carga'>
                 <span style='color: #666; font-size: 12px;'>ID: #{c['id']}</span><br>
-                <strong style='font-size: 20px;'>📍 {c['origen']} → San Jorge</strong><br>
+                <strong style='font-size: 20px; color: #1e3a8a;'>📍 {c['origen']} → San Jorge</strong><br>
                 <p style='color: #333 !important; margin: 5px 0;'>📦 Carga: {c['item']}</p>
-                <strong style='color: #1e3a8a; font-size: 18px;'>PAGO: ${c['pago']}</strong>
+                <strong style='color: #2E7D32; font-size: 18px;'>PAGO OFRECIDO: ${c['pago']}</strong>
             </div>
             """, unsafe_allow_html=True)
             
-            # Lógica de WhatsApp
-            mensaje = f"🚛 *RETORNO MATCH*\n¡Hola! Me interesa la carga de *{c['item']}* desde *{c['origen']}* hacia San Jorge. ¿Sigue disponible?"
-            link_wa = f"https://wa.me/543406649346?text={urllib.parse.quote(mensaje)}"
+            # Lógica de WhatsApp directo
+            msg_texto = f"🚛 *RETORNO MATCH*\n¡Hola! Me interesa la carga de *{c['item']}* desde *{c['origen']}* hacia San Jorge. ¿Sigue disponible?"
+            link_wa = f"https://wa.me/543406649346?text={urllib.parse.quote(msg_texto)}"
             
-            if st.button(f"✅ TOMAR CARGA #{c['id']}", key=f"btn_{c['id']}"):
-                st.markdown(f"""
-                    <a href="{link_wa}" target="_blank" style="text-decoration: none;">
-                        <div style="background-color: #25D366; color: white; padding: 15px; border-radius: 30px; text-align: center; font-weight: bold; margin-top: -10px; margin-bottom: 20px;">
-                            📲 ENVIAR WHATSAPP AL CLIENTE
-                        </div>
-                    </a>
-                """, unsafe_allow_html=True)
-
-# --- VISTA PARA EL CLIENTE (COMERCIOS) ---
-with tab2:
-    st.write("### ¿Qué necesitás traer a San Jorge?")
-    with st.form("form_nueva_carga"):
-        producto = st.text_input("Mercadería (ej. Pallets de Cemento)")
-        origen_merc = st.selectbox("Origen", ["Rosario", "Santa Fe",
+            if st.button(f"✅ CONTACTAR POR LA CARGA #{c
