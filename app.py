@@ -9,7 +9,7 @@ CLAVES = [
     "AIzaSyDxGWtHwsXp_dzsg6YnnU7OmPFBCU-_nEU"  # Clave 2
 ]
 
-# VADEMÉCUM
+# VADEMÉCUM CLEMENTINA (ACTUALIZADO)
 VADEMECUM_CLEMENTINA = """
 ADHERENTES: Optimizer, Rizo Spray, Break Thru, Fulltec, Alquimia, Tropgreen.
 BIOESTIMULANTES: YaraVita, Nutrition Grow, Fosfito, Howler, Vitagrow.
@@ -27,6 +27,7 @@ st.markdown("""
         background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), 
                           url("https://images.unsplash.com/photo-1594751439417-df9a97693661?q=80&w=2070&auto=format&fit=crop");
         background-size: cover !important;
+        background-attachment: fixed !important;
     }
     .titulo { color: white; text-align: center; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px black; }
     
@@ -42,10 +43,11 @@ st.markdown("""
 
     .reporte-box {
         background-color: white !important;
-        padding: 20px;
+        padding: 25px;
         border-radius: 15px;
         color: black !important;
         border-left: 12px solid #2E7D32;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
     }
     .reporte-box * { color: black !important; }
     
@@ -55,6 +57,8 @@ st.markdown("""
         background-color: #2E7D32 !important;
         color: white !important;
         font-weight: bold;
+        height: 50px;
+        font-size: 18px;
     }
 
     .btn-whatsapp {
@@ -67,6 +71,7 @@ st.markdown("""
         font-weight: bold;
         text-align: center;
         width: 100%;
+        margin-top: 10px;
     }
     label, p { color: white !important; font-weight: bold; }
     </style>
@@ -74,7 +79,7 @@ st.markdown("""
 
 # 3. CABECERA
 st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: white;'>San Jorge, Santa Fe</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: white;'>Asesoría Agronómica • San Jorge, Santa Fe</p>", unsafe_allow_html=True)
 
 # 4. INTERFAZ
 opcion = st.radio("SELECCIONÁ ORIGEN:", ["📸 CÁMARA", "📁 GALERÍA"], horizontal=True)
@@ -88,21 +93,29 @@ if foto:
     img_ready = Image.open(foto).convert('RGB')
     st.image(img_ready, use_container_width=True)
     
-    if st.button('🚀 GENERAR DIAGNÓSTICO'):
-        with st.spinner('Analizando muestra...'):
+    if st.button('🚀 GENERAR INFORME TÉCNICO'):
+        with st.spinner('Análisis en curso...'):
             exito = False
             for api_key in CLAVES:
                 try:
                     genai.configure(api_key=api_key)
-                    
-                    # Buscamos qué modelo está disponible dinámicamente
-                    modelos_disponibles = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-                    if not modelos_disponibles:
-                        continue 
+                    modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                    if not modelos: continue 
                         
-                    model = genai.GenerativeModel(modelos_disponibles[0])
+                    model = genai.GenerativeModel(modelos[0])
                     
-                    prompt = f"Actuá como un Ingeniero Agrónomo de San Jorge. Diagnóstico y receta comercial usando: {VADEMECUM_CLEMENTINA}. Respuesta en español."
+                    # PROMPT SENIOR MEJORADO
+                    prompt = f"""
+                    Actuá como un Ingeniero Agrónomo senior de San Jorge, Santa Fe. 
+                    Analizá la imagen y generá un informe con este formato:
+
+                    1. **DIAGNÓSTICO**: Sé directo (ej: "Ataque de Isoca detectado"). Explicá brevemente qué ves.
+                    2. **RECETA CLEMENTINA (Mezcla de Tanque)**: Armá una combinación lógica usando: {VADEMECUM_CLEMENTINA}. 
+                       - Debés incluir: Producto principal + Adherente recomendado + Bioestimulante para el estrés.
+                    3. **RECOMENDACIÓN TÉCNICA**: Un consejo de aplicación (clima, calidad de agua o velocidad).
+
+                    Usá un tono profesional pero cercano, de colega a colega.
+                    """
                     
                     response = model.generate_content([prompt, img_ready])
                     informe = response.text
@@ -110,7 +123,7 @@ if foto:
                     st.session_state['reporte_actual'] = informe
                     informe_html = informe.replace('\n', '<br>')
                     
-                    st.markdown(f"<div class='reporte-box'><b>📋 INFORME TÉCNICO:</b><br><br>{informe_html}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='reporte-box'><b>📋 INFORME PARA EL PRODUCTOR:</b><br><br>{informe_html}</div>", unsafe_allow_html=True)
                     exito = True
                     break 
                     
@@ -118,14 +131,8 @@ if foto:
                     continue
 
             if not exito:
-                st.error("⚠️ Sistema saturado temporalmente. Esperá 1 minuto.")
+                st.error("⚠️ El sistema está saturado. Reintentá en 1 minuto.")
 
-# 5. WHATSAPP
+# 5. WHATSAPP (CON NÚMERO ESPECÍFICO)
 if 'reporte_actual' in st.session_state:
-    texto_wa = urllib.parse.quote(f"🚜 *CONSULTA LA CLEMENTINA IA*\n\n{st.session_state['reporte_actual']}")
-    link_wa = f"https://wa.me/?text={texto_wa}"
-    st.markdown(f"<a href='{link_wa}' target='_blank' class='btn-whatsapp'>📲 ENVIAR POR WHATSAPP</a>", unsafe_allow_html=True)
-
-# 6. FIRMA FINAL IGNACIO DIAZ
-st.markdown("<div style='margin-top: 50px;'></div>", unsafe_allow_html=True)
-st.markdown("<div style='text-align: center; padding: 20px; border-top: 1px solid rgba(255,255,255,0.2);'><p style='color: white; font-size: 12px; margin: 0;'>Creado y desarrollado por</p><p style='color: #4CAF50; font-size: 18px; font-weight: bold; margin: 0;'>IGNACIO DIAZ</p><p style='color: gray; font-size: 10px;'>Tecnología Agrícola • San Jorge, Santa Fe</p></div>", unsafe_allow_html=True)
+    texto_wa = urllib.parse.quote(f"🚜 *
