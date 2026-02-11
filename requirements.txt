@@ -1,2 +1,3 @@
-google-generativeai==0.8.3
-pillow
+streamlit
+st-gsheets-connection
+pandas
