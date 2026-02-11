@@ -2,81 +2,58 @@ import streamlit as st
 import pandas as pd
 import urllib.parse
 
-# CONFIGURACIÓN DE LA PÁGINA
+# CONFIGURACIÓN BÁSICA
 st.set_page_config(page_title="RETORNO MATCH", layout="centered")
 
-# --- CONEXIÓN BLINDADA (Lectura Directa) ---
-# Usamos el modo exportación CSV que es infalible para leer
-SHEET_ID = "18oipzHxWlvBPGWOf7ikEnXRh3EeG9IMC06jZG0uLiOs"
-URL_CARGAS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
-URL_CAMIONES = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=669889309"
+# LINKS DE TU PLANILLA (Lectura directa sin contraseñas)
+ID = "18oipzHxWlvBPGWOf7ikEnXRh3EeG9IMC06jZG0uLiOs"
+URL_CARGAS = f"https://docs.google.com/spreadsheets/d/{ID}/export?format=csv&gid=0"
+URL_CAMIONES = f"https://docs.google.com/spreadsheets/d/{ID}/export?format=csv&gid=669889309"
 
-# ESTILOS VISUALES
+# ESTILO VISUAL
 st.markdown("""
     <style>
-    .stApp {
-        background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), 
-                    url("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070&auto=format&fit=crop");
-        background-size: cover !important;
-    }
-    .card-blanca {
-        background-color: white !important;
-        padding: 15px;
-        border-radius: 12px;
-        border-left: 8px solid #2ecc71;
-        margin-bottom: 10px;
-    }
-    .card-blanca * { color: #2c3e50 !important; }
+    .stApp { background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070"); background-size: cover; }
+    .card { background: white; padding: 15px; border-radius: 10px; border-left: 6px solid #2ecc71; margin-bottom: 10px; color: #2c3e50; }
     h1, h2, h3, p, label { color: white !important; font-weight: bold; }
-    .stMetric { background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 15px; border: 1px solid #2ecc71; }
     </style>
     """, unsafe_allow_html=True)
 
-# LECTURA DE DATOS
+# CARGAR DATOS
 try:
     df_cargas = pd.read_csv(URL_CARGAS)
     df_camiones = pd.read_csv(URL_CAMIONES)
-except Exception:
-    # Si falla, creamos tablas vacías para que no se rompa
+except:
     df_cargas = pd.DataFrame(columns=["origen", "item", "pago", "tel"])
     df_camiones = pd.DataFrame(columns=["nombre", "tel", "origen", "tipo"])
 
-# TÍTULOS
 st.markdown("<h1 style='text-align: center;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #2ecc71 !important;'>🍎 La Clementina - Logística</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #2ecc71 !important;'>La Clementina - San Jorge</p>", unsafe_allow_html=True)
 
-# CONTADORES
-col1, col2 = st.columns(2)
-col1.metric("📦 Cargas Hoy", len(df_cargas))
-col2.metric("🚛 Camiones Ruta", len(df_camiones))
+t1, t2, t3 = st.tabs(["🔍 BUSCAR", "📤 PUBLICAR", "🚛 MI CAMIÓN"])
 
-st.write("---")
+with t1:
+    f = st.selectbox("Filtrar origen:", ["Todos", "Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
+    for _, r in df_cargas.iterrows():
+        if f == "Todos" or str(r['origen']) == f:
+            st.markdown(f"<div class='card'><b>📍 {r['origen']} → San Jorge</b><br>📦 {r['item']}<br>💰 ${r['pago']}</div>", unsafe_allow_html=True)
+            txt = urllib.parse.quote(f"Hola! Vi tu carga de {r['item']} en {r['origen']}. ¿Sigue disponible?")
+            link = f"https://wa.me/549{str(r['tel']).replace('.0','')}?text={txt}"
+            st.markdown(f'<a href="{link}" target="_blank"><button style="width:100%; background:#25D366; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer; font-weight:bold;">📲 CONTACTAR</button></a>', unsafe_allow_html=True)
 
-tab1, tab2, tab3 = st.tabs(["🔍 BUSCAR CARGA", "📤 PUBLICAR (WhatsApp)", "🚛 MI CAMIÓN"])
+with t2:
+    with st.form("c"):
+        i = st.text_input("¿Qué llevamos?")
+        o = st.selectbox("Origen", ["Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
+        p = st.number_input("Pago ($)", step=1000)
+        if st.form_submit_button("🚀 PREPARAR"):
+            m = urllib.parse.quote(f"NUEVA CARGA:\n- Origen: {o}\n- Item: {i}\n- Pago: ${p}")
+            st.markdown(f'<a href="https://wa.me/5493406433604?text={m}" target="_blank"><button style="width:100%; background:#25D366; color:white; border:none; padding:15px; border-radius:10px; font-weight:bold;">📲 ENVIAR A CENTRAL</button></a>', unsafe_allow_html=True)
 
-# --- TAB 1: BUSCADOR (Funciona automático con la planilla) ---
-with tab1:
-    filtro = st.selectbox("¿Desde dónde buscás?", ["Todos", "Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
-    
-    hay_datos = False
-    for index, row in df_cargas.iterrows():
-        # Filtro básico y limpieza de datos
-        origen_dato = str(row['origen']) if pd.notna(row['origen']) else ""
-        
-        if filtro == "Todos" or origen_dato == filtro:
-            hay_datos = True
-            item = row['item'] if pd.notna(row['item']) else "Mercadería varia"
-            pago = row['pago'] if pd.notna(row['pago']) else "A convenir"
-            tel = str(row['tel']).replace(".0", "") if pd.notna(row['tel']) else ""
-            
-            st.markdown(f"""
-            <div class='card-blanca'>
-                <strong>📍 {origen_dato} → San Jorge</strong><br>
-                <span>📦 {item}</span><br>
-                <span style='color: #27ae60 !important;'>💰 PAGO: ${pago}</span>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            msg = f"🚛 *RETORNO MATCH*\nHola! Vi tu carga de *{item}* en *{origen_dato}*. ¿Sigue disponible?"
-            link = f"https://wa.me/549{tel}?text={urllib.parse.quote(msg)}"
-            st.markdown(f'<a href="{link}" target="_blank"><button style="width:100%; background-
+with t3:
+    with st.form("cam"):
+        n = st.text_input("Nombre / Empresa")
+        v = st.selectbox("Vuelvo de", ["Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
+        if st.form_submit_button("📢 AVISAR"):
+            m2 = urllib.parse.quote(f"CAMIÓN DISPONIBLE:\n- Empresa: {n}\n- Vuelve de: {v}")
+            st.markdown(f'<a href="https://wa.me/5493406433604?text={m2}" target="_blank"><button style="width:100%; background:#25D366; color:white; border:none; padding:15px; border-radius:10px; font-weight:bold;">📲 AVISAR A CENTRAL</button></a>', unsafe_allow_html=True)
