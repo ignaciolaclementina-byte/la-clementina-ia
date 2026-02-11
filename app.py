@@ -45,4 +45,40 @@ st.markdown("""
         padding: 25px;
         border-radius: 15px;
         color: black !important;
-        border-left: 12px solid #2E7D3
+        border-left: 12px solid #2E7D32;
+    }
+    .reporte-box * { color: black !important; }
+    
+    .stButton>button {
+        width: 100%;
+        border-radius: 30px;
+        background-color: #2E7D32 !important;
+        color: white !important;
+        font-weight: bold;
+        height: 50px;
+    }
+
+    .btn-whatsapp {
+        display: inline-block;
+        background-color: #25D366;
+        color: white !important;
+        padding: 15px;
+        border-radius: 30px;
+        text-decoration: none;
+        font-weight: bold;
+        text-align: center;
+        width: 100%;
+        margin-top: 10px;
+    }
+    label, p { color: white !important; font-weight: bold; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# 3. CABECERA
+st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>Asesoría Agronómica Digital • San Jorge, Santa Fe</p>", unsafe_allow_html=True)
+
+# 4. INTERFAZ DE CARGA
+opcion = st.radio("SELECCIONÁ ORIGEN:", ["📸 CÁMARA", "📁 GALERÍA"], horizontal=True)
+
+if opcion == "📸 CÁ
