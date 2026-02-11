@@ -45,7 +45,7 @@ if foto:
             try:
                 # CONFIGURACIÓN DEFINITIVA PARA EVITAR 404
                 genai.configure(api_key=CLAVE)
-                # Forzamos el modelo estable sin prefijos v1beta
+                # Forzamos el modelo estable sin prefijos v1beta que fallaban
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 prompt = f"Actúa como agrónomo. Analiza esta foto de {cul} en {est}. Diagnóstico de plagas y manchas. Receta solo productos de esta lista: {VADEMECUM}. Usa 'Dosis: X l/ha'."
@@ -60,5 +60,4 @@ if foto:
                         match = re.search(rf"{p}.*?(\d+[.,]?\d*)", informe, re.IGNORECASE)
                         if match:
                             d = float(match.group(1).replace(',', '.'))
-                            if d > 10: d = d / 1000 # Convierte cm3 a litros
-                            costo_ha
+                            if d > 10: d
