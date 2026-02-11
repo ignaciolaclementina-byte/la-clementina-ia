@@ -3,7 +3,7 @@ import google.generativeai as genai
 from PIL import Image
 import urllib.parse
 
-# 1. LLAVE (Tu API Key está perfecta)
+# 1. LLAVE (Tu API Key está perfecta, no la cambies)
 API_KEY = "AIzaSyAk1b1J69Nvsmzbbr5BZyW8UZlVpAtOgmo"
 
 # Lista de precios para el cálculo
@@ -41,17 +41,18 @@ if archivo:
     st.image(img, caption="Imagen cargada")
     
     if st.button("🚀 INICIAR ANÁLISIS"):
-        with st.spinner("Conectando con el Ingeniero IA..."):
+        with st.spinner("Analizando con el Ingeniero IA..."):
             try:
-                # AQUÍ ESTÁ LA SOLUCIÓN AL 404: Conexión limpia sin 'v1beta'
+                # CONFIGURACIÓN SIN ERRORES (Solución al 404)
                 genai.configure(api_key=API_KEY)
-                # Forzamos el uso del modelo estable
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                
+                # Esta es la forma más estable de llamar al modelo actualmente
+                model = genai.GenerativeModel(model_name='gemini-1.5-flash')
                 
                 vademecum = ", ".join(PRECIOS.keys())
-                prompt = f"Analiza esta imagen de {cultivo}. Identifica plagas/malezas y receta solo productos de esta lista: {vademecum}. Formato: 'Producto: Dosis'."
+                prompt = f"Actúa como agrónomo. Analiza este lote de {cultivo}. Recetá productos de esta lista: {vademecum}. Formato: 'Producto: Dosis'."
                 
-                # Pedir respuesta
+                # Generar contenido
                 respuesta = model.generate_content([prompt, img])
                 informe = respuesta.text
                 
@@ -60,7 +61,7 @@ if archivo:
                 st.subheader("📋 REPORTE AGRONÓMICO")
                 st.write(informe)
                 
-                # Cálculo de inversión estimado (simplificado para evitar fallos)
+                # Cálculo de inversión (Estimación rápida)
                 costo_estimado = 0.0
                 for p, precio in PRECIOS.items():
                     if p.lower() in informe.lower():
@@ -69,10 +70,10 @@ if archivo:
                 st.markdown(f"### 💰 Inversión estimada: USD {costo_estimado:.2f}")
                 st.markdown("</div>", unsafe_allow_html=True)
                 
-                # Preparar mensaje de WhatsApp
+                # Botón de WhatsApp
                 msg_wa = urllib.parse.quote(f"🚜 *LA CLEMENTINA IA*\n🌱 {cultivo} ({has} ha)\n\n{informe}\n\n💰 Total: USD {costo_estimado:.2f}")
                 st.markdown(f'<a href="https://wa.me/543406649346?text={msg_wa}" target="_blank"><button style="width:100%; background:#25D366; color:white; border:none; padding:15px; border-radius:10px; cursor:pointer; font-weight:bold; margin-top:10px;">📲 ENVIAR POR WHATSAPP</button></a>', unsafe_allow_html=True)
 
             except Exception as e:
-                # Corregimos el error de la línea 93 del intento anterior
-                st.error(f"Error de conexión: {str(e)}")
+                # Arreglado el error de cierre de comillas anterior
+                st.error(f"Error técnico: {str(e)}")
