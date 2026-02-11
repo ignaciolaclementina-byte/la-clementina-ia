@@ -3,93 +3,60 @@ import google.generativeai as genai
 from PIL import Image
 import urllib.parse
 
-# 1. TUS LLAVES (CON RESPALDO)
-CLAVES = ["AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw", "AIzaSyDxGWtHwsXp_dzsg6YnnU7OmPFBCU-_nEU"]
-
-VADEMECUM = "ADHERENTES: Optimizer, Rizo Spray. BIOESTIMULANTES: YaraVita. FUNGICIDAS: Cripton. HERBICIDAS: Round Up, 2,4-D. INSECTICIDAS: Solomon, Ampligo."
-
+# 1. CONFIGURACIÓN INICIAL
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. SKIN: FORZANDO ELIMINACIÓN DE GRIS/NEGRO
+# 2. EL SKIN DEFINITIVO: FUERZA BLANCO Y QUITA GRIS
 st.markdown("""
     <style>
-    /* Eliminamos el fondo gris de Streamlit */
-    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {
-        background: none !important;
-        background-color: #1a2e1a !important; /* Verde oscuro de respaldo */
-    }
+    /* Esto mata el gris de fondo de una vez por todas */
+    .stApp { background-color: white !important; }
+    [data-testid="stAppViewContainer"] { background-color: white !important; }
     
-    /* Ponemos la imagen de soja como base total */
-    [data-testid="stAppViewContainer"] {
-        background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
-                          url("https://images.unsplash.com/photo-1559813595-8854d7c3d8a1?q=80&w=1920&auto=format&fit=crop") !important;
-        background-size: cover !important;
-        background-position: center !important;
-        background-attachment: fixed !important;
+    /* Imagen de soja solo como un detalle superior suave */
+    .stApp::before {
+        content: "";
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-image: linear-gradient(rgba(255,255,255,0.8), rgba(255,255,255,0.8)), 
+                          url("https://images.unsplash.com/photo-1559813595-8854d7c3d8a1?q=80&w=1920&auto=format&fit=crop");
+        background-size: cover;
+        z-index: -1;
     }
 
-    /* Títulos con sombra para que 'salten' de la pantalla */
-    .titulo { color: white; text-align: center; font-size: 38px; font-weight: bold; text-shadow: 4px 4px 8px black; margin-top: -40px; }
-    .sub { color: #e0e0e0; text-align: center; font-size: 20px; text-shadow: 2px 2px 5px black; margin-bottom: 30px; }
-    
-    /* Forzamos texto blanco en todo el menú */
-    label, p, span, .stMarkdown { color: white !important; font-weight: bold !important; text-shadow: 1px 1px 3px black; }
+    /* Estilo Agrónomo: Verde y Negro para que se lea bien */
+    .titulo { color: #1B5E20; text-align: center; font-size: 32px; font-weight: bold; margin-bottom: 0; }
+    .sub { color: #2E7D32; text-align: center; font-size: 18px; margin-bottom: 20px; }
+    label, p, span { color: #1a1a1a !important; font-weight: bold !important; }
 
-    /* Caja de resultados: Blanca para que se lea perfecto */
-    .reporte-box {
-        background-color: rgba(255, 255, 255, 0.98) !important; padding: 25px; border-radius: 20px; 
-        color: black !important; border-left: 15px solid #2E7D32; box-shadow: 0px 10px 30px rgba(0,0,0,0.7);
-    }
-    .reporte-box * { color: black !important; text-shadow: none !important; }
-
-    /* Botones Profesionales */
-    .stButton>button { width: 100%; border-radius: 35px; background-color: #2E7D32 !important; color: white !important; height: 60px; border: 3px solid white; font-size: 20px; font-weight: bold; }
-    .btn-wa { display: block; background-color: #25D366; color: white !important; padding: 18px; border-radius: 35px; text-decoration: none; text-align: center; border: 3px solid white; font-weight: bold; font-size: 18px; }
+    /* Botones y Cajas */
+    .stButton>button { width: 100%; border-radius: 10px; background-color: #2E7D32 !important; color: white !important; height: 50px; border: none; }
+    .reporte-box { background-color: #f9f9f9 !important; padding: 20px; border-radius: 10px; color: black !important; border: 1px solid #ddd; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. INTERFAZ PRINCIPAL
+# 3. INTERFAZ
 st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
 st.markdown("<div class='sub'>San Jorge, Santa Fe</div>", unsafe_allow_html=True)
 
-with st.expander("❓ AYUDA CON LA CÁMARA"):
-    st.write("1. Dale permiso a la cámara en el candado 🔒 de arriba.")
-    st.write("2. En WhatsApp, usá 'Abrir en navegador' para que no falle.")
-
-opcion = st.radio("ORIGEN DE IMAGEN:", ["📸 CÁMARA", "📁 GALERÍA"], horizontal=True)
+opcion = st.radio("SELECCIONÁ:", ["📸 CÁMARA", "📁 GALERÍA"], horizontal=True)
 
 if opcion == "📸 CÁMARA":
     foto = st.camera_input("")
 else:
-    # Corrección definitiva de syntax en esta línea
-    foto = st.file_uploader("Subí tu imagen desde el equipo", type=["jpg", "png", "jpeg"])
+    # Aseguramos que no falte ninguna comilla aquí
+    foto = st.file_uploader("Elegí una imagen", type=["jpg", "png", "jpeg"])
 
 if foto:
     img = Image.open(foto).convert('RGB')
     st.image(img, use_container_width=True)
     
-    if st.button('🚀 GENERAR DIAGNÓSTICO PROFESIONAL'):
-        with st.spinner('Un Ingeniero Agrónomo virtual está analizando...'):
-            exito = False
-            for key in CLAVES:
-                try:
-                    genai.configure(api_key=key)
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                    prompt = f"Actuá como Ingeniero Agrónomo de San Jorge. Da un diagnóstico y receta comercial usando: {VADEMECUM}. Sé técnico y directo. Respuesta en español."
-                    res = model.generate_content([prompt, img])
-                    
-                    st.session_state['rep'] = res.text
-                    html_res = res.text.replace('\n', '<br>')
-                    st.markdown(f"<div class='reporte-box'><b>📋 INFORME TÉCNICO:</b><br><br>{html_res}</div>", unsafe_allow_html=True)
-                    exito = True
-                    break
-                except:
-                    continue
-            if not exito:
-                st.error("⚠️ Sistema saturado. Reintentá en un minuto.")
-
-if 'rep' in st.session_state:
-    link_wa = urllib.parse.quote(f"🚜 *CONSULTA LA CLEMENTINA IA*\n\n{st.session_state['rep']}")
-    st.markdown(f"<a href='https://wa.me/?text={link_wa}' target='_blank' class='btn-wa'>📲 ENVIAR REPORTE POR WHATSAPP</a>", unsafe_allow_html=True)
-
-st.markdown("<br><p style='text-align:center'>Desarrollado por <b>IGNACIO DIAZ</b> - San Jorge, SF</p>", unsafe_allow_html=True)
+    if st.button('🚀 ANALIZAR LOTE'):
+        with st.spinner('Procesando...'):
+            try:
+                genai.configure(api_key="AIzaSyD5BdXRFneGeQn9sG2qHip65dauBNbzKVw")
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                res = model.generate_content(["Actuá como agrónomo de San Jorge, analizá la imagen y da receta técnica.", img])
+                st.markdown(f"<div class='reporte-box'><b>📋 RESULTADO:</b><br><br>{res.text}</div>", unsafe_allow_html=True)
+            except:
+                st.error("Error de conexión. Reintentá.")
