@@ -1,7 +1,7 @@
 import streamlit as st
 import urllib.parse
 
-# 1. ESTILOS Y FONDO
+# 1. ESTILOS Y FONDO PROFESIONAL
 st.set_page_config(page_title="Retorno Match - San Jorge", layout="centered")
 
 st.markdown("""
@@ -25,7 +25,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. INICIALIZACIÓN DE DATOS (Lista vacía para evitar errores de historial)
+# 2. INICIALIZACIÓN DE DATOS
 if 'cargas' not in st.session_state:
     st.session_state.cargas = []
 if 'camiones' not in st.session_state:
@@ -33,64 +33,43 @@ if 'camiones' not in st.session_state:
 
 # 3. CABECERA
 st.markdown("<h1 style='text-align: center; color: white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #ffcc00;'>Logística San Jorge, SF</p>", unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs(["🛣️ BUSCAR CARGA", "📦 PUBLICAR CARGA", "🚛 PUBLICAR MI CAMIÓN"])
 
-# --- TAB 1: BUSCAR CARGA (VISTA CHOFER) ---
+# --- TAB 1: EL CHOFER BUSCA CARGA ---
 with tab1:
     filtro_origen = st.selectbox("¿Desde dónde buscás carga?", ["Todos", "Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
     
-    if not st.session_state.cargas:
-        st.info("No hay cargas publicadas. ¡Sé el primero en publicar!")
+    cargas_filtradas = [c for c in st.session_state.cargas if filtro_origen == "Todos" or c['origen'] == filtro_origen]
     
-    for c in st.session_state.cargas:
-        if filtro_origen == "Todos" or c['origen'] == filtro_origen:
-            st.markdown(f"<div class='card-blanca'><strong>📍 {c['origen']} → San Jorge</strong><br><span>📦 Mercadería: {c['item']}</span><br><strong style='color: #2E7D32 !important;'>PAGO: ${c['pago']}</strong></div>", unsafe_allow_html=True)
-            
-            # SEGURIDAD: Solo armar el link si existe 'tel'
-            if 'tel' in c:
-                msg_c = f"Hola! Vi tu carga de {c['item']} en Retorno Match. ¿Sigue disponible?"
-                link_c = f"https://wa.me/54{c['tel']}?text={urllib.parse.quote(msg_c)}"
-                st.markdown(f'<a href="{link_c}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366;color:white;padding:10px;border-radius:20px;text-align:center;font-weight:bold;margin-bottom:20px;">📲 CONTACTAR AL DUEÑO DIRECTO</div></a>', unsafe_allow_html=True)
-            else:
-                st.warning("Esta carga no tiene teléfono de contacto.")
+    if not cargas_filtradas:
+        st.info("No hay cargas disponibles para esa zona.")
+    
+    for c in cargas_filtradas:
+        st.markdown(f"<div class='card-blanca'><strong>📍 {c['origen']} → San Jorge</strong><br><span>📦 Mercadería: {c['item']}</span><br><strong style='color: #2E7D32 !important;'>PAGO: ${c['pago']}</strong></div>", unsafe_allow_html=True)
+        
+        # MENSAJE PRO PARA EL DUEÑO DE LA CARGA
+        texto_wa = f"🚛 *RETORNO MATCH*\n\n¡Hola! Vi tu publicación:\n📍 *Origen:* {c['origen']}\n📦 *Carga:* {c['item']}\n💰 *Pago:* ${c['pago']}\n\n¿Sigue disponible para cargar?"
+        link_wa = f"https://wa.me/54{c['tel']}?text={urllib.parse.quote(texto_wa)}"
+        
+        st.markdown(f'<a href="{link_wa}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366;color:white;padding:12px;border-radius:25px;text-align:center;font-weight:bold;margin-bottom:20px;box-shadow: 0px 4px 8px rgba(0,0,0,0.3);">📲 CONTACTAR AL DUEÑO</div></a>', unsafe_allow_html=True)
 
-# --- TAB 2: PUBLICAR CARGA (EL DUEÑO DEJA SU TEL) ---
+# --- TAB 2: EL CLIENTE PUBLICA CARGA ---
 with tab2:
-    with st.form("f1"):
+    with st.form("form_c"):
+        st.write("### Datos de la mercadería")
         p = st.text_input("¿Qué mercadería es?")
-        t_dueño = st.text_input("Tu WhatsApp (Ej: 3406444555)")
+        t_dueño = st.text_input("Tu WhatsApp (Ej: 3406411222)")
         o = st.selectbox("Origen", ["Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
-        pa = st.number_input("Pago ofrecido ($)", min_value=1000)
-        if st.form_submit_button("🚀 PUBLICAR CARGA"):
+        pa = st.number_input("Pago ofrecido ($)", min_value=1000, step=1000)
+        if st.form_submit_button("🚀 PUBLICAR"):
             if p and t_dueño:
-                st.session_state.cargas.append({"origen": o, "item": p, "pago": pa, "tel": t_dueño.replace(" ", "")})
-                st.success("¡Publicado!")
+                st.session_state.cargas.append({"origen": o, "item": p, "pago": pa, "tel": t_dueño.replace(" ", "").replace("-", "")})
+                st.success("¡Carga publicada! Ya la pueden ver los choferes.")
             else:
-                st.error("Completá mercadería y teléfono.")
+                st.error("Por favor completá mercadería y teléfono.")
 
-# --- TAB 3: PUBLICAR CAMIÓN (EL CHOFER DEJA SU TEL) ---
+# --- TAB 3: EL CHOFER PUBLICA CAMIÓN ---
 with tab3:
-    with st.form("f2"):
-        n = st.text_input("Tu Nombre")
-        tel_cam = st.text_input("Tu WhatsApp (Ej: 3406444555)")
-        d = st.selectbox("¿De dónde volvés?", ["Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
-        t = st.selectbox("Tipo de camión", ["Chasis solo", "Acoplado", "Sider", "Térmico"])
-        if st.form_submit_button("📢 PUBLICAR MI VUELTA"):
-            if n and tel_cam:
-                st.session_state.camiones.append({"nombre": n, "tel": tel_cam.replace(" ", ""), "origen": d, "tipo": t})
-                st.success("¡Camión publicado!")
-    
-    st.write("---")
-    for cam in st.session_state.camiones:
-        if 'tel' in cam:
-            st.markdown(f"<div class='card-blanca'><strong>🚛 {cam['nombre']}</strong><br><span>📍 Origen: {cam['origen']}</span><br><span>⚙️ {cam['tipo']}</span></div>", unsafe_allow_html=True)
-            msg_cam = f"Hola {cam['nombre']}! Tengo una carga desde {cam['origen']}."
-            link_cam = f"https://wa.me/54{cam['tel']}?text={urllib.parse.quote(msg_cam)}"
-            st.markdown(f'<a href="{link_cam}" target="_blank" style="text-decoration:none;"><div style="background-color:#1e3a8a;color:white;padding:10px;border-radius:20px;text-align:center;font-weight:bold;margin-bottom:20px;">📲 LLAMAR AL CAMIONERO DIRECTO</div></a>', unsafe_allow_html=True)
-
-# BOTÓN DE ADMINISTRADOR PARA LIMPIAR (Solo para vos)
-if st.sidebar.button("🧹 Limpiar base de datos"):
-    st.session_state.cargas = []
-    st.session_state.camiones = []
-    st.sidebar.success("¡Datos borrados!")
+    with st.form("form_cam"):
