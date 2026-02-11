@@ -15,7 +15,7 @@ VADEMECUM = "Optimizer, Rizo Spray, YaraVita, Cripton, Round Up, 2,4-D, Solomon,
 
 st.set_page_config(page_title="La Clementina IA", layout="centered")
 
-# 2. ESTILO VISUAL NITIDO
+# 2. ESTILO VISUAL (FONDO NÍTIDO)
 st.markdown("""
     <style>
     .stApp { background: url("https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop") no-repeat center center fixed; background-size: cover; }
@@ -43,18 +43,16 @@ if foto:
     if st.button("🚀 ANALIZAR AHORA"):
         with st.spinner("Conectando con el Ingeniero IA..."):
             try:
-                # CONFIGURACIÓN PARA EVITAR EL ERROR 404
+                # CONFIGURACIÓN DEFINITIVA PARA EVITAR 404
                 genai.configure(api_key=CLAVE)
-                # Forzamos la versión estable del modelo
+                # Forzamos el modelo de la forma más compatible
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                # Pedido a la IA (Comillas bien cerradas)
                 prompt = f"Actúa como agrónomo. Analiza esta foto de {cul} en {est}. Diagnóstico de plagas y manchas. Receta solo: {VADEMECUM}. Usa 'Dosis: X l/ha'."
-                
                 res = model.generate_content([prompt, img])
                 informe = res.text
                 
-                # Cálculo de costos y litros
+                # Cálculo de costos
                 costo_ha = 0.0
                 compra = []
                 for p, prec in PRECIOS.items():
@@ -77,7 +75,6 @@ if foto:
                 st.markdown(f"<h2 style='text-align:right; color:#1b5e20;'>TOTAL: USD {costo_ha*has:.2f}</h2>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
-                # Mensaje para WhatsApp
                 st.session_state['msg'] = f"🚜 *LA CLEMENTINA IA*\n📍 {cul} ({has} ha)\n\n{informe}\n\n💰 *TOTAL: USD {costo_ha*has:.2f}*"
                 
             except Exception as e:
