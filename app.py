@@ -76,4 +76,15 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # 3. CABECERA
-st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html
+st.markdown("<div class='titulo'>🚜 LA CLEMENTINA IA</div>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>Asesoría Agronómica Digital • San Jorge, Santa Fe</p>", unsafe_allow_html=True)
+
+# 4. INTERFAZ DE CARGA
+opcion = st.radio("SELECCIONÁ ORIGEN:", ["📸 CÁMARA", "📁 GALERÍA"], horizontal=True)
+
+if opcion == "📸 CÁMARA":
+    foto = st.camera_input("") 
+else:
+    foto = st.file_uploader("Cargar imagen del lote", type=["jpg", "png", "jpeg"])
+
+if foto:
