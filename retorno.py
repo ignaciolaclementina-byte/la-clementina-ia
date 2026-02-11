@@ -1,7 +1,7 @@
 import streamlit as st
 import urllib.parse
 
-# 1. CONFIGURACIÓN Y DISEÑO DE LA APP
+# 1. ESTILO Y CONFIGURACIÓN
 st.set_page_config(page_title="Retorno Match - San Jorge", layout="centered")
 
 st.markdown("""
@@ -10,35 +10,26 @@ st.markdown("""
         background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
                     url("https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075&auto=format&fit=crop");
         background-size: cover !important;
-        background-attachment: fixed !important;
     }
-    .titulo { color: #f8f9fa; text-align: center; font-size: 35px; font-weight: bold; text-shadow: 2px 2px 4px #000; margin-bottom: 0px; }
-    .subtitulo { color: #ffcc00; text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 20px; }
-    
     .card-carga {
         background-color: white !important;
         padding: 20px;
         border-radius: 15px;
-        color: #333 !important;
         border-left: 10px solid #ffcc00;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
         margin-bottom: 15px;
     }
     .card-carga * { color: #333 !important; }
-    
     .stButton>button {
         width: 100%;
         border-radius: 25px;
         background-color: #1e3a8a !important;
         color: white !important;
-        font-weight: bold;
-        height: 45px;
     }
-    label, p { color: white !important; font-weight: bold; }
+    label, p, h3 { color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. BASE DE DATOS TEMPORAL
+# 2. DATOS INICIALES
 if 'cargas' not in st.session_state:
     st.session_state.cargas = [
         {"id": 1, "origen": "Rosario", "item": "Repuestos Maquinaria", "pago": 55000},
@@ -46,42 +37,40 @@ if 'cargas' not in st.session_state:
     ]
 
 # 3. CABECERA
-st.markdown("<div class='titulo'>🚛 RETORNO MATCH</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitulo'>Logística Inteligente - San Jorge, SF</div>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #ffcc00 !important;'>San Jorge, Santa Fe</p>", unsafe_allow_html=True)
 
-# 4. PESTAÑAS
 tab1, tab2 = st.tabs(["🛣️ VISTA CHOFER", "📦 PUBLICAR CARGA"])
 
-# --- VISTA PARA EL CAMIONERO ---
+# --- VISTA CHOFER ---
 with tab1:
-    st.write("### Cargas disponibles para volver:")
+    st.write("### Cargas disponibles:")
     for c in st.session_state.cargas:
         with st.container():
             st.markdown(f"""
             <div class='card-carga'>
-                <small>ID: #{c['id']}</small><br>
-                <strong style='font-size: 20px;'>📍 {c['origen']} → San Jorge</strong><br>
+                <strong>📍 {c['origen']} → San Jorge</strong><br>
                 <span>📦 Carga: {c['item']}</span><br>
-                <strong style='color: #2E7D32 !important; font-size: 18px;'>PAGO: ${c['pago']}</strong>
+                <strong style='color: #2E7D32 !important;'>PAGO: ${c['pago']}</strong>
             </div>
             """, unsafe_allow_html=True)
             
-            # Link de WhatsApp corregido
-            msg = f"🚛 *RETORNO MATCH*\nMe interesa la carga de *{c['item']}* desde *{c['origen']}* hacia San Jorge. ¿Sigue disponible?"
+            # WhatsApp corregido sin errores de llaves
+            msg = f"Hola! Me interesa la carga {c['item']} desde {c['origen']} a San Jorge."
             link_wa = f"https://wa.me/543406649346?text={urllib.parse.quote(msg)}"
             
-            if st.button(f"✅ TOMAR CARGA #{c['id']}", key=f"btn_{c['id']}"):
-                st.markdown(f"""
-                    <a href="{link_wa}" target="_blank" style="text-decoration: none;">
-                        <div style="background-color: #25D366; color: white; padding: 15px; border-radius: 30px; text-align: center; font-weight: bold; margin-top: -10px; margin-bottom: 20px;">
-                            📲 ABRIR WHATSAPP AHORA
-                        </div>
-                    </a>
-                """, unsafe_allow_html=True)
+            if st.button(f"✅ CONTACTAR POR CARGA #{c['id']}", key=f"btn_{c['id']}"):
+                st.markdown(f'<a href="{link_wa}" target="_blank"><div style="background-color: #25D366; color: white; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold;">📲 ABRIR WHATSAPP</div></a>', unsafe_allow_html=True)
 
-# --- VISTA PARA EL CLIENTE ---
+# --- VISTA CLIENTE ---
 with tab2:
-    st.write("### Publicá tu mercadería")
-    with st.form("nueva_carga"):
-        prod = st.text_input("Mercadería (ej. 2 Pallets de Cemento)")
-        orig = st.selectbox("Origen", ["Rosario", "Santa Fe", "Córdoba", "
+    st.write("### Publicar mercadería")
+    with st.form("form_carga"):
+        prod = st.text_input("¿Qué mercadería es?")
+        orig = st.selectbox("Origen", ["Rosario", "Santa Fe", "Córdoba", "Buenos Aires", "Rafaela"])
+        pago = st.number_input("Pago ofrecido ($)", min_value=1000, step=1000)
+        
+        if st.form_submit_button("🚀 PUBLICAR"):
+            nuevo = {"id": len(st.session_state.cargas) + 1, "origen": orig, "item": prod, "pago": pago}
+            st.session_state.cargas.append(nuevo)
+            st.success("¡Publicado!")
