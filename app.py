@@ -9,7 +9,7 @@ CLAVES = [
     "AIzaSyDxGWtHwsXp_dzsg6YnnU7OmPFBCU-_nEU"  # Clave 2
 ]
 
-# VADEMÉCUM
+# VADEMÉCUM COMPLETO
 VADEMECUM_CLEMENTINA = """
 ADHERENTES: Optimizer, Rizo Spray, Break Thru, Fulltec, Alquimia, Tropgreen.
 BIOESTIMULANTES: YaraVita, Nutrition Grow, Fosfito, Howler, Vitagrow.
@@ -30,22 +30,22 @@ st.markdown("""
     }
     .titulo { color: white; text-align: center; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px black; }
     
-    /* TRADUCCIÓN BOTÓN GALERÍA */
+    /* TRADUCCIONES DE BOTONES */
     section[data-testid="stFileUploadDropzone"] button { font-size: 0px !important; }
     section[data-testid="stFileUploadDropzone"] button:after { content: "BUSCAR IMAGEN"; font-size: 16px !important; }
     section[data-testid="stFileUploadDropzone"] span { display: none; }
-    section[data-testid="stFileUploadDropzone"]:before { content: "Arrastrá tu foto acá o"; color: white; font-weight: bold; margin-bottom: 10px; }
+    section[data-testid="stFileUploadDropzone"]:before { content: "Seleccioná tu foto o"; color: white; font-weight: bold; margin-bottom: 10px; }
 
-    /* TRADUCCIÓN BOTÓN CÁMARA */
     div[data-testid="stCameraInput"] button { font-size: 0px !important; }
     div[data-testid="stCameraInput"] button:after { content: "TOMAR FOTO"; font-size: 16px !important; }
 
     .reporte-box {
         background-color: white !important;
-        padding: 20px;
+        padding: 25px;
         border-radius: 15px;
         color: black !important;
         border-left: 12px solid #2E7D32;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
     }
     .reporte-box * { color: black !important; }
     
@@ -55,18 +55,20 @@ st.markdown("""
         background-color: #2E7D32 !important;
         color: white !important;
         font-weight: bold;
+        height: 50px;
     }
 
     .btn-whatsapp {
-        display: inline-block;
+        display: block;
         background-color: #25D366;
         color: white !important;
         padding: 15px;
         border-radius: 30px;
         text-decoration: none;
-        font-weight: bold;
         text-align: center;
+        font-weight: bold;
         width: 100%;
+        margin-top: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -88,28 +90,28 @@ if foto:
     st.image(img_ready, use_container_width=True)
     
     if st.button('🚀 GENERAR DIAGNÓSTICO'):
-        with st.spinner('Analizando muestra...'):
+        with st.spinner('Conectando con el Ingeniero IA...'):
             exito = False
-            # BUCLE DE INTENTOS (ROTACIÓN DE CLAVES)
             for api_key in CLAVES:
                 try:
-                    # Configuramos la clave actual
                     genai.configure(api_key=api_key)
                     
-                    # 1. BUSCAMOS QUÉ MODELO ESTÁ DISPONIBLE (Evita error 404)
-                    modelos_disponibles = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-                    if not modelos_disponibles:
-                        continue # Si no encuentra modelos con esta clave, prueba la otra
-                        
-                    model = genai.GenerativeModel(modelos_disponibles[0])
+                    # Buscamos modelo disponible (Solución definitiva al 404)
+                    modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                    if not modelos: continue
                     
-                    # 2. GENERAMOS EL CONTENIDO
-                    prompt = f"Actuá como un Ingeniero Agrónomo de San Jorge. Diagnóstico y receta comercial usando: {VADEMECUM_CLEMENTINA}. Respuesta en español."
+                    # Preferimos gemini-1.5-flash si está disponible
+                    modelo_nombre = 'models/gemini-1.5-flash' if 'models/gemini-1.5-flash' in modelos else modelos[0]
+                    model = genai.GenerativeModel(modelo_nombre)
+                    
+                    prompt = f"""Sos un Ingeniero Agrónomo senior de San Jorge, Santa Fe. 
+                    Analizá la imagen. Identificá malezas, plagas o deficiencias.
+                    Recetá una solución usando únicamente estos productos: {VADEMECUM_CLEMENTINA}.
+                    Dá la dosis recomendada. Respuesta técnica y directa."""
                     
                     response = model.generate_content([prompt, img_ready])
                     informe = response.text
                     
-                    # SI LLEGAMOS ACÁ, FUE UN ÉXITO
                     st.session_state['reporte_actual'] = informe
                     informe_html = informe.replace('\n', '<br>')
                     
@@ -120,27 +122,20 @@ if foto:
                         </div>
                     """, unsafe_allow_html=True)
                     exito = True
-                    break # Salimos del bucle porque ya funcionó
+                    break 
                     
                 except Exception as e:
-                    # Si el error es de cuota (429), seguimos a la siguiente clave
-                    if "429" in str(e):
-                        continue
-                    else:
-                        # Si es otro error técnico, lo mostramos (opcional, pero ayuda a depurar)
-                        # st.error(f"Error técnico en intento: {e}")
-                        continue
+                    continue
 
             if not exito:
-                st.error("⚠️ Sistema saturado temporalmente o cuota agotada en ambas claves. Esperá 1 minuto.")
+                st.error("⚠️ Sistema saturado. Esperá un minuto e intentá de nuevo.")
 
 # 5. WHATSAPP
 if 'reporte_actual' in st.session_state:
     texto_wa = urllib.parse.quote(f"🚜 *CONSULTA LA CLEMENTINA IA*\n\n{st.session_state['reporte_actual']}")
-    link_wa = f"https://wa.me/?text={texto_wa}"
-    st.markdown(f"<a href='{link_wa}' target='_blank' class='btn-whatsapp'>📲 ENVIAR POR WHATSAPP</a>", unsafe_allow_html=True)
+    st.markdown(f"<a href='https://wa.me/?text={texto_wa}' target='_blank' class='btn-whatsapp'>📲 ENVIAR POR WHATSAPP</a>", unsafe_allow_html=True)
 
-# 6. FIRMA FINAL IGNACIO DIAZ
+# 6. FIRMA FINAL
 st.markdown("<div style='margin-top: 50px;'></div>", unsafe_allow_html=True)
 st.markdown("""
     <div style='text-align: center; padding: 20px; border-top: 1px solid rgba(255,255,255,0.2);'>
@@ -148,4 +143,4 @@ st.markdown("""
         <p style='color: #4CAF50; font-size: 18px; font-weight: bold; margin: 0;'>IGNACIO DIAZ</p>
         <p style='color: gray; font-size: 10px;'>Tecnología Agrícola • San Jorge, Santa Fe</p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
