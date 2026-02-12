@@ -4,82 +4,79 @@ import urllib.parse
 
 st.set_page_config(page_title="RETORNO MATCH", layout="centered")
 
-# --- CONFIGURACIÓN DE CONEXIÓN ---
-ID_PLANILLA = "18oipzHxWlvBPGWOf7ikEnXRh3EeG9IMC06jZG0uLiOs"
-
-# Formato infalible para leer pestañas por nombre
-URL_CARGAS = f"https://docs.google.com/spreadsheets/d/{ID_PLANILLA}/gviz/tq?tqx=out:csv&sheet=cargas"
-URL_CAMIONES = f"https://docs.google.com/spreadsheets/d/{ID_PLANILLA}/gviz/tq?tqx=out:csv&sheet=camiones"
-
-# ESTILOS VISUALES
-st.markdown("""
-    <style>
-    .stApp { background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070"); background-size: cover; }
-    .card { background: white; padding: 15px; border-radius: 10px; border-left: 6px solid #2ecc71; margin-bottom: 15px; }
-    .card b { color: #2c3e50; font-size: 18px; }
-    .card p { color: #555; margin: 5px 0; }
-    h1, h2, h3, p, label { color: white !important; font-weight: bold; }
-    </style>
-    """, unsafe_allow_html=True)
+# --- CONEXIÓN ---
+ID = "18oipzHxWlvBPGWOf7ikEnXRh3EeG9IMC06jZG0uLiOs"
+# Usamos gviz para buscar por NOMBRE de pestaña (más seguro)
+URL_CARGAS = f"https://docs.google.com/spreadsheets/d/{ID}/gviz/tq?tqx=out:csv&sheet=cargas"
+URL_CAMIONES = f"https://docs.google.com/spreadsheets/d/{ID}/gviz/tq?tqx=out:csv&sheet=camiones"
 
 st.markdown("<h1 style='text-align: center;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# FUNCIÓN DE CARGA SEGURA
-def cargar_datos(url):
-    try:
-        df = pd.read_csv(url)
-        # Limpieza: quitamos espacios y pasamos títulos a minúsculas
-        df.columns = df.columns.str.strip().str.lower()
-        return df.dropna(how='all')
-    except:
-        return pd.DataFrame()
+# --- ZONA DE DIAGNÓSTICO (ESTO TE VA A DECIR QUÉ PASA) ---
+st.write("---")
+st.subheader("🔧 Estado de Conexión")
 
-df_cargas = cargar_datos(URL_CARGAS)
-df_camiones = cargar_datos(URL_CAMIONES)
+try:
+    df_cargas = pd.read_csv(URL_CARGAS)
+    # Normalizamos nombres de columnas (todo a minúscula y sin espacios)
+    df_cargas.columns = df_cargas.columns.str.strip().str.lower()
+    
+    st.success(f"✅ Conexión exitosa con 'cargas'. Filas encontradas: {len(df_cargas)}")
+    st.write("Columnas que veo en el Excel:", list(df_cargas.columns))
+    
+    # Mostramos los datos crudos para que veas si llegan
+    with st.expander("Ver datos crudos del Excel"):
+        st.dataframe(df_cargas)
 
-t1, t2, t3 = st.tabs(["🔍 BUSCAR", "📤 PUBLICAR", "🚛 MI CAMIÓN"])
+except Exception as e:
+    st.error(f"❌ Error leyendo pestaña 'cargas': {e}")
+    df_cargas = pd.DataFrame()
 
-# --- PESTAÑA 1: BUSCADOR ---
+try:
+    df_camiones = pd.read_csv(URL_CAMIONES)
+    df_camiones.columns = df_camiones.columns.str.strip().str.lower()
+except:
+    df_camiones = pd.DataFrame()
+
+st.write("---")
+
+# --- INTERFAZ PRINCIPAL ---
+t1, t2 = st.tabs(["🔍 BUSCAR CARGA", "📤 PUBLICAR"])
+
 with t1:
-    if not df_cargas.empty:
-        # Buscador por Origen
-        opciones = ["Todos"] + sorted(df_cargas['origen'].unique().astype(str).tolist())
-        filtro = st.selectbox("¿Desde dónde buscás?", opciones)
+    # Verificamos si existen las columnas necesarias
+    if 'origen' in df_cargas.columns and 'item' in df_cargas.columns:
+        origenes = ["Todos"] + sorted(df_cargas['origen'].astype(str).unique().tolist())
+        filtro = st.selectbox("Filtrar por origen", origenes)
         
-        for _, r in df_cargas.iterrows():
-            if filtro == "Todos" or str(r['origen']) == filtro:
+        hay_resultados = False
+        for _, row in df_cargas.iterrows():
+            if filtro == "Todos" or str(row['origen']) == filtro:
+                hay_resultados = True
+                # Estilo de tarjeta
                 st.markdown(f"""
-                <div class='card'>
-                    <b>📍 {r['origen']} → San Jorge</b>
-                    <p>📦 Mercadería: {r['item']}</p>
-                    <p>💰 Pago: ${r['pago']}</p>
+                <div style="background:white; padding:15px; border-radius:10px; border-left:5px solid #2ecc71; margin-bottom:10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1);">
+                    <b style="color:#2c3e50; font-size:18px;">📍 {row['origen']}</b><br>
+                    <span style="color:#555;">📦 {row['item']}</span><br>
+                    <span style="color:#27ae60; font-weight:bold;">💰 ${row['pago']}</span>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Botón de WhatsApp
-                # Quitamos decimales si el Excel los agrega al teléfono
-                tel_limpio = str(r['tel']).split('.')[0].replace(" ", "")
-                msg = urllib.parse.quote(f"Hola! Vi tu carga de {r['item']} en {r['origen']}. ¿Sigue disponible?")
-                st.markdown(f'<a href="https://wa.me/549{tel_limpio}?text={msg}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; text-align:center; padding:12px; border-radius:8px; font-weight:bold; margin-top:-10px; margin-bottom:20px;">📲 CONTACTAR DUEÑO</div></a>', unsafe_allow_html=True)
+                # Botón WhatsApp
+                tel = str(row['tel']).split('.')[0] # Sacar decimales
+                msg = urllib.parse.quote(f"Hola, vi tu carga de {row['item']}.")
+                st.markdown(f'<a href="https://wa.me/549{tel}?text={msg}" target="_blank"><button style="width:100%; background:#25D366; color:white; border:none; padding:8px; border-radius:5px; margin-bottom:15px;">📲 CONTACTAR</button></a>', unsafe_allow_html=True)
+        
+        if not hay_resultados:
+            st.info("No hay cargas para ese filtro.")
+            
     else:
-        st.warning("⚠️ No se encontraron datos en el Excel.")
-        st.info("Chequeá que la pestaña se llame 'cargas' y que los títulos sean: origen, item, pago, tel")
+        st.error("⚠️ PROBLEMA DE COLUMNAS:")
+        st.warning("El Excel NO tiene las columnas 'origen' o 'item'.")
+        st.write("Por favor, en tu Excel poné estos títulos exactos en la fila 1:")
+        st.code("origen | item | pago | tel")
 
-# --- PESTAÑA 2: PUBLICAR ---
 with t2:
-    st.subheader("Publicar nueva carga")
-    with st.form("pub", clear_on_submit=True):
-        o = st.text_input("Origen (Ej: Rosario)")
-        i = st.text_input("¿Qué mercadería es?")
-        p = st.text_input("Pago ofrecido")
-        if st.form_submit_button("🚀 GENERAR PUBLICACIÓN"):
-            texto = urllib.parse.quote(f"NUEVA CARGA:\n📍 Origen: {o}\n📦 Item: {i}\n💰 Pago: {p}")
-            st.markdown(f'<a href="https://wa.me/5493406433604?text={texto}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; text-align:center; padding:15px; border-radius:10px; font-weight:bold;">📲 ENVIAR A CENTRAL PARA SUBIR</div></a>', unsafe_allow_html=True)
-
-# --- PESTAÑA 3: CAMIONES ---
-with t3:
-    if not df_camiones.empty:
-        for _, r in df_camiones.iterrows():
-            st.markdown(f"<div class='card'><b>🚛 {r['nombre']}</b><p>📍 Volviendo de: {r['origen']}</p></div>", unsafe_allow_html=True)
-    else:
-        st.info("No hay camiones reportados todavía.")
+    st.info("Para publicar, enviamos los datos a la central.")
+    if st.button("📲 ABRIR WHATSAPP CENTRAL"):
+        st.markdown('<meta http-equiv="refresh" content="0; url=https://wa.me/5493406433604">', unsafe_allow_html=True)
