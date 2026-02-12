@@ -32,7 +32,7 @@ st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>
 # 3. BOTONES
 col1, col2, col3 = st.columns(3)
 with col1:
-    if st.button("🔄 ACTUALIZAR", use_container_width=True):
+    if st.button("🔄 ACTUALIZAR LISTADO", use_container_width=True):
         st.rerun()
 with col3:
     LINK_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScWcPChu8-wqWSijj9IoA5ES6CunJOJTirhPvqXKHkl_sy9MA/viewform"
@@ -40,45 +40,63 @@ with col3:
 
 st.write("---")
 
-# 4. DATOS
+# 4. DATOS - APUNTANDO A LA PESTAÑA 2
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
-URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%201"
+# Cambiamos el nombre de la hoja a 'Respuestas de formulario 2'
+URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%202"
 
 try:
     df = pd.read_csv(URL)
     
-    # Forzamos los nombres de columnas para que coincidan con el formulario
-    df.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
+    # Según tu captura, los datos reales están en:
+    # Columna A: Fecha | Columna G: Origen | Columna H: Destino | Columna I: Equipo
+    # El teléfono parece estar en la Columna E o F.
     
-    search = st.text_input("", placeholder="🔍 Buscar destino...")
+    # Vamos a crear un nuevo mapa de datos limpio:
+    datos_limpios = []
+    
+    for _, row in df.iterrows():
+        # Verificamos si la columna 'Ubicación Actual' (G) tiene datos
+        if pd.notna(row['Ubicación Actual']):
+            datos_limpios.append({
+                'fecha': row['Marca temporal'],
+                'origen': row['Ubicación Actual'],
+                'destino': row['Destino del Retorno'],
+                'equipo': row['Tipo de Equipo'],
+                # Usamos el whatsapp de la columna E o F según se vea
+                'tel': row['whatsapp'] if 'whatsapp' in df.columns else "Sin Tel"
+            })
+    
+    df_final = pd.DataFrame(datos_limpios)
 
-    if search:
-        df = df[df['destino'].str.contains(search, case=False, na=False) | 
-                df['origen'].str.contains(search, case=False, na=False)]
+    search = st.text_input("", placeholder="🔍 Buscar por ciudad o equipo...")
 
-    if not df.empty:
-        for _, row in df.iloc[::-1].iterrows():
-            if pd.notna(row['origen']):
-                tel = str(row['tel']).split('.')[0].replace(" ", "").replace("+", "")
-                msg = urllib.parse.quote(f"Hola! Vi tu camion de {row['origen']} a {row['destino']} en Retorno Match.")
-                
-                st.markdown(f"""
-                <div class="camion-card">
-                    <div class="card-header">
-                        <span style="font-weight:bold; font-size:18px; color:black;">📍 {row['origen']} ⮕ {row['destino']}</span>
-                        <span style="color:green; font-weight:bold;">● DISPONIBLE</span>
-                    </div>
-                    <div style="padding:15px; color:#333;">
-                        <p style="margin:0;"><b>Equipo:</b> {row['equipo']}</p>
-                        <p style="margin:0; font-size:12px; color:grey;">Publicado: {row['fecha']}</p>
-                    </div>
-                    <a href="https://wa.me/{tel}?text={msg}" target="_blank" class="btn-wa">WHATSAPP</a>
+    if not df_final.empty:
+        if search:
+            df_final = df_final[df_final['destino'].str.contains(search, case=False, na=False) | 
+                               df_final['origen'].str.contains(search, case=False, na=False)]
+
+        for _, row in df_final.iloc[::-1].iterrows():
+            tel = str(row['tel']).split('.')[0].replace(" ", "").replace("+", "")
+            msg = urllib.parse.quote(f"Hola! Vi tu camión de {row['origen']} a {row['destino']} en Retorno Match.")
+            
+            st.markdown(f"""
+            <div class="camion-card">
+                <div class="card-header">
+                    <span style="font-weight:bold; font-size:18px; color:black;">📍 {str(row['origen']).upper()} ⮕ {str(row['destino']).upper()}</span>
+                    <span style="color:green; font-weight:bold;">● DISPONIBLE</span>
                 </div>
-                """, unsafe_allow_html=True)
+                <div style="padding:15px; color:#333;">
+                    <p style="margin:0;"><b>Equipo:</b> {row['equipo']}</p>
+                    <p style="margin:0; font-size:12px; color:grey;">Publicado: {row['fecha']}</p>
+                </div>
+                <a href="https://wa.me/{tel}?text={msg}" target="_blank" class="btn-wa">CONTACTAR POR WHATSAPP</a>
+            </div>
+            """, unsafe_allow_html=True)
     else:
-        st.write("No hay camiones publicados todavía.")
+        st.markdown("<h3 style='text-align:center; color:white;'>No hay camiones en la ruta seleccionada.</h3>", unsafe_allow_html=True)
 
 except Exception as e:
-    st.info("Esperando datos del formulario...")
+    st.error(f"Error de conexión: {e}")
 
 st.markdown("<br><p style='text-align:center; color:white; font-size:10px;'>San Jorge 2026</p>", unsafe_allow_html=True)
