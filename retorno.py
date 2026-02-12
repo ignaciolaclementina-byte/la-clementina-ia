@@ -10,33 +10,32 @@ SHEET_ID = "18oipzHxWlvBPGWOf7ikEnXRh3EeG9IMC06jZG0uLiOs"
 # Conexión directa a la pestaña 'cargas' por nombre
 URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=cargas"
 
-# --- PANEL DE DIAGNÓSTICO ---
-st.write("### 🔧 Estado de los Datos")
+# --- PANEL DE DIAGNÓSTICO (Solo para solucionar el problema) ---
+st.write("### 🔧 Estado de la Conexión")
 try:
     # Leemos el Excel
     df = pd.read_csv(URL)
     
-    # Limpiamos títulos: quitamos espacios y pasamos a minúscula
+    # Limpiamos títulos: quitamos espacios y pasamos a minúscula para que no falle
     df.columns = df.columns.str.strip().str.lower()
     
     if df.empty:
-        st.warning("⚠️ El Excel está conectado pero está VACÍO. Agregá una carga en la fila 2 del Excel.")
+        st.warning("⚠️ El Excel está conectado pero no tiene datos. Agregá información en la fila 2.")
     else:
-        st.success(f"✅ Conectado. Se encontraron {len(df)} filas.")
-        # Esto te permite ver qué está leyendo la App realmente
-        with st.expander("Hacé clic acá para ver los datos crudos del Excel"):
+        st.success(f"✅ Conectado. Se encontraron {len(df)} cargas.")
+        with st.expander("Ver datos detectados en el Excel"):
             st.dataframe(df)
 except Exception as e:
     st.error(f"❌ Error de conexión: {e}")
-    st.info("Asegurate de que la pestaña del Excel se llame exactamente 'cargas'.")
+    st.info("Revisá que la pestaña del Excel se llame exactamente 'cargas' y esté publicada.")
     st.stop()
 
 st.divider()
 
-# --- INTERFAZ VISUAL ---
+# --- INTERFAZ DE USUARIO ---
 st.markdown("<h1 style='text-align: center;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# Verificamos si existen las columnas necesarias
+# Verificamos si existen las columnas necesarias para que no tire error
 if 'origen' in df.columns and 'item' in df.columns:
     
     # Buscador por Origen
@@ -46,7 +45,7 @@ if 'origen' in df.columns and 'item' in df.columns:
     for index, row in df.iterrows():
         if filtro == "Todos" or str(row['origen']) == filtro:
             
-            # Tarjeta de Carga
+            # Tarjeta visual de la carga
             st.markdown(f"""
             <div style="background-color:white; padding:15px; border-radius:10px; border-left:8px solid #2ecc71; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                 <h3 style="color:#2c3e50; margin:0;">📍 {row['origen']}</h3>
@@ -55,18 +54,18 @@ if 'origen' in df.columns and 'item' in df.columns:
             </div>
             """, unsafe_allow_html=True)
             
-            # Botón WhatsApp
+            # Botón de contacto directo por WhatsApp
             tel = str(row['tel']).split('.')[0].replace(" ", "")
-            msg = urllib.parse.quote(f"Hola! Vi la carga de {row['item']} en {row['origen']} en la App.")
+            msg = urllib.parse.quote(f"Hola! Vi la carga de {row['item']} en {row['origen']} a través de la App.")
             link = f"https://wa.me/549{tel}?text={msg}"
             
             st.markdown(f'''
                 <a href="{link}" target="_blank" style="text-decoration:none;">
-                    <button style="width:100%; background-color:#25D366; color:white; border:none; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer; margin-bottom:20px;">
+                    <div style="background-color:#25D366; color:white; text-align:center; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer; margin-bottom:20px;">
                         📲 CONTACTAR DUEÑO
-                    </button>
+                    </div>
                 </a>
             ''', unsafe_allow_html=True)
 else:
-    st.error("⚠️ ERROR DE TÍTULOS")
-    st.write("El código busca 'origen', 'item', 'pago' y 'tel'. Revisá que los nombres en el Excel sean exactamente esos.")
+    st.error("⚠️ ERROR: No se encuentran las columnas 'origen' o 'item'.")
+    st.write("Asegurate de que los títulos en el Excel sean exactamente: origen, item, pago, tel")
