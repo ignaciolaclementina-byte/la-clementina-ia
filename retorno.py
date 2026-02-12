@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import urllib.parse
 
-# 1. CONFIGURACIÓN DE PÁGINA
+# 1. CONFIGURACIÓN
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# 2. ESTILO DE INTERFAZ
+# 2. ESTILO
 st.markdown("""
     <style>
     .stApp {
@@ -29,10 +29,10 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# 3. NAVEGACIÓN RÁPIDA
+# 3. BOTONES
 col1, col2, col3 = st.columns(3)
 with col1:
-    if st.button("🔄 ACTUALIZAR LISTADO", use_container_width=True):
+    if st.button("🔄 ACTUALIZAR", use_container_width=True):
         st.rerun()
 with col3:
     LINK_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScWcPChu8-wqWSijj9IoA5ES6CunJOJTirhPvqXKHkl_sy9MA/viewform"
@@ -40,57 +40,45 @@ with col3:
 
 st.write("---")
 
-# 4. CARGA DE DATOS (UNIFICANDO PESTAÑAS)
+# 4. DATOS
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
-URL_VIEJA = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=cargas"
-URL_NUEVA = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%201"
+URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%201"
 
 try:
-    # Leer datos viejos (pestaña 'cargas')
-    df_v = pd.read_csv(URL_VIEJA)
-    df_v = df_v[['origen', 'item', 'pago', 'tel']]
-    df_v.columns = ['origen', 'destino', 'equipo', 'tel']
-    df_v['fecha'] = "Histórico"
-
-    # Leer datos nuevos (del formulario)
-    df_n = pd.read_csv(URL_NUEVA)
-    df_n.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
-
-    # Juntar todo: lo nuevo arriba
-    df_total = pd.concat([df_n, df_v], ignore_index=True)
+    df = pd.read_csv(URL)
     
-    # 5. BUSCADOR
-    search = st.text_input("", placeholder="🔍 ¿A qué ciudad necesitás enviar carga? (Ej: Rosario, Córdoba...)")
+    # Forzamos los nombres de columnas para que coincidan con el formulario
+    df.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
     
+    search = st.text_input("", placeholder="🔍 Buscar destino...")
+
     if search:
-        # Aquí estaba el error del paréntesis, ya está corregido:
-        df_total = df_total[df_total['destino'].str.contains(search, case=False, na=False) | 
-                            df_total['origen'].str.contains(search, case=False, na=False)]
+        df = df[df['destino'].str.contains(search, case=False, na=False) | 
+                df['origen'].str.contains(search, case=False, na=False)]
 
-    # 6. MOSTRAR TARJETAS
-    if not df_total.empty:
-        for _, row in df_total.iloc[::-1].iterrows():
+    if not df.empty:
+        for _, row in df.iloc[::-1].iterrows():
             if pd.notna(row['origen']):
-                tel_limpio = str(row['tel']).split('.')[0].replace(" ", "").replace("+", "")
-                msg = urllib.parse.quote(f"Hola! Vi tu camión en Retorno Match de {row['origen']} a {row['destino']}. ¿Seguís con el camión vacío?")
+                tel = str(row['tel']).split('.')[0].replace(" ", "").replace("+", "")
+                msg = urllib.parse.quote(f"Hola! Vi tu camion de {row['origen']} a {row['destino']} en Retorno Match.")
                 
                 st.markdown(f"""
                 <div class="camion-card">
                     <div class="card-header">
                         <span style="font-weight:bold; font-size:18px; color:black;">📍 {row['origen']} ⮕ {row['destino']}</span>
-                        <span style="background:#00FF41; color:black; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold;">DISPONIBLE</span>
+                        <span style="color:green; font-weight:bold;">● DISPONIBLE</span>
                     </div>
                     <div style="padding:15px; color:#333;">
-                        <p style="margin:0;"><b>Camión/Equipo:</b> {row['equipo']}</p>
+                        <p style="margin:0;"><b>Equipo:</b> {row['equipo']}</p>
                         <p style="margin:0; font-size:12px; color:grey;">Publicado: {row['fecha']}</p>
                     </div>
-                    <a href="https://wa.me/{tel_limpio}?text={msg}" target="_blank" class="btn-wa">💬 CONTACTAR AL CHOFER</a>
+                    <a href="https://wa.me/{tel}?text={msg}" target="_blank" class="btn-wa">WHATSAPP</a>
                 </div>
                 """, unsafe_allow_html=True)
     else:
-        st.warning("No se encontraron camiones para esa ruta.")
+        st.write("No hay camiones publicados todavía.")
 
 except Exception as e:
-    st.info("Conectando con la base de datos de camiones...")
+    st.info("Esperando datos del formulario...")
 
-st.markdown("<br><p style='text-align:center; color:white; font-size:12px;'>Logística Retorno Match - San Jorge 2026</p>", unsafe_allow_html=True)
+st.markdown("<br><p style='text-align:center; color:white; font-size:10px;'>San Jorge 2026</p>", unsafe_allow_html=True)
