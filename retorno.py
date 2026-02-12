@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 
-# 1. CONFIGURACIÓN
+# 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="RETORNO MATCH", layout="wide", page_icon="🚛")
 
-# 2. ESTILO
+# 2. ESTILO VISUAL
 st.markdown("""
     <style>
     .stApp {
@@ -18,9 +18,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. CONEXIÓN (Usa el nombre [gsheets] de tus Secrets)
+# 3. CONEXIÓN (URL corregida con 'I' mayúscula)
 conn = st.connection("gsheets", type=GSheetsConnection)
-URL_DB = "https://docs.google.com/spreadsheets/d/18oipzHxWlvBPGW0f7ikEnXRh3EeG9lMC06jZG0uLiOs/edit#gid=0"
+URL_DB = "https://docs.google.com/spreadsheets/d/18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs/edit#gid=0"
 
 st.markdown("<h1 style='text-align: center; color: white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 tab1, tab2 = st.tabs(["🔍 BUSCAR VIAJES", "📤 PUBLICAR MI RETORNO"])
@@ -30,34 +30,46 @@ with tab1:
         st.cache_data.clear()
         st.rerun()
     try:
+        # Leemos la pestaña 'cargas'
         df = conn.read(spreadsheet=URL_DB, worksheet="cargas")
         if df is not None and not df.empty:
             df.columns = df.columns.str.strip().str.lower()
             for _, r in df.iloc[::-1].iterrows():
-                origen = r.get('origen', 'Sin especificar')
-                item = r.get('item', '-')
-                pago = r.get('pago', '-')
-                tel = str(r.get('tel', '')).split('.')[0].replace(" ", "")
-                st.markdown(f'<div class="card-viaje"><h3 style="color:black">📍 {str(origen).upper()}</h3><p style="color:black">📦 <b>Carga:</b> {item} | 💰 <b>Tarifa:</b> {pago}</p><a class="btn-ws" href="https://wa.me/549{tel}" target="_blank">📲 CONTACTAR</a></div>', unsafe_allow_html=True)
+                # Ajustado a tus columnas: nombre, unidad, ubicacion, destino
+                nombre = r.get('nombre', 'Sin nombre')
+                unidad = r.get('unidad', '-')
+                ubi = r.get('ubicacion', '-')
+                dest = r.get('destino', '-')
+                
+                st.markdown(f"""
+                <div class="card-viaje">
+                    <h3 style="color:black">📍 {str(ubi).upper()} -> {str(dest).upper()}</h3>
+                    <p style="color:black">👤 <b>Contacto:</b> {nombre} | 🚛 <b>Unidad:</b> {unidad}</p>
+                </div>
+                """, unsafe_allow_html=True)
         else:
-            st.info("No hay viajes todavía.")
+            st.info("No hay datos en la pestaña 'cargas'.")
     except Exception as e:
         st.error(f"Error de conexión: {e}")
 
 with tab2:
     with st.form("form_nuevo", clear_on_submit=True):
-        origen = st.text_input("¿Desde dónde salís?")
-        item = st.text_input("¿Qué llevás o buscás?")
-        pago = st.text_input("Tarifa / Pago")
-        tel = st.text_input("WhatsApp (Ej: 3406400000)")
+        st.markdown("<p style='color:white'>Completá los datos para publicar:</p>", unsafe_allow_html=True)
+        nombre = st.text_input("Nombre / Empresa")
+        unidad = st.text_input("Tipo de Unidad")
+        ubicacion = st.text_input("Ubicación actual")
+        destino = st.text_input("Destino deseado")
+        
         if st.form_submit_button("PUBLICAR AHORA"):
-            if origen and tel:
+            if nombre and ubicacion:
                 try:
                     current_df = conn.read(spreadsheet=URL_DB, worksheet="cargas")
-                    nuevo = pd.DataFrame([{"origen": origen, "item": item, "pago": pago, "tel": tel}])
+                    nuevo = pd.DataFrame([{"nombre": nombre, "unidad": unidad, "ubicacion": ubicacion, "destino": destino}])
                     updated_df = pd.concat([current_df, nuevo], ignore_index=True)
                     conn.update(spreadsheet=URL_DB, data=updated_df, worksheet="cargas")
                     st.success("¡Publicado!")
                     st.balloons()
                 except Exception as e:
                     st.error(f"Error al guardar: {e}")
+            else:
+                st.warning("Completá nombre y ubicación.")
