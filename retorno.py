@@ -1,83 +1,92 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+import streamlit.components.v1 as components
 
-# 1. CONFIGURACIÓN Y ESTILO "NIGHT MODE" PROFESIONAL
+# 1. CONFIGURACIÓN DE APARIENCIA PROFESIONAL
 st.set_page_config(page_title="RETORNO MATCH", layout="wide", page_icon="🚛")
 
 st.markdown("""
     <style>
-    [data-testid="stAppViewContainer"] {
+    /* Fondo oscuro y moderno */
+    .stApp {
         background: #0e1117;
-        color: white;
     }
-    .stButton>button {
-        width: 100%;
-        border-radius: 10px;
-        height: 3em;
-        background-color: #2ecc71;
-        color: white;
-        border: none;
-        font-weight: bold;
-    }
-    .viaje-card {
+    
+    /* Contenedor de las tarjetas */
+    .card {
         background: #1d2129;
         padding: 20px;
         border-radius: 15px;
-        border-left: 5px solid #2ecc71;
         margin-bottom: 15px;
+        border-left: 6px solid #2ecc71;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
-    .wa-link {
-        color: #2ecc71 !important;
+    
+    .card h3 { color: #2ecc71; margin-bottom: 5px; }
+    .card p { color: #cfd8dc; margin: 3px 0; font-size: 1.1rem; }
+    
+    /* Botón de WhatsApp tipo App */
+    .btn-ws {
+        background-color: #25D366;
+        color: white !important;
+        padding: 12px 20px;
+        border-radius: 10px;
         text-decoration: none;
         font-weight: bold;
-        font-size: 1.1rem;
+        display: block;
+        text-align: center;
+        margin-top: 15px;
+    }
+    
+    /* Pestañas estilizadas */
+    .stTabs [data-baseweb="tab-list"] { background: #1d2129; padding: 5px; border-radius: 10px; }
+    .stTabs [data-baseweb="tab"] { color: white !important; }
+    
+    /* Ajuste del formulario para que no se vea tan "parche" */
+    .form-container {
+        background: white;
+        border-radius: 20px;
+        padding: 5px;
+        overflow: hidden;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. BASE DE DATOS (Solo lectura de lo que ya tenés)
+# LINKS
 URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLxlHXfxe4BKqlpm1xYZ8yKhrd2vH1mRDNWRNDnmg1zgt6kYlqnobYHkMS_LjfwlQM18PmCCVZzLzm/pub?gid=0&single=true&output=csv"
+URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSd8BBZZ563XiGaEoYCg_bfmDN3hLsG7jcING2B2PGAEJDPbhQ/viewform?embedded=true"
 
-# TÍTULO
-st.markdown("<h1 style='text-align: center;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: gray;'>San Jorge - Santa Fe</p>", unsafe_allow_html=True)
+# INTERFAZ
+st.markdown("<h1 style='text-align: center; color: white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #2ecc71;'>Logística inteligente San Jorge</p>", unsafe_allow_html=True)
 
-tab1, tab2 = st.tabs(["🔍 BUSCAR VIAJES", "📤 PUBLICAR MI RETORNO"])
+tab1, tab2 = st.tabs(["🔍 BUSCAR CARGAS", "📤 PUBLICAR VIAJE"])
 
 with tab1:
-    col1, col2 = st.columns([4, 1])
-    with col2:
-        if st.button("🔄 REFRESCAR"):
-            st.cache_data.clear()
-            st.rerun()
+    if st.button("🔄 ACTUALIZAR"):
+        st.cache_data.clear()
+        st.rerun()
     
     try:
         df = pd.read_csv(URL_CSV)
         df.columns = df.columns.str.strip().str.lower()
+        df = df.dropna(subset=['origen'])
         
         for _, r in df.iloc[::-1].iterrows():
-            with st.container():
-                st.markdown(f"""
-                <div class="viaje-card">
-                    <h3 style='margin:0;'>📍 {str(r['origen']).upper()}</h3>
-                    <p style='margin:5px 0;'>📦 <b>Carga:</b> {r['item']} | 💰 <b>Tarifa:</b> {r['pago']}</p>
-                    <a class="wa-link" href="https://wa.me/549{str(r['tel']).split('.')[0]}">📲 CONTACTAR POR WHATSAPP</a>
-                </div>
-                """, unsafe_allow_html=True)
+            tel = str(r['tel']).split('.')[0].replace(" ", "").replace("+", "")
+            st.markdown(f"""
+            <div class="card">
+                <h3>📍 {str(r['origen']).upper()}</h3>
+                <p><b>📦 CARGA:</b> {r['item']}</p>
+                <p><b>💰 PAGO:</b> {r['pago']}</p>
+                <a class="btn-ws" href="https://wa.me/549{tel}" target="_blank">📲 CONTACTAR POR WHATSAPP</a>
+            </div>
+            """, unsafe_allow_html=True)
     except:
-        st.info("Cargando viajes disponibles...")
+        st.info("Buscando nuevos viajes en la zona...")
 
 with tab2:
-    st.subheader("Publicar nuevo viaje")
-    with st.form("cargador_viajes", clear_on_submit=True):
-        origen = st.text_input("¿Desde dónde salís?")
-        item = st.text_input("¿Qué llevás o buscás?")
-        pago = st.text_input("Tarifa / Pago")
-        tel = st.text_input("Tu WhatsApp (Ej: 3406400000)")
-        
-        enviado = st.form_submit_button("PUBLICAR AHORA")
-        
-        if enviado:
-            st.success("¡Publicado! (Nota: Los datos se verán en la lista tras la aprobación del sistema)")
-            st.info("Nacho: Como sacamos Google Forms, para que el envío sea automático a tu Excel sin errores, tendríamos que usar una base de datos más robusta, pero para empezar, este diseño es 10 veces mejor.")
+    st.markdown("<h3 style='color: white; text-align: center;'>Cargá tus datos aquí abajo</h3>", unsafe_allow_html=True)
+    st.markdown("<div class='form-container'>", unsafe_allow_html=True)
+    components.iframe(URL_FORM, height=700, scrolling=True)
+    st.markdown("</div>", unsafe_allow_html=True)
