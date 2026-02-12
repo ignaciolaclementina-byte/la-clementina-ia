@@ -1,67 +1,89 @@
 import streamlit as st
 import pandas as pd
-import urllib.parse
+import streamlit.components.v1 as components
 
-# 1. CONFIGURACIÓN VISUAL (FONDO Y ESTILO PRO)
+# 1. CONFIGURACIÓN VISUAL
 st.set_page_config(page_title="RETORNO MATCH", layout="wide", page_icon="🚛")
 
 st.markdown("""
     <style>
-    /* Fondo de depósito logístico oscuro */
     .stApp {
-        background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), 
-        url("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070");
+        background-image: linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.8)), 
+        url("https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=2070");
         background-size: cover; background-attachment: fixed;
     }
-    
-    /* Estilo de las pestañas */
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; background-color: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; }
-    .stTabs [data-baseweb="tab"] { height: 50px; color: white !important; font-weight: bold; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; }
-    .stTabs [aria-selected="true"] { background-color: #2ecc71 !important; border-color: #2ecc71 !important; }
-
-    /* Tarjetas de resultados */
-    .card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 8px solid #2ecc71; color: black; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+    .card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 8px solid #2ecc71; color: black; }
     .card-camion { border-left: 8px solid #3498db; }
-    .card h3 { margin-top:0; color: #1a1a1a; font-size: 1.2rem; font-weight: 800; }
-    .card p { margin: 5px 0; color: #444; font-size: 0.95rem; }
-
-    /* Botones */
-    .btn-ws { display: block; width: 100%; text-align: center; background: #25D366; color: white !important; padding: 10px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 10px; }
-    .btn-ws:hover { background: #1da851; }
-    
-    /* Títulos */
-    h1 { color: white !important; text-align: center; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; }
-    .seccion-titulo { color: #2ecc71; font-weight: bold; margin-bottom: 10px; font-size: 1.2rem; }
+    .card h3 { margin: 0; color: #1a1a1a; font-size: 1.3rem; }
+    .stTabs [data-baseweb="tab-list"] { background-color: rgba(255,255,255,0.1); border-radius: 10px; padding: 5px; }
+    .stTabs [data-baseweb="tab"] { color: white !important; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXIÓN A BASE DE DATOS (LECTURA)
-# Usamos tu link CSV público que ya funcionaba
-URL_DATOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLxlHXfxe4BKqlpm1xYZ8yKhrd2vH1mRDNWRNDnmg1zgt6kYlqnobYHkMS_LjfwlQM18PmCCVZzLzm/pub?output=csv&gid=0"
-URL_CAMIONES = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLxlHXfxe4BKqlpm1xYZ8yKhrd2vH1mRDNWRNDnmg1zgt6kYlqnobYHkMS_LjfwlQM18PmCCVZzLzm/pub?output=csv&gid=1752528761"
+# 2. CONEXIÓN (Lectura del Excel)
+# Usamos tu link de publicación CSV para leer los datos
+URL_DATOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLxlHXfxe4BKqlpm1xYZ8yKhrd2vH1mRDNWRNDnmg1zgt6kYlqnobYHkMS_LjfwlQM18PmCCVZzLzm/pub?output=csv"
 
-# Tu número de Admin para recibir las solicitudes de publicación
-ADMIN_WHATSAPP = "5493406649346" 
+# 3. INTERFAZ
+st.markdown("<h1 style='text-align: center; color: white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-def cargar_db(url):
-    try:
-        df = pd.read_csv(url)
-        df.columns = df.columns.str.strip().str.lower()
-        return df
-    except:
-        return pd.DataFrame()
+tab_buscar, tab_publicar = st.tabs(["🔍 BUSCAR CARGAS/CAMIONES", "📝 PUBLICAR AHORA"])
 
-# 3. INTERFAZ PRINCIPAL
-st.markdown("<h1>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
-
-tab_buscar, tab_pub_carga, tab_pub_camion = st.tabs(["🔍 BUSCAR", "📦 PUBLICAR CARGA", "🚛 PUBLICAR CAMIÓN"])
-
-# --- PESTAÑA 1: BUSCADOR ---
+# --- PESTAÑA BUSCAR ---
 with tab_buscar:
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        filtro = st.text_input("📍 Filtrar por Ciudad:", placeholder="Ej: Rosario, Rafaela...", key="search")
-    with col2:
-        if st.button("🔄 ACTUALIZAR"):
-            st.cache_data.clear()
-            st.rerun()
+    st.markdown("<h3 style='color:white'>Últimos Movimientos</h3>", unsafe_allow_html=True)
+    if st.button("🔄 ACTUALIZAR LISTA"):
+        st.cache_data.clear()
+        st.rerun()
+        
+    try:
+        df = pd.read_csv(URL_DATOS)
+        df.columns = df.columns.str.strip().str.lower()
+        
+        # Filtramos filas vacías
+        df = df.dropna(subset=[df.columns[0]]) 
+        
+        for _, r in df.iterrows():
+            # Detectamos si es camión o carga (ajustá esto según tus columnas reales)
+            # Asumimos columna 0: Origen, 1: Detalle, 2: Pago, 3: Tel
+            origen = str(r.iloc[0]).upper()
+            detalle = str(r.iloc[1])
+            pago = str(r.iloc[2])
+            tel = str(r.iloc[3]).split('.')[0].replace(" ", "")
+            
+            # Icono y color según el contenido
+            es_camion = "CAMION" in detalle.upper() or "VACIO" in detalle.upper()
+            clase = "card-camion" if es_camion else "card"
+            icon = "🚛" if es_camion else "📦"
+            
+            st.markdown(f"""
+            <div class="{clase}">
+                <h3>{icon} {origen}</h3>
+                <p><b>Detalle:</b> {detalle}</p>
+                <p><b>Valor:</b> {pago}</p>
+                <a href="https://wa.me/549{tel}" target="_blank" style="text-decoration:none; color:#25D366; font-weight:bold; display:block; margin-top:10px;">
+                    📲 CONTACTAR AHORA
+                </a>
+            </div>
+            """, unsafe_allow_html=True)
+    except Exception as e:
+        st.info("Conectando con la base de datos...")
+
+# --- PESTAÑA PUBLICAR (Aquí está el truco) ---
+with tab_publicar:
+    st.markdown("<div style='background: white; padding: 20px; border-radius: 15px;'>", unsafe_allow_html=True)
+    st.subheader("Cargá tus datos aquí 👇")
+    
+    # PEGA ACÁ TU LINK DE GOOGLE FORMS
+    # Ejemplo: "https://docs.google.com/forms/d/e/1FAIpQLSe.../viewform?embedded=true"
+    # Asegurate de que termine en 'viewform?embedded=true' para que se vea bien
+    LINK_FORMULARIO = "PEGAR_AQUI_TU_LINK_DEL_FORMULARIO" 
+    
+    if "PEGAR_AQUI" in LINK_FORMULARIO:
+        st.warning("⚠️ Faltan configurar el link del Formulario en el código.")
+        st.info("Pasos: Creá un Google Form -> Vinculalo a tu Excel -> Copiá el link -> Pegalo en el código.")
+    else:
+        # Esto incrusta el formulario DENTRO de la app. El usuario no sale nunca.
+        components.iframe(LINK_FORMULARIO, height=800, scrolling=True)
+        
+    st.markdown("</div>", unsafe_allow_html=True)
