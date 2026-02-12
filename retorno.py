@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 
-# CONFIGURACIÓN DE PÁGINA
-st.set_page_config(page_title="RETORNO MATCH", layout="wide")
+# 1. CONFIGURACIÓN DE PÁGINA
+st.set_page_config(page_title="RETORNO MATCH", layout="wide", page_icon="🚛")
 
-# ESTILO VISUAL (Fondo y tarjetas)
+# 2. ESTILO VISUAL
 st.markdown("""
     <style>
     .stApp {
@@ -18,7 +18,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# CONEXIÓN A GOOGLE SHEETS
+# 3. CONEXIÓN A GOOGLE SHEETS
 conn = st.connection("gsheets", type=GSheetsConnection)
 URL_DB = "https://docs.google.com/spreadsheets/d/18oipzHxWlvBPGW0f7ikEnXRh3EeG9lMC06jZG0uLiOs/edit#gid=0"
 
@@ -31,25 +31,27 @@ with tab1:
         st.cache_data.clear()
         st.rerun()
     
-    # Leer datos reales
-    df = conn.read(spreadsheet=URL_DB, worksheet="0")
-    if not df.empty:
-        df.columns = df.columns.str.strip().str.lower()
-        # Mostrar de más nuevo a más viejo
-        for _, r in df.iloc[::-1].iterrows():
-            if pd.notna(r['origen']):
-                tel = str(r['tel']).split('.')[0]
-                st.markdown(f"""
-                <div class="card-viaje">
-                    <h3>📍 {str(r['origen']).upper()}</h3>
-                    <p>📦 <b>Carga:</b> {r['item']} | 💰 <b>Tarifa:</b> {r['pago']}</p>
-                    <a class="btn-ws" href="https://wa.me/549{tel}" target="_blank">📲 CONTACTAR</a>
-                </div>
-                """, unsafe_allow_html=True)
+    # LEER LA HOJA "cargas" (Asegurate que se llame así en el Excel)
+    try:
+        df = conn.read(spreadsheet=URL_DB, worksheet="cargas") # <--- CAMBIO CLAVE AQUÍ
+        if not df.empty:
+            df.columns = df.columns.str.strip().str.lower()
+            for _, r in df.iloc[::-1].iterrows():
+                if pd.notna(r.get('origen')):
+                    tel = str(r.get('tel', '')).split('.')[0].replace(" ", "")
+                    st.markdown(f"""
+                    <div class="card-viaje">
+                        <h3>📍 {str(r['origen']).upper()}</h3>
+                        <p>📦 <b>Carga:</b> {r.get('item', 'N/A')} | 💰 <b>Tarifa:</b> {r.get('pago', 'A convenir')}</p>
+                        <a class="btn-ws" href="https://wa.me/549{tel}" target="_blank">📲 CONTACTAR</a>
+                    </div>
+                    """, unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"Error al leer la hoja 'cargas': {e}")
 
 with tab2:
     st.markdown("<h3 style='color: white;'>Publicar nuevo viaje</h3>", unsafe_allow_html=True)
-    with st.form("nuevo_viaje", clear_on_submit=True):
+    with st.form("form_nuevo", clear_on_submit=True):
         origen = st.text_input("¿Desde dónde salís?")
         item = st.text_input("¿Qué llevás o buscás?")
         pago = st.text_input("Tarifa / Pago")
@@ -57,15 +59,15 @@ with tab2:
         
         if st.form_submit_button("PUBLICAR AHORA"):
             if origen and tel:
-                # 1. Traer datos actuales
-                current_df = conn.read(spreadsheet=URL_DB, worksheet="0")
+                # 1. Traer datos actuales de la hoja "cargas"
+                current_df = conn.read(spreadsheet=URL_DB, worksheet="cargas")
                 # 2. Crear nueva fila
                 nuevo = pd.DataFrame([{"origen": origen, "item": item, "pago": pago, "tel": tel}])
-                # 3. Combinar y subir
+                # 3. Unir y subir
                 updated_df = pd.concat([current_df, nuevo], ignore_index=True)
-                conn.update(spreadsheet=URL_DB, data=updated_df)
+                conn.update(spreadsheet=URL_DB, data=updated_df, worksheet="cargas")
                 
-                st.success("¡Publicado en el Excel!")
+                st.success("¡Publicado! Revisá la pestaña 'BUSCAR VIAJES'.")
                 st.balloons()
             else:
-                st.error("Faltan datos obligatorios.")
+                st.warning("Completá origen y teléfono.")
