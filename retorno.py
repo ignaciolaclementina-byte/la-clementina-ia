@@ -11,7 +11,7 @@ ID_PLANILLA = "18oipzHxWlvBPGWOf7ikEnXRh3EeG9IMC06jZG0uLiOs"
 URL_CARGAS = f"https://docs.google.com/spreadsheets/d/{ID_PLANILLA}/gviz/tq?tqx=out:csv&sheet=cargas"
 URL_CAMIONES = f"https://docs.google.com/spreadsheets/d/{ID_PLANILLA}/gviz/tq?tqx=out:csv&sheet=camiones"
 
-# ESTILOS
+# ESTILOS VISUALES
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070"); background-size: cover; }
@@ -24,11 +24,12 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align: center;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# FUNCION PARA CARGAR DATOS SIN ERRORES
+# FUNCIÓN DE CARGA SEGURA
 def cargar_datos(url):
     try:
         df = pd.read_csv(url)
-        df.columns = df.columns.str.strip().str.lower() # Limpia espacios y mayúsculas
+        # Limpieza: quitamos espacios y pasamos títulos a minúsculas
+        df.columns = df.columns.str.strip().str.lower()
         return df.dropna(how='all')
     except:
         return pd.DataFrame()
@@ -42,7 +43,7 @@ t1, t2, t3 = st.tabs(["🔍 BUSCAR", "📤 PUBLICAR", "🚛 MI CAMIÓN"])
 with t1:
     if not df_cargas.empty:
         # Buscador por Origen
-        opciones = ["Todos"] + sorted(df_cargas['origen'].unique().tolist())
+        opciones = ["Todos"] + sorted(df_cargas['origen'].unique().astype(str).tolist())
         filtro = st.selectbox("¿Desde dónde buscás?", opciones)
         
         for _, r in df_cargas.iterrows():
@@ -56,23 +57,24 @@ with t1:
                 """, unsafe_allow_html=True)
                 
                 # Botón de WhatsApp
-                tel = str(r['tel']).split('.')[0].replace(" ", "")
+                # Quitamos decimales si el Excel los agrega al teléfono
+                tel_limpio = str(r['tel']).split('.')[0].replace(" ", "")
                 msg = urllib.parse.quote(f"Hola! Vi tu carga de {r['item']} en {r['origen']}. ¿Sigue disponible?")
-                st.markdown(f'<a href="https://wa.me/549{tel}?text={msg}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; text-align:center; padding:12px; border-radius:8px; font-weight:bold; margin-top:-10px; margin-bottom:20px;">📲 CONTACTAR DUEÑO</div></a>', unsafe_allow_html=True)
+                st.markdown(f'<a href="https://wa.me/549{tel_limpio}?text={msg}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; text-align:center; padding:12px; border-radius:8px; font-weight:bold; margin-top:-10px; margin-bottom:20px;">📲 CONTACTAR DUEÑO</div></a>', unsafe_allow_html=True)
     else:
-        st.warning("⚠️ No se encontraron datos. Revisá que la pestaña del Excel se llame 'cargas' y tenga datos abajo de los títulos.")
-        st.info("Títulos requeridos en Excel: origen, item, pago, tel")
+        st.warning("⚠️ No se encontraron datos en el Excel.")
+        st.info("Chequeá que la pestaña se llame 'cargas' y que los títulos sean: origen, item, pago, tel")
 
 # --- PESTAÑA 2: PUBLICAR ---
 with t2:
     st.subheader("Publicar nueva carga")
-    with st.form("pub"):
+    with st.form("pub", clear_on_submit=True):
         o = st.text_input("Origen (Ej: Rosario)")
         i = st.text_input("¿Qué mercadería es?")
         p = st.text_input("Pago ofrecido")
         if st.form_submit_button("🚀 GENERAR PUBLICACIÓN"):
             texto = urllib.parse.quote(f"NUEVA CARGA:\n📍 Origen: {o}\n📦 Item: {i}\n💰 Pago: {p}")
-            st.markdown(f'<a href="https://wa.me/5493406433604?text={texto}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; text-align:center; padding:15px; border-radius:10px; font-weight:bold;">📲 ENVIAR A CENTRAL</div></a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="https://wa.me/5493406433604?text={texto}" target="_blank" style="text-decoration:none;"><div style="background:#25D366; color:white; text-align:center; padding:15px; border-radius:10px; font-weight:bold;">📲 ENVIAR A CENTRAL PARA SUBIR</div></a>', unsafe_allow_html=True)
 
 # --- PESTAÑA 3: CAMIONES ---
 with t3:
