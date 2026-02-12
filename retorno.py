@@ -20,11 +20,11 @@ try:
     df.columns = df.columns.str.strip().str.lower()
     
     if df.empty:
-        st.warning("⚠️ El Excel está conectado pero no tiene datos en las filas. Agregá una carga en la fila 2.")
+        st.warning("⚠️ El Excel está conectado pero está VACÍO. Agregá una carga en la fila 2 del Excel.")
     else:
         st.success(f"✅ Conectado. Se encontraron {len(df)} filas.")
         # Esto te permite ver qué está leyendo la App realmente
-        with st.expander("Ver tabla cruda del Excel"):
+        with st.expander("Hacé clic acá para ver los datos crudos del Excel"):
             st.dataframe(df)
 except Exception as e:
     st.error(f"❌ Error de conexión: {e}")
@@ -56,7 +56,6 @@ if 'origen' in df.columns and 'item' in df.columns:
             """, unsafe_allow_html=True)
             
             # Botón WhatsApp
-            # Limpiamos el número de teléfono por si viene con decimales
             tel = str(row['tel']).split('.')[0].replace(" ", "")
             msg = urllib.parse.quote(f"Hola! Vi la carga de {row['item']} en {row['origen']} en la App.")
             link = f"https://wa.me/549{tel}?text={msg}"
@@ -69,5 +68,5 @@ if 'origen' in df.columns and 'item' in df.columns:
                 </a>
             ''', unsafe_allow_html=True)
 else:
-    st.error("⚠️ ERROR DE COLUMNAS")
-    st.write("El código busca 'origen', 'item', 'pago' y 'tel'. Revisá que los nombres en el Excel sean iguales.")
+    st.error("⚠️ ERROR DE TÍTULOS")
+    st.write("El código busca 'origen', 'item', 'pago' y 'tel'. Revisá que los nombres en el Excel sean exactamente esos.")
