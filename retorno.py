@@ -19,10 +19,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. CONEXIÓN (Usando el nombre [gsheets] de tus Secrets)
+# 3. CONEXIÓN (Debe coincidir con [gsheets] en tus Secrets)
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# URL CORRECTA (Copiada de tu mensaje)
+# URL de tu Excel (la que pasaste recién)
 URL_DB = "https://docs.google.com/spreadsheets/d/18oipzHxWlvBPGW0f7ikEnXRh3EeG9lMC06jZG0uLiOs/edit#gid=0"
 
 st.markdown("<h1 style='text-align: center; color: white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
@@ -35,8 +35,7 @@ with tab1:
         st.rerun()
     
     try:
-        # Intentamos leer la primera hoja
-        df = conn.read(spreadsheet=URL_DB)
-        if not df.empty:
-            df.columns = df.columns.str.strip().str.lower()
-            for _, r in df.iloc[::-
+        # Leemos la pestaña 'cargas'
+        df = conn.read(spreadsheet=URL_DB, worksheet="cargas")
+        
+        if df is not None and
