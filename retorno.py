@@ -1,9 +1,11 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
-# 1. CONFIGURACIÓN
+# 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="RETORNO MATCH", layout="wide")
 
+# Estilo visual pro
 st.markdown("""
     <style>
     .stApp {
@@ -11,46 +13,53 @@ st.markdown("""
         url("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070");
         background-size: cover; background-attachment: fixed;
     }
-    .card { background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; border-left: 12px solid #2ecc71; }
-    .card h3, .card p { color: #1a1a1a !important; }
-    .stButton>button { width: 100%; background-color: #2ecc71; color: white; font-weight: bold; }
+    .card { background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; border-left: 10px solid #2ecc71; color: black; }
+    .card h3 { margin-top:0; color: #1a1a1a; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXIÓN (Solo lectura para mostrar lo que ya se cargó)
-URL_CARGAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLxlHXfxe4BKqlpm1xYZ8yKhrd2vH1mRDNWRNDnmg1zgt6kYlqnobYHkMS_LjfwlQM18PmCCVZzLzm/pub?output=csv"
+# 2. CONEXIÓN DIRECTA (Sin demoras de "Publicar en la web")
+# Usamos el link de edición, pero la App lo usará como base de datos
+url = "https://docs.google.com/spreadsheets/d/18oipzHxWlvBPGWOf7ikEnXRh3EeG9IMC06jZG0uLiOS/edit?usp=sharing"
+conn = st.connection("gsheets", type=GSheetsConnection)
 
 # 3. INTERFAZ
-st.markdown("<h1 style='text-align: center; color: white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
+st.title("🚛 RETORNO MATCH - SAN JORGE")
 
-tab1, tab2, tab3 = st.tabs(["🔍 VER DISPONIBLES", "📦 PUBLICAR CARGA", "🚛 PUBLICAR CAMIÓN"])
+tab1, tab2 = st.tabs(["🔍 BUSCAR DISPONIBLES", "📤 PUBLICAR (CARGA O CAMIÓN)"])
 
 with tab1:
-    st.subheader("Últimas publicaciones")
-    try:
-        df = pd.read_csv(URL_CARGAS)
-        for _, r in df.dropna(subset=[df.columns[0]]).iterrows():
-            st.markdown(f"""
-            <div class='card'>
-                <h3>📍 {str(r.iloc[0]).upper()}</h3>
-                <p><b>Detalle:</b> {r.iloc[1]}</p>
-                <p><b>Contacto:</b> {r.iloc[2]}</p>
-                <a href="https://wa.me/549{r.iloc[2]}" style="text-decoration:none; color:#25D366; font-weight:bold;">📲 CONTACTAR AHORA</a>
+    # Leemos los datos actuales
+    data = conn.read(spreadsheet=url, usecols=[0,1,2,3])
+    data = data.dropna(subset=[data.columns[0]]) # Limpiar filas vacías
+    
+    for _, row in data.iterrows():
+        st.markdown(f"""
+            <div class="card">
+                <h3>📍 {row.iloc[0]}</h3>
+                <p><b>Detalle:</b> {row.iloc[1]}</p>
+                <p><b>Pago/Tipo:</b> {row.iloc[2]}</p>
+                <p><b>Teléfono:</b> {row.iloc[3]}</p>
+                <a href="https://wa.me/549{row.iloc[3]}" target="_blank" style="color: green; font-weight: bold;">📲 Contactar por WhatsApp</a>
             </div>
-            """, unsafe_allow_html=True)
-    except:
-        st.info("No hay publicaciones recientes.")
+        """, unsafe_allow_html=True)
 
 with tab2:
-    st.subheader("📤 Datos de la Carga")
-    # Formulario embebido de Google (La forma más segura de cargar datos sin fallos)
-    # Deberías crear un Google Form y pegar el link acá:
-    st.markdown("""
-        <iframe src="TU_LINK_DE_GOOGLE_FORM_AQUÍ?embedded=true" width="100%" height="600" frameborder="0" marginheight="0" marginwidth="0">Cargando…</iframe>
-    """, unsafe_allow_html=True)
-
-with tab3:
-    st.subheader("🚛 Datos del Camión")
-    st.markdown("""
-        <iframe src="TU_LINK_DE_GOOGLE_FORM_AQUÍ?embedded=true" width="100%" height="600" frameborder="0" marginheight="0" marginwidth="0">Cargando…</iframe>
-    """, unsafe_allow_html=True)
+    st.subheader("Completá los datos para publicar")
+    with st.form(key="publicar_form"):
+        tipo = st.selectbox("¿Qué publicás?", ["Carga Disponible", "Camión Buscando Retorno"])
+        origen = st.text_input("Origen / Ubicación actual")
+        detalle = st.text_input("¿Qué llevás? / ¿Qué buscás? (Ej: Maíz / Térmico)")
+        pago = st.text_input("Pago ofrecido / Tarifa")
+        tel = st.text_input("Tu WhatsApp (Ej: 3406649346)")
+        
+        submit_button = st.form_submit_button(label="🚀 PUBLICAR AHORA")
+        
+        if submit_button:
+            # Aquí creamos la nueva fila
+            new_data = pd.DataFrame([{"origen": origen, "item": detalle, "pago": pago, "tel": tel}])
+            # Actualizamos el Excel
+            updated_df = pd.concat([data, new_data], ignore_index=True)
+            conn.update(spreadsheet=url, data=updated_df)
+            st.success("¡Publicado con éxito! Refrescá la pestaña de búsqueda.")
+            st.balloons()
