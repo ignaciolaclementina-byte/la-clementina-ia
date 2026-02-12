@@ -1,117 +1,121 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
+from datetime import datetime
 
 # Configuración de página
-st.set_page_config(page_title="RETORNO MATCH | Logística Inteligente", page_icon="🚛", layout="wide")
+st.set_page_config(page_title="RETORNO MATCH | Portal de Disponibilidad", page_icon="🚛", layout="wide")
 
-# --- INTERFAZ PREMIUM ---
+# --- ESTILO DE INTERFAZ PROFESIONAL ---
 st.markdown("""
     <style>
+    /* Fondo de depósito logístico profesional */
     .stApp {
-        background: linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)), 
+        background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), 
                     url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
     }
     
-    /* Encabezado */
-    .hero-text {
-        text-align: center;
-        color: white;
-        padding: 20px 0;
-    }
-    .hero-text h1 { font-size: 50px; font-weight: 900; margin-bottom: 0; text-shadow: 2px 2px 10px black; }
-    .hero-text p { font-size: 20px; color: #00FF41; font-weight: bold; }
+    /* Header Principal */
+    .main-header { text-align: center; padding: 30px 0; }
+    .main-header h1 { color: white; font-size: 55px; font-weight: 900; margin-bottom: 5px; }
+    .main-header p { color: #00FF41; font-size: 22px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
 
-    /* Tarjetas de Camiones (Mejoradas) */
-    .card-container {
-        background: rgba(255, 255, 255, 0.98);
+    /* Tarjetas de Camiones Disponibles */
+    .camion-card {
+        background: #FFFFFF;
         border-radius: 12px;
-        padding: 20px;
+        padding: 0;
         margin-bottom: 25px;
-        border-top: 5px solid #28a745;
-        box-shadow: 0px 15px 35px rgba(0,0,0,0.4);
-        color: #333;
+        box-shadow: 0px 15px 35px rgba(0,0,0,0.5);
+        overflow: hidden;
+        border: 1px solid #e0e0e0;
     }
-
-    .route-header {
+    
+    .card-header {
+        background: #f8f9fa;
+        padding: 15px 25px;
+        border-bottom: 1px solid #eee;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 10px;
-        margin-bottom: 15px;
     }
 
-    .badge-dispo {
-        background: #28a745;
-        color: white;
-        padding: 5px 15px;
-        border-radius: 20px;
+    .card-body { padding: 25px; }
+
+    .route-text { font-size: 24px; font-weight: 800; color: #1a1a1a; }
+    .route-arrow { color: #007bff; padding: 0 10px; }
+
+    .tag-dispo {
+        background: #00FF41;
+        color: #000;
+        padding: 4px 12px;
+        border-radius: 50px;
         font-size: 12px;
-        font-weight: bold;
+        font-weight: 800;
     }
 
-    .data-row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 10px;
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 15px;
     }
 
-    .data-label { color: #888; font-size: 14px; text-transform: uppercase; font-weight: bold; }
-    .data-value { color: #1a1a1a; font-size: 18px; font-weight: 700; }
+    .label { color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; }
+    .value { color: #333; font-size: 18px; font-weight: 700; }
 
-    /* Botón de WhatsApp estilizado */
-    .btn-contact {
-        background-color: #25D366;
+    /* Botón de Acción para Empresas */
+    .btn-contratar {
+        background: #25D366;
         color: white !important;
         text-align: center;
         padding: 15px;
-        border-radius: 8px;
         display: block;
         text-decoration: none;
-        font-weight: bold;
+        font-weight: 900;
         font-size: 18px;
-        margin-top: 20px;
-        box-shadow: 0px 4px 10px rgba(37, 211, 102, 0.3);
+        transition: 0.3s;
     }
-    
-    /* Ajustes de inputs */
-    .stTextInput>div>div>input {
-        background-color: rgba(255,255,255,0.1) !important;
+    .btn-contratar:hover { background: #128C7E; }
+
+    /* Estilo del buscador */
+    .stTextInput input {
+        background: rgba(255,255,255,0.05) !important;
         color: white !important;
-        border: 1px solid rgba(255,255,255,0.3) !important;
-        height: 50px;
-        border-radius: 10px;
+        border: 1px solid #444 !important;
+        height: 60px;
+        font-size: 18px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- HEADER ---
+# --- CABECERA ---
 st.markdown("""
-    <div class="hero-text">
+    <div class="main-header">
         <h1>RETORNO MATCH</h1>
-        <p>CONECTANDO CAMIONES VACÍOS CON CARGAS DISPONIBLES</p>
+        <p>Logística de Retornos en Tiempo Real</p>
     </div>
 """, unsafe_allow_html=True)
 
-# --- BOTONES DE ACCIÓN ---
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.button("🔍 BUSCAR CARGA", use_container_width=True)
-with col2:
-    st.button("🚛 CAMIONES DISPONIBLES", use_container_width=True, type="primary")
-with col3:
-    st.link_button("➕ PUBLICAR DISPO", "https://docs.google.com/spreadsheets/d/18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs/edit", use_container_width=True)
+# --- NAVEGACIÓN RÁPIDA ---
+col_nav1, col_nav2, col_nav3 = st.columns(3)
+with col_nav1:
+    if st.button("🚛 VER CAMIONES VACÍOS", use_container_width=True, type="primary"):
+        st.rerun()
+with col_nav2:
+    st.button("📦 VER CARGAS", use_container_width=True)
+with col_nav3:
+    st.link_button("➕ PUBLICAR DISPONIBILIDAD", "https://docs.google.com/spreadsheets/d/18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs/edit", use_container_width=True)
 
-st.write("---")
+st.write("")
 
-# --- BUSCADOR ---
-search = st.text_input("", placeholder="🔍 Filtrar por destino o equipo (ej: Rosario, Batea, Sider...)")
+# --- BUSCADOR INTELIGENTE PARA EMPRESAS ---
+search = st.text_input("", placeholder="🔍 ¿A dónde necesitás enviar carga? (Ej: Rosario, Córdoba, Buenos Aires...)")
 
-# --- CARGA DE DATOS ---
+# --- CONEXIÓN Y DATOS ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=cargas"
 
@@ -119,40 +123,44 @@ try:
     df = pd.read_csv(URL)
     df.columns = [c.strip().lower() for c in df.columns]
 
+    # Lógica de búsqueda: Filtra por destino del camión (columna 'item')
     if search:
-        df = df[df.astype(str).apply(lambda x: x.str.contains(search, case=False)).any(axis=1)]
+        df = df[df['item'].str.contains(search, case=False, na=False) | df['origen'].str.contains(search, case=False, na=False)]
 
     if not df.empty:
         for _, row in df.iloc[::-1].iterrows():
             if pd.notna(row['origen']):
-                tel = str(row['tel']).replace(".0", "")
-                msg = urllib.parse.quote(f"Hola! Vi tu camión en Retorno Match. ¿Tenés disponibilidad desde {row['origen']} hacia {row['item']}?")
+                tel = str(row['tel']).replace(".0", "").replace(" ", "")
+                # Mensaje pre-armado para el chofer
+                msg = urllib.parse.quote(f"Hola! Vi en Retorno Match que estás volviendo vacío desde {row['origen']} hacia {row['item']}. Tengo una carga para ofrecerte. ¿Te interesa?")
                 
                 st.markdown(f"""
-                <div class="card-container">
-                    <div class="route-header">
-                        <span style="font-size: 22px; font-weight: 900;">📍 {str(row['origen']).upper()} ⮕ {str(row['item']).upper()}</span>
-                        <span class="badge-dispo">RETORNO DISPONIBLE</span>
+                <div class="camion-card">
+                    <div class="card-header">
+                        <span class="route-text">📍 {str(row['origen']).upper()} <span class="route-arrow">⮕</span> 🏁 {str(row['item']).upper()}</span>
+                        <span class="tag-dispo">● DISPONIBLE</span>
                     </div>
-                    <div class="data-row">
-                        <div>
-                            <p class="data-label">Equipo / Observaciones</p>
-                            <p class="data-value">🚛 {row['pago']}</p>
+                    <div class="card-body">
+                        <div class="info-grid">
+                            <div>
+                                <p class="label">Equipo / Camión</p>
+                                <p class="value">🚛 {row['pago']}</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <p class="label">Estado de Carga</p>
+                                <p class="value" style="color: #28a745;">VACÍO / EN RETORNO</p>
+                            </div>
                         </div>
-                        <div style="text-align: right;">
-                            <p class="data-label">Publicado</p>
-                            <p class="data-value">Hoy</p>
-                        </div>
+                        <a href="https://wa.me/{tel}?text={msg}" target="_blank" class="btn-contratar">
+                            SOLICITAR CARGA PARA ESTE CAMIÓN
+                        </a>
                     </div>
-                    <a href="https://wa.me/{tel}?text={msg}" target="_blank" class="btn-contact">
-                        📱 CONTACTAR AL CHOFER
-                    </a>
                 </div>
                 """, unsafe_allow_html=True)
     else:
-        st.info("Buscando retornos disponibles en la red...")
+        st.markdown("<h3 style='color:white; text-align:center;'>No se encontraron camiones para esta ruta por ahora.</h3>", unsafe_allow_html=True)
 
 except Exception as e:
-    st.error("Conexión activa con Google Sheets.")
+    st.error("Sincronizando con la red de transportistas...")
 
-st.caption("Central de Logística San Jorge | 2026")
+st.markdown("<br><p style='text-align:center; color: #666;'>Sistema de Match Logístico - San Jorge 2026</p>", unsafe_allow_html=True)
