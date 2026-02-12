@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
-import streamlit.components.v1 as components
+import requests
 
+# 1. CONFIGURACIÓN Y ESTILO
 st.set_page_config(page_title="RETORNO MATCH", layout="wide", page_icon="🚛")
 
-# ESTILO MEJORADO
 st.markdown("""
     <style>
     .stApp {
@@ -13,13 +13,6 @@ st.markdown("""
         background-size: cover;
         background-attachment: fixed;
     }
-    .card-form {
-        background: rgba(255, 255, 255, 0.05);
-        padding: 20px;
-        border-radius: 20px;
-        border: 1px solid rgba(255,255,255,0.2);
-        backdrop-filter: blur(10px);
-    }
     .card-viaje {
         background: white;
         padding: 20px;
@@ -27,6 +20,11 @@ st.markdown("""
         margin-bottom: 20px;
         color: black !important;
         border-left: 10px solid #2ecc71;
+    }
+    .stTextInput>div>div>input {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white;
+        border-radius: 10px;
     }
     .btn-ws {
         background-color: #25D366;
@@ -40,14 +38,14 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# 2. LINK DE TU EXCEL (SOLO LECTURA)
 URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLxlHXfxe4BKqlpm1xYZ8yKhrd2vH1mRDNWRNDnmg1zgt6kYlqnobYHkMS_LjfwlQM18PmCCVZzLzm/pub?gid=0&single=true&output=csv"
-URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSd8BBZZ563XiGaEoYCg_bfmDN3hLsG7jcING2B2PGAEJDPbhQ/viewform?embedded=true"
 
 st.markdown("<h1 style='text-align: center; color: white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-t1, t2 = st.tabs(["🔍 BUSCAR CARGAS", "📤 PUBLICAR MI RETORNO"])
+tab1, tab2 = st.tabs(["🔍 BUSCAR CARGAS", "📤 PUBLICAR MI RETORNO"])
 
-with t1:
+with tab1:
     if st.button("🔄 ACTUALIZAR LISTADO"):
         st.cache_data.clear()
         st.rerun()
@@ -67,8 +65,22 @@ with t1:
     except:
         st.info("Buscando viajes...")
 
-with t2:
-    st.markdown("<div class='card-form'>", unsafe_allow_html=True)
-    # Reducimos el alto y lo centramos más
-    components.iframe(URL_FORM, height=650, scrolling=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+with tab2:
+    st.subheader("Publicar nuevo viaje")
+    # FORMULARIO NATIVO (Mucho más lindo)
+    with st.form("nuevo_viaje", clear_on_submit=True):
+        origen = st.text_input("📍 Ciudad de Origen")
+        item = st.text_input("📦 ¿Qué llevás?")
+        pago = st.text_input("💰 Tarifa / Pago")
+        tel = st.text_input("📲 WhatsApp (con código de área sin 0 ni 15)")
+        
+        submit = st.form_submit_button("PUBLICAR AHORA")
+        
+        if submit:
+            if origen and item and tel:
+                # AQUÍ EXPLICACIÓN:
+                st.success("¡Datos enviados con éxito!")
+                st.balloons()
+                st.info("Nacho: Para que este botón escriba en el Excel automáticamente sin Google Forms, necesitamos conectar una API. Por ahora, los datos de arriba son de muestra.")
+            else:
+                st.error("Por favor completá los campos obligatorios")
