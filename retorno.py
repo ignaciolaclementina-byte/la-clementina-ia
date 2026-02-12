@@ -3,121 +3,134 @@ import pandas as pd
 import urllib.parse
 
 # Configuración de página
-st.set_page_config(page_title="RETORNO MATCH | Logística", page_icon="🚛", layout="centered")
+st.set_page_config(page_title="RETORNO MATCH | Logística", page_icon="🚛", layout="wide")
 
-# --- DISEÑO AVANZADO ---
+# --- DISEÑO TIPO PORTAL PROFESIONAL (Basado en tu imagen anterior) ---
 st.markdown("""
     <style>
     .stApp {
-        background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), 
-                    url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+        background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+                    url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
     }
     
-    .main-title {
-        color: #FFFFFF;
+    .main-header {
         text-align: center;
-        font-size: 40px;
-        font-weight: 900;
-        text-shadow: 3px 3px 10px #000000;
-        margin-bottom: 5px;
-    }
-
-    .sub-title {
-        color: #FFD700;
-        text-align: center;
-        font-size: 18px;
-        font-weight: 600;
-        margin-bottom: 30px;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-
-    .viaje-card {
-        background-color: #FFFFFF;
         padding: 20px;
+    }
+
+    .title-text {
+        color: white;
+        font-size: 45px;
+        font-weight: 900;
+        text-transform: uppercase;
+        margin-bottom: 0px;
+        text-shadow: 2px 2px 15px rgba(0,0,0,1);
+    }
+
+    /* Menú de pestañas estilo botones */
+    .nav-container {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 30px;
+    }
+
+    /* Tarjetas de camiones */
+    .card {
+        background: rgba(255, 255, 255, 0.95);
         border-radius: 15px;
-        border-left: 12px solid #FFD700;
+        padding: 25px;
         margin-bottom: 20px;
-        box-shadow: 0px 8px 15px rgba(0,0,0,0.4);
+        border-left: 10px solid #28a745;
+        box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
     }
 
-    .city-text { color: #1a1a1a; font-size: 24px; font-weight: 800; margin: 0; }
-    .item-text { color: #555; font-size: 18px; font-weight: 600; margin-bottom: 10px; }
-    .price-tag { 
-        background-color: #e8f5e9; 
-        color: #2e7d32; 
-        padding: 5px 15px; 
-        border-radius: 8px; 
-        font-weight: 800; 
-        font-size: 20px;
-        display: inline-block;
+    .status-badge {
+        background: #28a745;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 50px;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
     }
 
-    .whatsapp-btn {
-        display: block;
-        text-align: center;
+    .wa-button {
         background-color: #25D366;
         color: white !important;
+        text-align: center;
         padding: 12px;
         border-radius: 10px;
+        display: block;
         text-decoration: none;
         font-weight: bold;
         margin-top: 15px;
-        transition: 0.3s;
+        font-size: 18px;
     }
-    .whatsapp-btn:hover { background-color: #128C7E; transform: scale(1.02); }
 
-    .stTextInput>div>div>input {
-        border-radius: 25px;
-        padding: 10px 20px;
+    .hero-section {
+        text-align: center;
+        color: white;
+        padding: 40px 10px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown('<p class="main-title">🚛 RETORNO MATCH</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">Buscador de Cargas en Tiempo Real</p>', unsafe_allow_html=True)
+# --- CABECERA ---
+st.markdown('<div class="main-header"><p class="title-text">🚛 RETORNO MATCH</p></div>', unsafe_allow_html=True)
+
+# --- NAVEGACIÓN (Simulada con columnas de Streamlit para que sea funcional) ---
+col_nav1, col_nav2, col_nav3 = st.columns([1,1,1])
+with col_nav1:
+    btn_cargas = st.button("🔍 BUSCAR CARGA", use_container_width=True)
+with col_nav2:
+    btn_camiones = st.button("🚛 CAMIONES DISPONIBLES", use_container_width=True)
+with col_nav3:
+    st.link_button("➕ PUBLICAR", "https://docs.google.com/spreadsheets/d/18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs/edit", use_container_width=True)
+
+st.markdown("<hr style='border: 0.5px solid rgba(255,255,255,0.2)'>", unsafe_allow_html=True)
+
+# --- LÓGICA DE CONTENIDO ---
+st.markdown('<div class="hero-section"><h2>¿Sos Cliente o Transportista?</h2><p>Encontrá el match perfecto para aprovechar el viaje vacío.</p></div>', unsafe_allow_html=True)
 
 # Conexión al Sheets
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=cargas"
 
-# Buscador
-search = st.text_input("", placeholder="🔍 Buscar por origen (ej: San Jorge, Rosario...)")
-
 try:
     df = pd.read_csv(URL)
     df.columns = [c.strip().lower() for c in df.columns]
-    
-    # Filtrar si hay búsqueda
+
+    # Buscador principal
+    search = st.text_input("", placeholder="🔍 Escribí el destino o ciudad para filtrar camiones en vacío...")
+
     if search:
-        df = df[df['origen'].str.contains(search, case=False, na=False)]
+        df = df[df['item'].str.contains(search, case=False, na=False) | df['origen'].str.contains(search, case=False, na=False)]
 
     if not df.empty:
         for _, row in df.iloc[::-1].iterrows():
             if pd.notna(row['origen']):
-                # Crear link de WhatsApp automático
-                tel_limpio = str(row['tel']).replace(".0", "").replace(" ", "").replace("+", "")
-                msg = urllib.parse.quote(f"Hola, vi el viaje desde {row['origen']} por {row['item']} en Retorno Match. ¿Sigue disponible?")
-                ws_link = f"https://wa.me/{tel_limpio}?text={msg}"
-
+                # Datos para WhatsApp
+                tel = str(row['tel']).replace(".0", "")
+                msg = urllib.parse.quote(f"Hola! Vi tu camión en Retorno Match. ¿Tenes disponibilidad desde {row['origen']} hacia {row['item']}?")
+                
                 st.markdown(f"""
-                <div class="viaje-card">
-                    <p class="city-text">📍 {str(row['origen']).upper()}</p>
-                    <p class="item-text">📦 CARGA: {str(row['item']).upper()}</p>
-                    <div class="price-tag">💰 ${row['pago']}</div>
-                    <a href="{ws_link}" target="_blank" class="whatsapp-btn">
-                        💬 CONTACTAR POR WHATSAPP
+                <div class="card">
+                    <span class="status-badge">CAMIÓN DISPONIBLE</span>
+                    <h2 style="color: #1a1a1a; margin-top:10px;">📍 {str(row['origen']).upper()} ➡️ {str(row['item']).upper()}</h2>
+                    <p style="color: #555;"><strong>EQUIPO:</strong> {row['pago']}</p>
+                    <a href="https://wa.me/{tel}?text={msg}" target="_blank" class="wa-button">
+                        ✅ CONTACTAR TRANSPORTISTA
                     </a>
                 </div>
                 """, unsafe_allow_html=True)
     else:
-        st.warning("No se encontraron viajes con ese origen.")
+        st.info("No hay camiones reportados en esta zona por ahora.")
 
 except Exception as e:
-    st.error("Sincronizando con la base de datos...")
+    st.error("Conectando con la central de cargas...")
 
-if st.button("🔄 REFRESCAR CARTELERA"):
-    st.rerun()
+st.markdown("<br><center><button style='border-radius:20px; padding:10px; background:#1E1E1E; color:white; border:none;'>🔄 ACTUALIZAR APP</button></center>", unsafe_allow_html=True)
