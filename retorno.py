@@ -1,15 +1,13 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
-from datetime import datetime
 
-# Configuración de página
-st.set_page_config(page_title="RETORNO MATCH | Portal de Disponibilidad", page_icon="🚛", layout="wide")
+# 1. CONFIGURACIÓN DE PÁGINA
+st.set_page_config(page_title="RETORNO MATCH | Logística", page_icon="🚛", layout="wide")
 
-# --- ESTILO DE INTERFAZ PROFESIONAL ---
+# 2. ESTILO DE INTERFAZ PREMIUM
 st.markdown("""
     <style>
-    /* Fondo de depósito logístico profesional */
     .stApp {
         background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), 
                     url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
@@ -18,20 +16,18 @@ st.markdown("""
         background-attachment: fixed;
     }
     
-    /* Header Principal */
-    .main-header { text-align: center; padding: 30px 0; }
-    .main-header h1 { color: white; font-size: 55px; font-weight: 900; margin-bottom: 5px; }
-    .main-header p { color: #00FF41; font-size: 22px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+    .main-header { text-align: center; padding: 20px 0; }
+    .main-header h1 { color: white; font-size: 50px; font-weight: 900; margin-bottom: 0; text-shadow: 2px 2px 10px black; }
+    .main-header p { color: #00FF41; font-size: 20px; font-weight: bold; text-transform: uppercase; }
 
-    /* Tarjetas de Camiones Disponibles */
+    /* Tarjetas de Camiones */
     .camion-card {
-        background: #FFFFFF;
-        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.98);
+        border-radius: 15px;
         padding: 0;
         margin-bottom: 25px;
         box-shadow: 0px 15px 35px rgba(0,0,0,0.5);
         overflow: hidden;
-        border: 1px solid #e0e0e0;
     }
     
     .card-header {
@@ -43,32 +39,14 @@ st.markdown("""
         align-items: center;
     }
 
-    .card-body { padding: 25px; }
+    .route-text { font-size: 22px; font-weight: 800; color: #1a1a1a; }
+    .tag-dispo { background: #00FF41; color: black; padding: 4px 12px; border-radius: 50px; font-size: 12px; font-weight: 800; }
 
-    .route-text { font-size: 24px; font-weight: 800; color: #1a1a1a; }
-    .route-arrow { color: #007bff; padding: 0 10px; }
+    .card-body { padding: 20px 25px; }
+    .label { color: #888; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+    .value { color: #333; font-size: 18px; font-weight: 700; margin-bottom: 10px; }
 
-    .tag-dispo {
-        background: #00FF41;
-        color: #000;
-        padding: 4px 12px;
-        border-radius: 50px;
-        font-size: 12px;
-        font-weight: 800;
-    }
-
-    .info-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        margin-top: 15px;
-    }
-
-    .label { color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; }
-    .value { color: #333; font-size: 18px; font-weight: 700; }
-
-    /* Botón de Acción para Empresas */
-    .btn-contratar {
+    .btn-wa {
         background: #25D366;
         color: white !important;
         text-align: center;
@@ -77,90 +55,101 @@ st.markdown("""
         text-decoration: none;
         font-weight: 900;
         font-size: 18px;
+        border-radius: 0 0 15px 15px;
         transition: 0.3s;
     }
-    .btn-contratar:hover { background: #128C7E; }
+    .btn-wa:hover { background: #128C7E; }
 
     /* Estilo del buscador */
     .stTextInput input {
-        background: rgba(255,255,255,0.05) !important;
+        background-color: rgba(255,255,255,0.1) !important;
         color: white !important;
-        border: 1px solid #444 !important;
-        height: 60px;
-        font-size: 18px;
+        border: 1px solid rgba(255,255,255,0.3) !important;
+        height: 50px;
+        border-radius: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- CABECERA ---
+# 3. CABECERA
 st.markdown("""
     <div class="main-header">
         <h1>RETORNO MATCH</h1>
-        <p>Logística de Retornos en Tiempo Real</p>
+        <p>Disponibilidad de Camiones en Vacío</p>
     </div>
 """, unsafe_allow_html=True)
 
-# --- NAVEGACIÓN RÁPIDA ---
+# 4. NAVEGACIÓN
 col_nav1, col_nav2, col_nav3 = st.columns(3)
 with col_nav1:
-    if st.button("🚛 VER CAMIONES VACÍOS", use_container_width=True, type="primary"):
-        st.rerun()
+    st.button("🔍 BUSCAR RETORNOS", use_container_width=True, type="primary")
 with col_nav2:
-    st.button("📦 VER CARGAS", use_container_width=True)
+    if st.button("🔄 ACTUALIZAR LISTADO", use_container_width=True):
+        st.rerun()
 with col_nav3:
-    st.link_button("➕ PUBLICAR DISPONIBILIDAD", "https://docs.google.com/spreadsheets/d/18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs/edit", use_container_width=True)
+    # Link del formulario que me pasaste
+    LINK_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScWcPChu8-wqWSijj9IoA5ES6CunJOJTirhPvqXKHkl_sy9MA/viewform"
+    st.link_button("➕ PUBLICAR MI CAMIÓN", LINK_FORM, use_container_width=True)
 
-st.write("")
+st.write("---")
 
-# --- BUSCADOR INTELIGENTE PARA EMPRESAS ---
-search = st.text_input("", placeholder="🔍 ¿A dónde necesitás enviar carga? (Ej: Rosario, Córdoba, Buenos Aires...)")
+# 5. BUSCADOR
+search = st.text_input("", placeholder="🔍 ¿A qué ciudad necesitás mandar carga? (Ej: Rosario, Córdoba...)")
 
-# --- CONEXIÓN Y DATOS ---
+# 6. CARGA DE DATOS DESDE LAS RESPUESTAS DEL FORMULARIO
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
-URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=cargas"
+URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%201"
 
 try:
     df = pd.read_csv(URL)
-    df.columns = [c.strip().lower() for c in df.columns]
-
-    # Lógica de búsqueda: Filtra por destino del camión (columna 'item')
+    
+    # Ajustamos las columnas según el orden de Google Forms:
+    # [Marca temporal, Ubicación Actual, Destino del Retorno, Tipo de Equipo, WhatsApp de Contacto]
+    df.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
+    
+    # Filtrado por búsqueda
     if search:
-        df = df[df['item'].str.contains(search, case=False, na=False) | df['origen'].str.contains(search, case=False, na=False)]
+        df = df[df['destino'].str.contains(search, case=False, na=False) | 
+                df['origen'].str.contains(search, case=False, na=False)]
 
     if not df.empty:
+        # Mostramos los últimos cargados arriba (orden inverso)
         for _, row in df.iloc[::-1].iterrows():
             if pd.notna(row['origen']):
-                tel = str(row['tel']).replace(".0", "").replace(" ", "")
-                # Mensaje pre-armado para el chofer
-                msg = urllib.parse.quote(f"Hola! Vi en Retorno Match que estás volviendo vacío desde {row['origen']} hacia {row['item']}. Tengo una carga para ofrecerte. ¿Te interesa?")
+                # Limpiar el teléfono por si viene con espacios o .0
+                tel_final = str(row['tel']).split('.')[0].replace(" ", "").replace("+", "")
+                
+                # Mensaje automático para el transportista
+                msg = urllib.parse.quote(f"Hola! Vi en Retorno Match que tenés el camión disponible desde {row['origen']} hacia {row['destino']}. ¿Todavía lo tenés vacío?")
+                wa_link = f"https://wa.me/{tel_final}?text={msg}"
                 
                 st.markdown(f"""
                 <div class="camion-card">
                     <div class="card-header">
-                        <span class="route-text">📍 {str(row['origen']).upper()} <span class="route-arrow">⮕</span> 🏁 {str(row['item']).upper()}</span>
-                        <span class="tag-dispo">● DISPONIBLE</span>
+                        <span class="route-text">📍 {str(row['origen']).upper()} ⮕ 🏁 {str(row['destino']).upper()}</span>
+                        <span class="tag-dispo">DISPONIBLE</span>
                     </div>
                     <div class="card-body">
-                        <div class="info-grid">
+                        <div style="display: flex; justify-content: space-between;">
                             <div>
                                 <p class="label">Equipo / Camión</p>
-                                <p class="value">🚛 {row['pago']}</p>
+                                <p class="value">🚛 {row['equipo']}</p>
                             </div>
                             <div style="text-align: right;">
-                                <p class="label">Estado de Carga</p>
-                                <p class="value" style="color: #28a745;">VACÍO / EN RETORNO</p>
+                                <p class="label">Publicado</p>
+                                <p class="value" style="font-size: 14px;">{row['fecha']}</p>
                             </div>
                         </div>
-                        <a href="https://wa.me/{tel}?text={msg}" target="_blank" class="btn-contratar">
-                            SOLICITAR CARGA PARA ESTE CAMIÓN
-                        </a>
                     </div>
+                    <a href="{wa_link}" target="_blank" class="btn-wa">
+                        📱 CONTACTAR AL TRANSPORTISTA
+                    </a>
                 </div>
                 """, unsafe_allow_html=True)
     else:
-        st.markdown("<h3 style='color:white; text-align:center;'>No se encontraron camiones para esta ruta por ahora.</h3>", unsafe_allow_html=True)
+        st.markdown("<p style='color:white; text-align:center;'>No hay camiones vacíos reportados en esta ruta por el momento.</p>", unsafe_allow_html=True)
 
 except Exception as e:
-    st.error("Sincronizando con la red de transportistas...")
+    st.error("Conectando con la base de datos de transportistas...")
 
-st.markdown("<br><p style='text-align:center; color: #666;'>Sistema de Match Logístico - San Jorge 2026</p>", unsafe_allow_html=True)
+st.markdown("<br><p style='text-align:center; color: #666;'>Logística Inteligente - San Jorge, Santa Fe | 2026</p>", unsafe_allow_html=True)
