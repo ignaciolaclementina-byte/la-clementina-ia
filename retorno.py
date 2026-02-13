@@ -20,6 +20,10 @@ ID_EM = ["entry.610070407", "entry.170847116", "entry.576675281", "entry.4665404
 # --- 2. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
+# Inicializar estado de "Concretados" si no existe
+if 'concretados' not in st.session_state:
+    st.session_state.concretados = set()
+
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -29,12 +33,18 @@ st.markdown("""
         background-attachment: fixed !important;
     }
     .stApp { background: transparent !important; }
+    
     .card-container {
         background: white !important; border-radius: 12px; padding: 18px; margin-bottom: 12px;
         display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
+    .card-concretada {
+        background: #e0e0e0 !important; opacity: 0.7; border-left: 8px solid #7f8c8d !important;
+    }
     .route-text { font-size: 20px; font-weight: 800; color: #1a1a1a !important; margin: 0; }
-    .detail-text { font-size: 14px; color: #555 !important; margin: 4px 0 0 0; }
+    .status-dispo { color: #25D366; font-weight: bold; font-size: 14px; }
+    .status-conc { color: #e74c3c; font-weight: bold; font-size: 14px; }
+    
     .btn-wa { background-color: #25D366; color: white !important; padding: 10px 20px; border-radius: 50px; text-decoration: none; font-weight: bold; }
     .stForm { background: rgba(255, 255, 255, 0.08) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; border-radius: 15px !important; padding: 20px !important; }
     h1, h3, p, label { color: white !important; }
@@ -47,19 +57,17 @@ def enviar_a_google(url, payload):
         return True
     except: return False
 
-st.markdown("<div style='text-align:center;'><h1 style='font-size: 48px;'>🚛 RETORNO MATCH</h1><p style='color: #25D366 !important; font-weight: bold;'>LOGÍSTICA SAN JORGE</p></div>", unsafe_allow_html=True)
-
-tab1, tab2 = st.tabs(["👋 SOY CHOFER (Busco Carga)", "🏢 SOY EMPRESA (Busco Camión)"])
-
-# --- LÓGICA DE FILTRADO POR DÍA ---
-# Esta función asegura que solo veamos lo publicado en las últimas 24hs
 def filtrar_solo_hoy(df):
     try:
         df['fecha'] = pd.to_datetime(df['fecha'], dayfirst=True)
         hace_24hs = datetime.now() - timedelta(hours=24)
-        return df[df['fecha'] >= hace_24hs]
+        return df[df['fecha'] >= hace_24hs].copy()
     except:
-        return df # Si falla el formato de fecha, muestra todo para no romper la app
+        return df
+
+st.markdown("<div style='text-align:center;'><h1 style='font-size: 48px;'>🚛 RETORNO MATCH</h1><p style='color: #25D366 !important; font-weight: bold;'>LOGÍSTICA SAN JORGE</p></div>", unsafe_allow_html=True)
+
+tab1, tab2 = st.tabs(["👋 SOY CHOFER (Busco Carga)", "🏢 SOY EMPRESA (Busco Camión)"])
 
 # ==========================================
 # PESTAÑA 1: VISTA CHOFER
@@ -76,34 +84,41 @@ with tab1:
                         st.success("✅ ¡Publicado!"); time.sleep(1.2); st.rerun()
 
     with col_f2:
-        st.markdown("### 📦 Cargas Disponibles (Últimas 24hs)")
+        st.markdown("### 📦 Cargas Disponibles")
         try:
             df_c = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}")
             df_c.columns = ['fecha', 'origen', 'destino', 'mercaderia', 'tel']
-            
-            # APLICAMOS EL FILTRO DE 24 HORAS
             df_c = filtrar_solo_hoy(df_c)
             
-            if df_c.empty:
-                st.info("No hay cargas nuevas de hoy. ¡Sé el primero en publicar!")
-            else:
-                for _, row in df_c.iloc[::-1].iterrows():
-                    t_clean = "".join(filter(str.isdigit, str(row['tel'])))
-                    if t_clean.startswith('0'): t_clean = t_clean[1:]
-                    t_final = t_clean if t_clean.startswith('549') else "549" + t_clean
-                    
-                    msg = urllib.parse.quote(f"Hola! Vi tu carga en Retorno Match: {row['origen']} -> {row['destino']} ({row['mercaderia']}). Sigue disponible?")
-                    link_wa = f"https://api.whatsapp.com/send?phone={t_final}&text={msg}"
-                    
-                    st.markdown(f"""
-                        <div class="card-container" style="border-left: 8px solid #3498db;">
-                            <div style="flex-grow:1;">
-                                <p class="route-text">📍 {str(row['origen']).upper()} ➔ {str(row['destino']).upper()}</p>
-                                <p class="detail-text">📦 <b>Carga:</b> {row['mercaderia']} | 📅 {row['fecha'].strftime('%H:%M hs')}</p>
-                            </div>
-                            <a href="{link_wa}" target="_blank" class="btn-wa" style="background-color: #3498db;">TOMAR CARGA</a>
+            for i, row in df_c.iloc[::-1].iterrows():
+                card_id = f"carga_{i}"
+                esta_concretado = card_id in st.session_state.concretados
+                
+                t_clean = "".join(filter(str.isdigit, str(row['tel'])))
+                if t_clean.startswith('0'): t_clean = t_clean[1:]
+                t_final = t_clean if t_clean.startswith('549') else "549" + t_clean
+                
+                msg = urllib.parse.quote(f"Hola! Vi tu carga: {row['origen']} -> {row['destino']}. Sigue disponible?")
+                link_wa = f"https://api.whatsapp.com/send?phone={t_final}&text={msg}"
+                
+                status_html = '<span class="status-conc">● CONCRETADO</span>' if esta_concretado else '<span class="status-dispo">● DISPONIBLE</span>'
+                css_clase = "card-container card-concretada" if esta_concretado else "card-container"
+
+                st.markdown(f"""
+                    <div class="{css_clase}" style="border-left: 8px solid {'#7f8c8d' if esta_concretado else '#3498db'};">
+                        <div style="flex-grow:1;">
+                            <p style="color:gray; font-size:12px; margin:0;">{status_html} | 🕒 {row['fecha'].strftime('%H:%M')}</p>
+                            <p class="route-text">📍 {str(row['origen']).upper()} ➔ {str(row['destino']).upper()}</p>
+                            <p class="detail-text">📦 {row['mercaderia']}</p>
                         </div>
-                    """, unsafe_allow_html=True)
+                        {'<span style="color:gray; font-weight:bold;">Cerrado</span>' if esta_concretado else f'<a href="{link_wa}" target="_blank" class="btn-wa" style="background-color: #3498db;">TOMAR CARGA</a>'}
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                if not esta_concretado:
+                    if st.button(f"Marcar Concretada", key=card_id):
+                        st.session_state.concretados.add(card_id)
+                        st.rerun()
         except: st.info("Sincronizando...")
 
 # ==========================================
@@ -121,32 +136,39 @@ with tab2:
                         st.success("✅ ¡En línea!"); time.sleep(1.2); st.rerun()
 
     with col_e2:
-        st.markdown("### 🚛 Camiones Disponibles (Últimas 24hs)")
+        st.markdown("### 🚛 Camiones Disponibles")
         try:
             df_h = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}")
             df_h.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
-            
-            # APLICAMOS EL FILTRO DE 24 HORAS
             df_h = filtrar_solo_hoy(df_h)
             
-            if df_h.empty:
-                st.info("No hay camiones disponibles de hoy.")
-            else:
-                for _, row in df_h.iloc[::-1].iterrows():
-                    t_clean = "".join(filter(str.isdigit, str(row['tel'])))
-                    if t_clean.startswith('0'): t_clean = t_clean[1:]
-                    t_final = t_clean if t_clean.startswith('549') else "549" + t_clean
-                    
-                    msg_ch = urllib.parse.quote(f"Hola! Vi tu camión en Retorno Match: {row['origen']} -> {row['destino']} (Equipo: {row['equipo']}). Te interesa una carga?")
-                    link_wa_ch = f"https://api.whatsapp.com/send?phone={t_final}&text={msg_ch}"
-                    
-                    st.markdown(f"""
-                        <div class="card-container" style="border-left: 8px solid #25D366;">
-                            <div style="flex-grow:1;">
-                                <p class="route-text">📍 {str(row['origen']).upper()} ➔ {str(row['destino']).upper()}</p>
-                                <p class="detail-text">🚛 <b>Equipo:</b> {row['equipo']} | 📅 {row['fecha'].strftime('%H:%M hs')}</p>
-                            </div>
-                            <a href="{link_wa_ch}" target="_blank" class="btn-wa">WHATSAPP</a>
+            for i, row in df_h.iloc[::-1].iterrows():
+                card_id = f"camion_{i}"
+                esta_concretado = card_id in st.session_state.concretados
+                
+                t_clean = "".join(filter(str.isdigit, str(row['tel'])))
+                if t_clean.startswith('0'): t_clean = t_clean[1:]
+                t_final = t_clean if t_clean.startswith('549') else "549" + t_clean
+                
+                msg_ch = urllib.parse.quote(f"Hola! Vi tu camión: {row['origen']} -> {row['destino']}. Te interesa una carga?")
+                link_wa_ch = f"https://api.whatsapp.com/send?phone={t_final}&text={msg_ch}"
+                
+                status_html = '<span class="status-conc">● CONCRETADO</span>' if esta_concretado else '<span class="status-dispo">● DISPONIBLE</span>'
+                css_clase = "card-container card-concretada" if esta_concretado else "card-container"
+
+                st.markdown(f"""
+                    <div class="{css_clase}" style="border-left: 8px solid {'#7f8c8d' if esta_concretado else '#25D366'};">
+                        <div style="flex-grow:1;">
+                            <p style="color:gray; font-size:12px; margin:0;">{status_html} | 🕒 {row['fecha'].strftime('%H:%M')}</p>
+                            <p class="route-text">📍 {str(row['origen']).upper()} ➔ {str(row['destino']).upper()}</p>
+                            <p class="detail-text">🚛 {row['equipo']}</p>
                         </div>
-                    """, unsafe_allow_html=True)
+                        {'<span style="color:gray; font-weight:bold;">Cerrado</span>' if esta_concretado else f'<a href="{link_wa_ch}" target="_blank" class="btn-wa">WHATSAPP</a>'}
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                if not esta_concretado:
+                    if st.button(f"Marcar Concretado", key=card_id):
+                        st.session_state.concretados.add(card_id)
+                        st.rerun()
         except: st.info("Sincronizando...")
