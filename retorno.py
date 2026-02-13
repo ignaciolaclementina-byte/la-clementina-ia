@@ -5,12 +5,12 @@ import requests
 import urllib.parse
 from datetime import datetime, timedelta
 
-# --- CONFIGURACIÓN (Tus IDs reales) ---
+# --- CONFIGURACIÓN DE CONEXIÓN ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
 
-# URLS DE FORMULARIOS
+# URLs de Google Forms (Respuestas)
 FORM_CH_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 ID_CH = ["entry.1304806144", "entry.1519265625", "entry.597193898", "entry.1574172378"]
 
@@ -19,7 +19,7 @@ ID_EM = ["entry.610070407", "entry.170847116", "entry.576675281", "entry.1930562
 
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
-# --- TU INTERFAZ ORIGINAL (DEPÓSITOS) ---
+# --- ESTILOS VISUALES (INTERFAZ ORIGINAL) ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -36,6 +36,7 @@ st.markdown("""
     .route-style { font-size: 20px; font-weight: 800; color: #1e3799 !important; margin: 0; }
     .label-style { background: #f1f2f6; padding: 4px 10px; border-radius: 6px; font-size: 14px; color: #2f3542; border: 1px solid #dcdde1; display: flex; align-items: center; gap: 5px; }
     .btn-blue { background-color: #3498db; color: white !important; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: bold; }
+    .btn-green { background-color: #2ecc71; color: white !important; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: bold; }
     h1, h3, p, label { color: white !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -51,13 +52,14 @@ st.markdown("<div style='text-align:center;'><h1 style='font-size: 50px;'>🚛 R
 
 t1, t2 = st.tabs(["🚀 SOY CHOFER (Busco Carga)", "🏢 SOY EMPRESA (Busco Camión)"])
 
-# === VISTA CHOFER ===
+# === PESTAÑA 1: VISTA CHOFER (Busca Carga) ===
 with t1:
     c1, c2 = st.columns([1, 2.2])
     with c1:
         st.markdown("### 📢 Publicar mi Camión")
         with st.form("f1", clear_on_submit=True):
-            o, d = st.text_input("📍 Origen"), st.text_input("🏁 Destino")
+            o = st.text_input("📍 Origen")
+            d = st.text_input("🏁 Destino")
             e = st.selectbox("🚛 Equipo", ["Chasis", "Acoplado", "Semi", "Sider", "Térmico"])
             w = st.text_input("📱 WhatsApp")
             if st.form_submit_button("PUBLICAR"):
@@ -69,8 +71,7 @@ with t1:
             df = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}")
             df = filtrar_24hs(df)
             for _, r in df.iloc[::-1].iterrows():
-                # MAPEO CORREGIDO SEGÚN TU EXCEL (image_cd4765.png):
-                # 0:Fecha, 1:Retiro, 2:Entrega, 3:Mercadería, 4:WhatsApp, 5:Empresa
+                # MAPEO CORREGIDO: 0:Fecha, 1:Retiro, 2:Entrega, 3:Mercadería, 4:WhatsApp, 5:Empresa
                 f, ret, ent, mer, tel, emp = r[0], r[1], r[2], r[3], r[4], r[5]
                 
                 t_clean = "".join(filter(str.isdigit, str(tel)))
@@ -83,26 +84,30 @@ with t1:
                             <div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 10px;">
                                 <span class="label-style">📦 Carga: {mer}</span>
                                 <span class="label-style">🏢 Empresa: {emp if pd.notna(emp) else 'S/D'}</span>
+                                <span class="label-style">📱 Tel: {tel}</span>
                                 <span class="label-style">🕒 {f.strftime('%H:%M')} hs</span>
                             </div>
                         </div>
                         <a href="https://api.whatsapp.com/send?phone={t_final}" target="_blank" class="btn-blue">TOMAR CARGA</a>
                     </div>
                 """, unsafe_allow_html=True)
-        except: st.info("Sincronizando...")
+        except: st.info("Sincronizando cargas...")
 
-# === VISTA EMPRESA ===
+# === PESTAÑA 2: VISTA EMPRESA (Busca Camión) ===
 with t2:
     c1, c2 = st.columns([1, 2.2])
     with c1:
-        st.markdown("### 🏢 Publicar Carga")
+        st.markdown("### 🏢 Publicar Nueva Carga")
         with st.form("f2", clear_on_submit=True):
-            eo, ed = st.text_input("📍 Retiro"), st.text_input("🏁 Entrega")
-            em, en = st.text_input("📦 Mercadería"), st.text_input("🏢 Empresa")
+            eo = st.text_input("📍 Retiro")
+            ed = st.text_input("🏁 Entrega")
+            em = st.text_input("📦 Mercadería")
+            en = st.text_input("🏢 Nombre de Empresa")
             ew = st.text_input("📱 WhatsApp")
             if st.form_submit_button("PUBLICAR CARGA AHORA"):
-                requests.post(FORM_EM_URL, data={ID_EM[0]:eo, ID_EM[1]:ed, ID_EM[2]:em, ID_EM[3]:en, ID_EM[4]:ew})
-                st.success("Publicado"); time.sleep(1); st.rerun()
+                if eo and ed and en and ew:
+                    requests.post(FORM_EM_URL, data={ID_EM[0]:eo, ID_EM[1]:ed, ID_EM[2]:em, ID_EM[3]:en, ID_EM[4]:ew})
+                    st.success("Carga publicada"); time.sleep(1); st.rerun()
     with c2:
         st.markdown("### 🚛 Camiones Disponibles")
         try:
@@ -121,7 +126,7 @@ with t2:
                                 <span class="label-style">🕒 {f.strftime('%H:%M')} hs</span>
                             </div>
                         </div>
-                        <a href="https://api.whatsapp.com/send?phone={t_final}" target="_blank" style="background-color: #2ecc71;" class="btn-blue">WHATSAPP</a>
+                        <a href="https://api.whatsapp.com/send?phone={t_final}" target="_blank" class="btn-green">WHATSAPP</a>
                     </div>
                 """, unsafe_allow_html=True)
-        except: st.info("Sincronizando...")
+        except: st.info("Sincronizando choferes...")
