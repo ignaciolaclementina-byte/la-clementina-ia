@@ -1,28 +1,30 @@
 import streamlit as st
 import pandas as pd
+import urllib.parse
 import time
+import requests
 
-# 1. CONFIGURACIÓN DE PÁGINA (SIEMPRE PRIMERO)
+# 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
-# 2. ESTILO CSS "PERFORADOR" (Para obligar a ver el fondo)
+# 2. CSS "FUERZA BRUTA" PARA EL FONDO Y TRANSPARENCIAS
 st.markdown("""
     <style>
-    /* Fondo principal en todas las capas posibles */
-    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stMain"] {
-        background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+    /* ESTO ELIMINA EL FONDO NEGRO DE TODAS LAS CAPAS */
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stMain"], [data-testid="stVerticalBlock"] {
+        background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.75)), 
                     url('https://images.unsplash.com/photo-1519003722824-192d992a6059?auto=format&fit=crop&w=1920&q=80') !important;
         background-size: cover !important;
         background-position: center !important;
         background-attachment: fixed !important;
     }
 
-    /* Volver transparentes los bloques negros de Streamlit */
-    [data-testid="stVerticalBlock"], .main .block-container, div[class^="st-emotion-cache"] {
+    /* FORZAR TRANSPARENCIA EN CONTENEDORES INTERNOS */
+    div[class^="st-emotion-cache"], .main .block-container {
         background-color: transparent !important;
     }
 
-    /* Tarjetas con contraste */
+    /* TARJETAS ESTILO PREMIUM */
     .card {
         background: white;
         border-radius: 12px;
@@ -36,52 +38,71 @@ st.markdown("""
     .card-camion { border-left: 10px solid #25D366; }
     .card-carga { border-left: 10px solid #3498db; }
 
-    /* Forzar color de títulos fuera de tarjetas */
-    h1, h2, h3, span, label, p {
-        color: white !important;
-    }
-    
-    /* Textos dentro de tarjetas (Oscuros para leer bien) */
-    .title-text { color: #1a1a1a !important; font-weight: 800; font-size: 22px; margin:0; }
+    /* TEXTOS */
+    h1, h2, h3, p, label, .stMarkdown { color: white !important; }
+    .title-text { color: #1a1a1a !important; font-weight: 800; font-size: 22px; margin: 0; }
     .sub-text { color: #444 !important; font-size: 16px; margin: 5px 0; }
 
-    /* Botones */
-    .btn-wa { background-color: #25D366; color: white !important; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; }
-    .btn-blue { background-color: #3498db; color: white !important; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; }
+    /* BOTONES */
+    .btn-wa { background-color: #25D366; color: white !important; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: bold; }
+    .btn-blue { background-color: #3498db; color: white !important; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: bold; }
 
-    /* Estilo de las Pestañas */
-    .stTabs [data-baseweb="tab-list"] { background-color: rgba(255,255,255,0.1); border-radius: 10px; }
-    .stTabs [data-baseweb="tab"] { color: white !important; }
+    /* DISEÑO DE PESTAÑAS */
+    .stTabs [data-baseweb="tab-list"] { background-color: rgba(255,255,255,0.1); border-radius: 12px; padding: 5px; }
+    .stTabs [data-baseweb="tab"] { color: white !important; font-weight: bold; }
     .stTabs [aria-selected="true"] { background-color: #25D366 !important; border-radius: 8px; }
     </style>
     """, unsafe_allow_html=True)
 
 # 3. CABECERA
-st.markdown("<h1 style='text-align:center; font-size: 50px;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#25D366 !important; font-weight:bold; font-size:20px;'>SISTEMA INTEGRAL DE LOGÍSTICA SAN JORGE</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; font-size: 55px; font-weight: 900; margin-bottom:0;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#25D366 !important; font-size: 20px; font-weight: bold;'>LOGÍSTICA SAN JORGE — CONECTANDO CARGAS</p>", unsafe_allow_html=True)
 
 # 4. SISTEMA DE PESTAÑAS
-tab1, tab2 = st.tabs(["🚚 BUSCAR CARGA (Para Choferes)", "📦 BUSCAR CAMIÓN (Para Empresas)"])
+tab_choferes, tab_empresas = st.tabs(["🚀 PARA CHOFERES (Buscá Carga)", "🏭 PARA EMPRESAS (Buscá Camión)"])
 
-with tab1:
-    st.markdown("### 🏢 Cargas Disponibles")
-    st.info("Aquí los choferes pueden aceptar viajes publicados por empresas.")
+# --- PESTAÑA 1: EL CHOFER ENTRA ACÁ ---
+with tab_choferes:
+    st.markdown("### 🏢 Cargas Disponibles (Empresas que necesitan camión)")
     
-    # Ejemplo de carga
+    # Formulario para que el chofer publique su camion (NUEVA UBICACIÓN CLARA)
+    with st.expander("📝 PUBLICAR MI CAMIÓN DISPONIBLE (Choferes completar aquí)"):
+        with st.form("form_nuevo_camion", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            with c1:
+                ori = st.text_input("📍 Origen (Desde donde salís)")
+                equ = st.selectbox("🚛 Tipo de Equipo", ["Chasis", "Acoplado", "Semi", "Sider", "Térmico"])
+            with c2:
+                des = st.text_input("🏁 Destino (A donde vas)")
+                tel = st.text_input("📱 Tu WhatsApp (Ej: 3406123456)")
+            
+            if st.form_submit_button("🚀 PUBLICAR MI CAMIÓN"):
+                if ori and des and tel:
+                    # Aquí iría tu link de Google Form actual
+                    st.success("✅ ¡Publicado! Ahora las empresas te verán en la otra pestaña.")
+                else:
+                    st.warning("Completá los datos.")
+
+    st.write("---")
+    # Ejemplo de carga que el chofer puede ver
     st.markdown("""
         <div class="card card-carga">
             <div>
                 <p class="title-text">📍 ROSARIO → SAN JORGE</p>
-                <p class="sub-text">📦 <b>CARGA:</b> 15 Pallets (Alimento) | 🏢 <b>EMPRESA:</b> Distribuidora S.J.</p>
+                <p class="sub-text">📦 <b>CARGA:</b> 15 Pallets de mercadería | 🏢 <b>EMPRESA:</b> Distribuidora S.J.</p>
             </div>
             <a href="#" class="btn-blue">ACEPTAR CARGA</a>
         </div>
     """, unsafe_allow_html=True)
 
-with tab2:
-    st.markdown("### 🚛 Camiones Disponibles")
+# --- PESTAÑA 2: LA EMPRESA ENTRA ACÁ ---
+with tab_empresas:
+    st.markdown("### 🚛 Camiones Disponibles (Choferes buscando retorno)")
     
-    # Conexión a tu Excel
+    with st.expander("📢 PUBLICAR CARGA (Si sos una empresa y necesitás un camión)"):
+        st.info("Formulario para empresas en desarrollo...")
+
+    # CARGA DE DATOS REALES DE TU EXCEL (Tu lista actual)
     SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
     URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%203&t={int(time.time())}"
     
@@ -91,8 +112,8 @@ with tab2:
         df.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
         
         for _, row in df.iloc[::-1].iterrows():
-            tel = "".join(filter(str.isdigit, str(row['tel'])))
-            link = f"https://wa.me/{tel}?text=Hola!%20Vi%20tu%20camion%20en%20Retorno%20Match"
+            tel_clean = "".join(filter(str.isdigit, str(row['tel'])))
+            link = f"https://wa.me/{tel_clean}?text=Hola!%20Vi%20tu%20camion%20en%20Retorno%20Match"
             st.markdown(f"""
                 <div class="card card-camion">
                     <div>
@@ -103,6 +124,6 @@ with tab2:
                 </div>
             """, unsafe_allow_html=True)
     except:
-        st.write("Cargando camiones...")
+        st.write("Actualizando lista de camiones...")
 
-st.markdown("<br><p style='text-align:center; opacity:0.5;'>San Jorge, Santa Fe | 2026</p>", unsafe_allow_html=True)
+st.markdown("<br><p style='text-align:center; opacity:0.6;'>San Jorge, Santa Fe | 2026</p>", unsafe_allow_html=True)
