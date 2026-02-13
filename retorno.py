@@ -18,20 +18,22 @@ ID_EM = ["entry.610070407", "entry.170847116", "entry.576675281", "entry.1930562
 
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
-# --- 2. LÓGICA DE DETECCIÓN DE PAÍS Y BANDERA ---
+# --- 2. LÓGICA DE DETECCIÓN Y MENSAJES ---
 def detectar_pais_y_whatsapp(tel_sucio):
     num = "".join(filter(str.isdigit, str(tel_sucio)))
     if not num: return "🌐", ""
-    if num.startswith("54"): return "🇦🇷", num
-    elif num.startswith("598"): return "🇺🇾", num
-    elif num.startswith("55"): return "🇧🇷", num
-    elif num.startswith("56"): return "🇨🇱", num
-    elif num.startswith("595"): return "🇵🇾", num
-    elif num.startswith("591"): return "🇧🇴", num
-    if len(num) <= 10: return "🇦🇷", "549" + num
-    return "🌐", num
+    if num.startswith("54"): bandera = "🇦🇷"
+    elif num.startswith("598"): bandera = "🇺🇾"
+    elif num.startswith("55"): bandera = "🇧🇷"
+    elif num.startswith("56"): bandera = "🇨🇱"
+    elif num.startswith("595"): bandera = "🇵🇾"
+    elif num.startswith("591"): bandera = "🇧🇴"
+    else: bandera = "🌐"
+    
+    if len(num) <= 10: num = "549" + num
+    return bandera, num
 
-# --- 3. ESTILOS VISUALES (INTERFAZ ORIGINAL) ---
+# --- 3. ESTILOS VISUALES ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -65,7 +67,7 @@ st.markdown("<div style='text-align:center;'><h1 style='font-size: 50px; font-we
 
 t1, t2 = st.tabs(["🚀 SOY CHOFER (Busco Carga)", "🏢 SOY EMPRESA (Busco Camión)"])
 
-# === PESTAÑA 1: CHOFERES ===
+# === PESTAÑA 1: CHOFERES (Cargas) ===
 with t1:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -85,6 +87,8 @@ with t1:
             for _, r in df.iloc[::-1].iterrows():
                 f, ret, ent, mer, tel, emp = r[0], r[1], r[2], r[3], r[4], r[5]
                 bandera, t_final = detectar_pais_y_whatsapp(tel)
+                # MENSAJE AUTOMÁTICO PARA EMPRESA
+                msg = urllib.parse.quote(f"Hola! Vi tu carga en Retorno Match: {ret} -> {ent} ({mer}). Mi camión está disponible. ¿Sigue libre?")
                 st.markdown(f"""
                     <div class="card-white" style="border-left: 8px solid #3498db;">
                         <div>
@@ -95,12 +99,12 @@ with t1:
                                 <span class="label-style">{bandera} {tel}</span>
                             </div>
                         </div>
-                        <a href="https://api.whatsapp.com/send?phone={t_final}" target="_blank" class="btn-blue">TOMAR CARGA</a>
+                        <a href="https://api.whatsapp.com/send?phone={t_final}&text={msg}" target="_blank" class="btn-blue">TOMAR CARGA</a>
                     </div>
                 """, unsafe_allow_html=True)
         except: st.info("Sincronizando...")
 
-# === PESTAÑA 2: EMPRESA ===
+# === PESTAÑA 2: EMPRESA (Camiones) ===
 with t2:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -118,6 +122,8 @@ with t2:
             for _, r in dfh.iloc[::-1].iterrows():
                 f, o, d, eq, tel = r[0], r[1], r[2], r[3], r[4]
                 bandera, t_final = detectar_pais_y_whatsapp(tel)
+                # MENSAJE AUTOMÁTICO PARA CHOFER
+                msg_ch = urllib.parse.quote(f"Hola! Vi tu camión en Retorno Match: {o} -> {d} ({eq}). Tengo una carga disponible. ¿Te interesa?")
                 st.markdown(f"""
                     <div class="card-white" style="border-left: 8px solid #2ecc71;">
                         <div>
@@ -127,29 +133,19 @@ with t2:
                                 <span class="label-style">{bandera} {tel}</span>
                             </div>
                         </div>
-                        <a href="https://api.whatsapp.com/send?phone={t_final}" target="_blank" class="btn-green">WHATSAPP</a>
+                        <a href="https://api.whatsapp.com/send?phone={t_final}&text={msg_ch}" target="_blank" class="btn-green">WHATSAPP</a>
                     </div>
                 """, unsafe_allow_html=True)
         except: st.info("Sincronizando...")
 
-# --- 4. PIE DE PÁGINA LEGAL ---
+# --- PIE DE PÁGINA LEGAL ---
 st.markdown("---")
 st.markdown(f"""
     <div class="footer-text">
         <p>© {datetime.now().year} <b>RETORNO MATCH</b> - Todos los derechos reservados.</p>
         <p>Desarrollado y Patentado por <b>IGNACIO DIAZ</b> | San Jorge, Santa Fe.</p>
-        <p style="font-size: 10px; opacity: 0.7;">
-            Queda prohibida la reproducción total o parcial de la estructura, diseño y código de esta plataforma.<br>
-            Retorno Match es una plataforma de enlace. No se responsabiliza por los acuerdos contractuales entre las partes.
-        </p>
     </div>
     """, unsafe_allow_html=True)
 
-# Botón opcional de TyC en Streamlit para no recargar la página
-with st.expander("⚖️ Ver Términos y Condiciones de Uso"):
-    st.write("""
-        **1. Propiedad Intelectual:** Toda la estructura, código y diseño de 'Retorno Match' son propiedad exclusiva de Ignacio Diaz.
-        **2. Uso del Servicio:** La plataforma funciona como un tablero de anuncios gratuito para facilitar el contacto logístico.
-        **3. Responsabilidad:** Ignacio Diaz y Retorno Match no intervienen en las negociaciones, fletes ni pagos, por lo que no se responsabilizan por incumplimientos entre choferes y empresas.
-        **4. Datos:** Los usuarios aceptan que su número de WhatsApp sea público para facilitar el contacto.
-    """)
+with st.expander("⚖️ Ver Términos y Condiciones"):
+    st.write("Toda la estructura y código son propiedad de Ignacio Diaz. Retorno Match no se responsabiliza por los fletes.")
