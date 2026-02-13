@@ -10,7 +10,6 @@ SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
 
-# URLs de Google Forms
 FORM_CH_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 ID_CH = ["entry.1304806144", "entry.1519265625", "entry.597193898", "entry.1574172378"]
 
@@ -19,7 +18,7 @@ ID_EM = ["entry.610070407", "entry.170847116", "entry.576675281", "entry.1930562
 
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
-# --- 2. ESTILOS VISUALES (INTERFAZ ORIGINAL) ---
+# --- 2. INTERFAZ ORIGINAL (DEPÓSITOS) ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -41,6 +40,19 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# --- 3. LÓGICA DE TELÉFONO INTERNACIONAL ---
+def formatear_whatsapp(tel_sucio):
+    # Solo deja números
+    num = "".join(filter(str.isdigit, str(tel_sucio)))
+    if not num: return ""
+    
+    # Si el número es largo (11+ dígitos), asumimos que ya tiene código de país
+    if len(num) >= 11:
+        return num
+    # Si es un número corto de Argentina (ej: 3406...), le pone el 549
+    else:
+        return "549" + num
+
 def filtrar_24hs(df):
     try:
         df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0], dayfirst=True)
@@ -52,16 +64,15 @@ st.markdown("<div style='text-align:center;'><h1 style='font-size: 50px; font-we
 
 t1, t2 = st.tabs(["🚀 SOY CHOFER (Busco Carga)", "🏢 SOY EMPRESA (Busco Camión)"])
 
-# === PESTAÑA 1: VISTA CHOFER (Cargas Disponibles) ===
+# === PESTAÑA 1: VISTA CHOFER ===
 with t1:
     c1, c2 = st.columns([1, 2.2])
     with c1:
         st.markdown("### 📢 Publicar mi Camión")
         with st.form("f1", clear_on_submit=True):
-            o = st.text_input("📍 Origen")
-            d = st.text_input("🏁 Destino")
+            o, d = st.text_input("📍 Origen"), st.text_input("🏁 Destino")
             e = st.selectbox("🚛 Equipo", ["Chasis", "Acoplado", "Semi", "Sider", "Térmico"])
-            w = st.text_input("📱 WhatsApp")
+            w = st.text_input("📱 WhatsApp (Ej: 5493406...)")
             if st.form_submit_button("PUBLICAR DISPONIBILIDAD"):
                 requests.post(FORM_CH_URL, data={ID_CH[0]:o, ID_CH[1]:d, ID_CH[2]:e, ID_CH[3]:w})
                 st.success("✅ Publicado"); time.sleep(1); st.rerun()
@@ -72,8 +83,7 @@ with t1:
             df = filtrar_24hs(df)
             for _, r in df.iloc[::-1].iterrows():
                 f, ret, ent, mer, tel, emp = r[0], r[1], r[2], r[3], r[4], r[5]
-                t_clean = "".join(filter(str.isdigit, str(tel)))
-                t_final = t_clean if t_clean.startswith('54') else "549" + t_clean
+                t_final = formatear_whatsapp(tel)
                 st.markdown(f"""
                     <div class="card-white" style="border-left: 8px solid #3498db;">
                         <div>
@@ -90,7 +100,7 @@ with t1:
                 """, unsafe_allow_html=True)
         except: st.info("Sincronizando...")
 
-# === PESTAÑA 2: VISTA EMPRESA (Camiones Disponibles) ===
+# === PESTAÑA 2: VISTA EMPRESA ===
 with t2:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -108,10 +118,8 @@ with t2:
             dfh = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}")
             dfh = filtrar_24hs(dfh)
             for _, r in dfh.iloc[::-1].iterrows():
-                # 0:Fecha, 1:Origen, 2:Destino, 3:Equipo, 4:WhatsApp Chofer
                 f, o, d, eq, tel = r[0], r[1], r[2], r[3], r[4]
-                t_clean = "".join(filter(str.isdigit, str(tel)))
-                t_final = t_clean if t_clean.startswith('54') else "549" + t_clean
+                t_final = formatear_whatsapp(tel)
                 st.markdown(f"""
                     <div class="card-white" style="border-left: 8px solid #2ecc71;">
                         <div>
