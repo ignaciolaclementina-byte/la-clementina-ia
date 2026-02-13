@@ -2,101 +2,89 @@ import streamlit as st
 import pandas as pd
 import urllib.parse
 
-# 1. CONFIGURACIÓN
+# 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# 2. ESTILO
+# 2. ESTILO VISUAL PREMIUM
 st.markdown("""
     <style>
     .stApp {
-        background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), 
-                    url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+        background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), 
+                    url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
     }
     .camion-card {
-        background: rgba(255, 255, 255, 0.98);
-        border-radius: 15px;
-        margin-bottom: 20px;
-        box-shadow: 0px 10px 20px rgba(0,0,0,0.5);
-        overflow: hidden;
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        border-left: 8px solid #00FF41;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
-    .card-header { background: #f8f9fa; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
-    .btn-wa { background: #25D366; color: white !important; text-align: center; padding: 12px; display: block; text-decoration: none; font-weight: bold; border-radius: 0 0 15px 15px; }
+    .btn-wa {
+        background: #25D366;
+        color: white !important;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        display: inline-block;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# 3. BOTONES
-col1, col2, col3 = st.columns(3)
-with col1:
-    if st.button("🔄 ACTUALIZAR LISTADO", use_container_width=True):
-        st.rerun()
-with col3:
-    LINK_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScWcPChu8-wqWSijj9IoA5ES6CunJOJTirhPvqXKHkl_sy9MA/viewform"
-    st.link_button("➕ PUBLICAR MI CAMIÓN", LINK_FORM, use_container_width=True)
-
-st.write("---")
-
-# 4. DATOS - APUNTANDO A LA PESTAÑA 2
+# 3. CONEXIÓN A LA BASE DE DATOS
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
-# Cambiamos el nombre de la hoja a 'Respuestas de formulario 2'
-URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%202"
+# Esta URL intenta buscar la última pestaña de respuestas creada
+URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv"
 
 try:
     df = pd.read_csv(URL)
     
-    # Según tu captura, los datos reales están en:
-    # Columna A: Fecha | Columna G: Origen | Columna H: Destino | Columna I: Equipo
-    # El teléfono parece estar en la Columna E o F.
+    # Limpieza: Eliminamos columnas totalmente vacías que a veces crea Google
+    df = df.dropna(axis=1, how='all')
     
-    # Vamos a crear un nuevo mapa de datos limpio:
-    datos_limpios = []
-    
-    for _, row in df.iterrows():
-        # Verificamos si la columna 'Ubicación Actual' (G) tiene datos
-        if pd.notna(row['Ubicación Actual']):
-            datos_limpios.append({
-                'fecha': row['Marca temporal'],
-                'origen': row['Ubicación Actual'],
-                'destino': row['Destino del Retorno'],
-                'equipo': row['Tipo de Equipo'],
-                # Usamos el whatsapp de la columna E o F según se vea
-                'tel': row['whatsapp'] if 'whatsapp' in df.columns else "Sin Tel"
-            })
-    
-    df_final = pd.DataFrame(datos_limpios)
+    # Renombramos a nombres simples para el código
+    # Esperamos: [Fecha, Origen, Destino, Equipo, WhatsApp]
+    if len(df.columns) >= 5:
+        df.columns = ['fecha', 'origen', 'destino', 'equipo', 'whatsapp'] + list(df.columns[5:])
 
-    search = st.text_input("", placeholder="🔍 Buscar por ciudad o equipo...")
+    # 4. BUSCADOR
+    search = st.text_input("", placeholder="🔍 ¿A dónde buscás retorno? (Ej: Rosario, Córdoba...)")
 
-    if not df_final.empty:
+    # 5. MOSTRAR CARGAS
+    if not df.empty:
+        # Filtrar si hay búsqueda
         if search:
-            df_final = df_final[df_final['destino'].str.contains(search, case=False, na=False) | 
-                               df_final['origen'].str.contains(search, case=False, na=False)]
+            df = df[df['destino'].str.contains(search, case=False, na=False) | 
+                    df['origen'].str.contains(search, case=False, na=False)]
 
-        for _, row in df_final.iloc[::-1].iterrows():
-            tel = str(row['tel']).split('.')[0].replace(" ", "").replace("+", "")
-            msg = urllib.parse.quote(f"Hola! Vi tu camión de {row['origen']} a {row['destino']} en Retorno Match.")
-            
-            st.markdown(f"""
-            <div class="camion-card">
-                <div class="card-header">
-                    <span style="font-weight:bold; font-size:18px; color:black;">📍 {str(row['origen']).upper()} ⮕ {str(row['destino']).upper()}</span>
-                    <span style="color:green; font-weight:bold;">● DISPONIBLE</span>
+        for _, row in df.iloc[::-1].iterrows():
+            if pd.notna(row['origen']):
+                tel = str(row['whatsapp']).split('.')[0].replace(" ", "").replace("+", "")
+                msg = urllib.parse.quote(f"Hola! Vi tu retorno de {row['origen']} a {row['destino']} en Retorno Match.")
+                
+                st.markdown(f"""
+                <div class="camion-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="color: black; margin:0;">📍 {str(row['origen']).upper()} ⮕ {str(row['destino']).upper()}</h3>
+                            <p style="color: #666; margin: 5px 0;"><b>🚛 Equipo:</b> {row['equipo']}</p>
+                            <small style="color: #999;">Publicado: {row['fecha']}</small>
+                        </div>
+                        <a href="https://wa.me/{tel}?text={msg}" target="_blank" class="btn-wa">📱 CONTACTAR</a>
+                    </div>
                 </div>
-                <div style="padding:15px; color:#333;">
-                    <p style="margin:0;"><b>Equipo:</b> {row['equipo']}</p>
-                    <p style="margin:0; font-size:12px; color:grey;">Publicado: {row['fecha']}</p>
-                </div>
-                <a href="https://wa.me/{tel}?text={msg}" target="_blank" class="btn-wa">CONTACTAR POR WHATSAPP</a>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
     else:
-        st.markdown("<h3 style='text-align:center; color:white;'>No hay camiones en la ruta seleccionada.</h3>", unsafe_allow_html=True)
+        st.info("No hay camiones disponibles por el momento.")
 
 except Exception as e:
-    st.error(f"Error de conexión: {e}")
+    st.warning("Configurando conexión con el formulario...")
 
-st.markdown("<br><p style='text-align:center; color:white; font-size:10px;'>San Jorge 2026</p>", unsafe_allow_html=True)
+# Botón para publicar al final
+st.write("---")
+LINK_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScWcPChu8-wqWSijj9IoA5ES6CunJOJTirhPvqXKHkl_sy9MA/viewform"
+st.link_button("➕ PUBLICAR MI CAMIÓN AQUÍ", LINK_FORM, use_container_width=True)
