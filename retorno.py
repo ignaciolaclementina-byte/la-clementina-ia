@@ -3,138 +3,130 @@ import pandas as pd
 import time
 import requests
 
-# 1. CONFIGURACIÓN
+# 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
-# 2. CSS AVANZADO (Mantenemos tu estilo de cristal)
+# 2. ESTILO VISUAL (Fondo de depósito y tarjetas limpias)
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
-        background-image: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), 
+        background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
                         url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070&auto=format&fit=crop') !important;
         background-size: cover !important;
-        background-attachment: fixed !important;
     }
-    .stApp, .stMain, [data-testid="stHeader"] { background: transparent !important; }
+    .stApp, [data-testid="stHeader"] { background: transparent !important; }
     
-    /* Estilo de Tarjetas */
     .card-container {
         background: white !important;
-        border-radius: 15px;
-        padding: 18px;
-        margin-bottom: 12px;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 10px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     }
-    .route-text { font-size: 20px; font-weight: 800; color: #1a1a1a !important; margin: 0; }
-    .detail-text { font-size: 14px; color: #555 !important; }
+    .route-text { font-size: 18px; font-weight: bold; color: #1a1a1a !important; margin: 0; }
+    .detail-text { font-size: 13px; color: #666 !important; margin: 0; }
     
     .btn-wa {
         background-color: #25D366;
         color: white !important;
-        padding: 10px 20px;
-        border-radius: 50px;
+        padding: 8px 16px;
+        border-radius: 8px;
         text-decoration: none;
         font-weight: bold;
-    }
-
-    /* Formularios */
-    .stForm {
-        background: rgba(255,255,255,0.05) !important;
-        border: 1px solid rgba(255,255,255,0.2) !important;
-        border-radius: 15px !important;
+        font-size: 14px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. FUNCIÓN PARA ENVIAR DATOS A GOOGLE (Sustituye al Formulario Externo)
-def enviar_a_google(url_form, datos):
-    try:
-        requests.post(url_form, data=datos)
-        return True
-    except:
-        return False
+# 3. DATOS TÉCNICOS (Tu Formulario Único)
+URL_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScC-OLmU8VbJgv0BLkLZ-9CH4i27bkwKa3zbv-QiguLbNE9pQ/formResponse"
+SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
+
+# IDs que sacamos de tu link
+ID_ORIGEN = "entry.973040585"
+ID_DESTINO = "entry.1801965341"
+ID_EQUIPO_MERC = "entry.661385730"
+ID_TEL = "entry.118433459"
 
 # 4. HEADER
-st.markdown("""
-    <div style='text-align:center; padding-bottom: 20px;'>
-        <h1 style='font-size: 45px; color: white; margin-bottom:0;'>🚛 RETORNO MATCH</h1>
-        <p style='color: #25D366; font-size: 18px; font-weight: bold; letter-spacing: 2px;'>LOGÍSTICA PROFESIONAL SAN JORGE</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# IDs de tus formularios (Los sacamos de la URL de 'enviar' de Google Forms)
-# Necesitaremos los IDs de los campos (entry.12345) para que sea automático
-FORM_CAMIONES_URL = "https://docs.google.com/forms/d/e/TU_ID_FORM_3/formResponse"
-FORM_CARGAS_URL = "https://docs.google.com/forms/d/e/1wyj2NyletifL_9OYphSFNrZRA38l6fLe2TNNg95pJxc/formResponse"
+st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#25D366; font-weight:bold; margin-top:-20px;'>LOGÍSTICA PROFESIONAL SAN JORGE</p>", unsafe_allow_html=True)
 
 tab1, tab2 = st.tabs(["👋 SOY CHOFER (Busco Carga)", "🏢 SOY EMPRESA (Busco Camión)"])
 
 # --- VISTA CHOFER ---
 with tab1:
-    col_a, col_b = st.columns([1, 2])
-    with col_a:
-        st.markdown("### 📢 Publicar mi Camión")
-        with st.form("form_chofer", clear_on_submit=True):
-            f_orig = st.text_input("📍 Origen")
-            f_dest = st.text_input("🏁 Destino")
-            f_equi = st.selectbox("🚛 Equipo", ["Chasis", "Acoplado", "Semi", "Sider", "Térmico"])
-            f_tel = st.text_input("📱 WhatsApp (con código de área)")
+    col_f1, col_f2 = st.columns([1, 2])
+    with col_f1:
+        st.subheader("📢 Publicar mi Camión")
+        with st.form("form_camion", clear_on_submit=True):
+            orig = st.text_input("📍 ¿Desde dónde salís?")
+            dest = st.text_input("🏁 ¿Hacia dónde vas?")
+            equi = st.selectbox("🚛 Equipo", ["Chasis", "Acoplado", "Semi", "Sider", "Térmico", "Todo los Equipos"])
+            tel = st.text_input("📱 WhatsApp (Solo números)")
+            
             if st.form_submit_button("PUBLICAR DISPONIBILIDAD", use_container_width=True):
-                # Aquí conectaremos los entry.id de tu Google Form 3
-                st.success("¡Publicado! Aparecerás en la lista de empresas.")
+                payload = {ID_ORIGEN: orig, ID_DESTINO: dest, ID_EQUIPO_MERC: f"CAMION: {equi}", ID_TEL: tel}
+                requests.post(URL_GOOGLE_FORM, data=payload)
+                st.success("✅ ¡Publicado! Ya aparecés en la lista.")
+                time.sleep(1)
+                st.rerun()
 
-    with col_b:
-        st.markdown("### 📦 Cargas disponibles")
-        # Lectura de Hoja 4
-        SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
-        URL_C = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%204&t={int(time.time())}"
+    with col_f2:
+        st.subheader("📦 Cargas que esperan transporte")
+        # Leemos la hoja de respuestas
+        URL_CSV = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&t={int(time.time())}"
         try:
-            df_c = pd.read_csv(URL_C).iloc[:, :5]
-            df_c.columns = ['fecha', 'origen', 'destino', 'mercaderia', 'tel']
-            for _, row in df_c.iloc[::-1].head(10).iterrows():
+            df = pd.read_csv(URL_CSV)
+            # Filtramos solo lo que diga "CARGA:" en la columna equipo/mercadería
+            df_cargas = df[df.iloc[:, 3].str.contains("CARGA:", na=False)]
+            for _, row in df_cargas.iloc[::-1].head(10).iterrows():
                 st.markdown(f"""
-                    <div class="card-container" style="border-left: 10px solid #3498db;">
-                        <div class="info-section">
-                            <p class="route-text">📍 {str(row['origen']).upper()} ➔ {str(row['destino']).upper()}</p>
-                            <p class="detail-text">📦 {row['mercaderia']} | 📅 {row['fecha']}</p>
+                    <div class="card-container" style="border-left: 8px solid #3498db;">
+                        <div>
+                            <p class="route-text">📍 {str(row.iloc[1]).upper()} ➔ {str(row.iloc[2]).upper()}</p>
+                            <p class="detail-text">{row.iloc[3]} | 📅 {row.iloc[0]}</p>
                         </div>
-                        <a href="https://wa.me/{row['tel']}" class="btn-wa" style="background-color: #3498db;">ACEPTAR</a>
+                        <a href="https://wa.me/{row.iloc[4]}" target="_blank" class="btn-wa" style="background-color:#3498db;">TOMAR CARGA</a>
                     </div>
                 """, unsafe_allow_html=True)
-        except: st.info("Buscando nuevas cargas...")
+        except: st.info("No hay cargas publicadas por ahora.")
 
 # --- VISTA EMPRESA ---
 with tab2:
-    col_c, col_d = st.columns([1, 2])
-    with col_c:
-        st.markdown("### 📢 Publicar Carga")
-        with st.form("form_empresa", clear_on_submit=True):
+    col_e1, col_e2 = st.columns([1, 2])
+    with col_e1:
+        st.subheader("📢 Publicar Carga")
+        with st.form("form_carga", clear_on_submit=True):
             e_orig = st.text_input("📍 Punto de Retiro")
             e_dest = st.text_input("🏁 Punto de Entrega")
-            e_merc = st.text_input("📦 Mercadería")
+            e_merc = st.text_input("📦 ¿Qué mercadería es?")
             e_tel = st.text_input("📱 WhatsApp Empresa")
+            
             if st.form_submit_button("BUSCAR CAMIÓN AHORA", use_container_width=True):
-                # Aquí conectaremos los entry.id de tu Google Form 4
-                st.success("¡Carga publicada! Los choferes ya pueden verla.")
+                payload = {ID_ORIGEN: e_orig, ID_DESTINO: e_dest, ID_EQUIPO_MERC: f"CARGA: {e_merc}", ID_TEL: e_tel}
+                requests.post(URL_GOOGLE_FORM, data=payload)
+                st.success("✅ ¡Carga publicada con éxito!")
+                time.sleep(1)
+                st.rerun()
 
-    with col_d:
-        st.markdown("### 🚛 Camiones buscando retorno")
-        # Lectura de Hoja 3
-        URL_V = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%203&t={int(time.time())}"
+    with col_e2:
+        st.subheader("🚛 Camiones buscando retorno")
         try:
-            df_v = pd.read_csv(URL_V).iloc[:, :5]
-            df_v.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
-            for _, row in df_v.iloc[::-1].head(10).iterrows():
+            df = pd.read_csv(URL_CSV)
+            # Filtramos solo lo que diga "CAMION:"
+            df_camiones = df[df.iloc[:, 3].str.contains("CAMION:", na=False)]
+            for _, row in df_camiones.iloc[::-1].head(10).iterrows():
                 st.markdown(f"""
-                    <div class="card-container" style="border-left: 10px solid #25D366;">
-                        <div class="info-section">
-                            <p class="route-text">📍 {str(row['origen']).upper()} ➔ {str(row['destino']).upper()}</p>
-                            <p class="detail-text">🚛 {row['equipo']} | 📅 {row['fecha']}</p>
+                    <div class="card-container" style="border-left: 8px solid #25D366;">
+                        <div>
+                            <p class="route-text">📍 {str(row.iloc[1]).upper()} ➔ {str(row.iloc[2]).upper()}</p>
+                            <p class="detail-text">{row.iloc[3]} | 📅 {row.iloc[0]}</p>
                         </div>
-                        <a href="https://wa.me/{row['tel']}" class="btn-wa">WHATSAPP</a>
+                        <a href="https://wa.me/{row.iloc[4]}" target="_blank" class="btn-wa">WHATSAPP</a>
                     </div>
                 """, unsafe_allow_html=True)
-        except: st.info("Buscando camiones...")
+        except: st.info("No hay camiones buscando retorno ahora.")
