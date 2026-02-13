@@ -19,7 +19,7 @@ ID_EM = ["entry.610070407", "entry.170847116", "entry.576675281", "entry.1930562
 
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
-# --- 2. LÓGICA DE DETECCIÓN DE PAÍS Y BANDERA (ACTUALIZADA) ---
+# --- 2. LÓGICA DE DETECCIÓN DE PAÍS Y BANDERA ---
 def detectar_pais_y_whatsapp(tel_sucio):
     num = "".join(filter(str.isdigit, str(tel_sucio)))
     if not num: return "🌐", ""
@@ -38,13 +38,13 @@ def detectar_pais_y_whatsapp(tel_sucio):
     elif num.startswith("591"): 
         return "🇧🇴", num
     
-    # Si el número es corto (local Argentina sin 54), asumimos AR y agregamos 549
+    # Si el número es local Argentina sin prefijo, agregamos 549 por defecto
     if len(num) <= 10:
         return "🇦🇷", "549" + num
     
     return "🌐", num
 
-# --- 3. ESTILOS VISUALES (TU INTERFAZ DE DEPÓSITOS) ---
+# --- 3. ESTILOS VISUALES (INTERFAZ ORIGINAL) ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -77,13 +77,14 @@ st.markdown("<div style='text-align:center;'><h1 style='font-size: 50px; font-we
 
 t1, t2 = st.tabs(["🚀 SOY CHOFER (Busco Carga)", "🏢 SOY EMPRESA (Busco Camión)"])
 
-# === PESTAÑA 1: VISTA CHOFER ===
+# === PESTAÑA 1: VISTA CHOFER (Cargas) ===
 with t1:
     c1, c2 = st.columns([1, 2.2])
     with c1:
         st.markdown("### 📢 Publicar mi Camión")
         with st.form("f1", clear_on_submit=True):
-            o, d = st.text_input("📍 Origen"), st.text_input("🏁 Destino")
+            o = st.text_input("📍 Origen")
+            d = st.text_input("🏁 Destino")
             e = st.selectbox("🚛 Equipo", ["Chasis", "Acoplado", "Semi", "Sider", "Térmico"])
             w = st.text_input("📱 WhatsApp (Ej: 3406...)")
             if st.form_submit_button("PUBLICAR DISPONIBILIDAD"):
@@ -113,7 +114,7 @@ with t1:
                 """, unsafe_allow_html=True)
         except: st.info("Sincronizando...")
 
-# === PESTAÑA 2: VISTA EMPRESA ===
+# === PESTAÑA 2: VISTA EMPRESA (Camiones) ===
 with t2:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -147,3 +148,16 @@ with t2:
                     </div>
                 """, unsafe_allow_html=True)
         except: st.info("Sincronizando...")
+
+# --- PIE DE PÁGINA / CRÉDITOS ---
+st.markdown("---") 
+st.markdown(
+    """
+    <div style='text-align: center; padding: 20px;'>
+        <p style='color: rgba(255,255,255,0.6); font-size: 14px; letter-spacing: 1px;'>
+            Creado por <b>IGNACIO DIAZ</b>
+        </p>
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
