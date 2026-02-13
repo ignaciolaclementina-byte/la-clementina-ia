@@ -10,7 +10,6 @@ SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
 
-# URLs de Google Forms
 FORM_CH_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 ID_CH = ["entry.1304806144", "entry.1519265625", "entry.597193898", "entry.1574172378"]
 
@@ -23,25 +22,13 @@ st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", lay
 def detectar_pais_y_whatsapp(tel_sucio):
     num = "".join(filter(str.isdigit, str(tel_sucio)))
     if not num: return "🌐", ""
-
-    # Detección por prefijo internacional
-    if num.startswith("54"): 
-        return "🇦🇷", num
-    elif num.startswith("598"): 
-        return "🇺🇾", num
-    elif num.startswith("55"): 
-        return "🇧🇷", num
-    elif num.startswith("56"): 
-        return "🇨🇱", num
-    elif num.startswith("595"): 
-        return "🇵🇾", num
-    elif num.startswith("591"): 
-        return "🇧🇴", num
-    
-    # Si el número es local Argentina sin prefijo, agregamos 549 por defecto
-    if len(num) <= 10:
-        return "🇦🇷", "549" + num
-    
+    if num.startswith("54"): return "🇦🇷", num
+    elif num.startswith("598"): return "🇺🇾", num
+    elif num.startswith("55"): return "🇧🇷", num
+    elif num.startswith("56"): return "🇨🇱", num
+    elif num.startswith("595"): return "🇵🇾", num
+    elif num.startswith("591"): return "🇧🇴", num
+    if len(num) <= 10: return "🇦🇷", "549" + num
     return "🌐", num
 
 # --- 3. ESTILOS VISUALES (INTERFAZ ORIGINAL) ---
@@ -63,6 +50,7 @@ st.markdown("""
     .btn-blue { background-color: #3498db; color: white !important; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: bold; }
     .btn-green { background-color: #2ecc71; color: white !important; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: bold; }
     h1, h3, p, label { color: white !important; }
+    .footer-text { color: rgba(255,255,255,0.6); font-size: 12px; text-align: center; margin-top: 50px; line-height: 1.6; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -77,21 +65,20 @@ st.markdown("<div style='text-align:center;'><h1 style='font-size: 50px; font-we
 
 t1, t2 = st.tabs(["🚀 SOY CHOFER (Busco Carga)", "🏢 SOY EMPRESA (Busco Camión)"])
 
-# === PESTAÑA 1: VISTA CHOFER (Cargas) ===
+# === PESTAÑA 1: CHOFERES ===
 with t1:
     c1, c2 = st.columns([1, 2.2])
     with c1:
         st.markdown("### 📢 Publicar mi Camión")
         with st.form("f1", clear_on_submit=True):
-            o = st.text_input("📍 Origen")
-            d = st.text_input("🏁 Destino")
+            o, d = st.text_input("📍 Origen"), st.text_input("🏁 Destino")
             e = st.selectbox("🚛 Equipo", ["Chasis", "Acoplado", "Semi", "Sider", "Térmico"])
-            w = st.text_input("📱 WhatsApp (Ej: 3406...)")
+            w = st.text_input("📱 WhatsApp")
             if st.form_submit_button("PUBLICAR DISPONIBILIDAD"):
                 requests.post(FORM_CH_URL, data={ID_CH[0]:o, ID_CH[1]:d, ID_CH[2]:e, ID_CH[3]:w})
                 st.success("✅ Publicado"); time.sleep(1); st.rerun()
     with c2:
-        st.markdown("### 📦 Cargas Disponibles (Últimas 24hs)")
+        st.markdown("### 📦 Cargas Disponibles")
         try:
             df = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}")
             df = filtrar_24hs(df)
@@ -103,10 +90,9 @@ with t1:
                         <div>
                             <p class="route-style">📍 {str(ret).upper()} ➔ {str(ent).upper()}</p>
                             <div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 10px;">
-                                <span class="label-style">📦 Carga: {mer}</span>
-                                <span class="label-style">🏢 Empresa: {emp if pd.notna(emp) else 'S/D'}</span>
-                                <span class="label-style">{bandera} Tel: {tel}</span>
-                                <span class="label-style">🕒 {f.strftime('%H:%M')} hs</span>
+                                <span class="label-style">📦 {mer}</span>
+                                <span class="label-style">🏢 {emp}</span>
+                                <span class="label-style">{bandera} {tel}</span>
                             </div>
                         </div>
                         <a href="https://api.whatsapp.com/send?phone={t_final}" target="_blank" class="btn-blue">TOMAR CARGA</a>
@@ -114,20 +100,18 @@ with t1:
                 """, unsafe_allow_html=True)
         except: st.info("Sincronizando...")
 
-# === PESTAÑA 2: VISTA EMPRESA (Camiones) ===
+# === PESTAÑA 2: EMPRESA ===
 with t2:
     c1, c2 = st.columns([1, 2.2])
     with c1:
         st.markdown("### 🏢 Publicar Nueva Carga")
         with st.form("f2", clear_on_submit=True):
-            eo, ed = st.text_input("📍 Retiro"), st.text_input("🏁 Entrega")
-            em, en = st.text_input("📦 Mercadería"), st.text_input("🏢 Empresa")
-            ew = st.text_input("📱 WhatsApp")
+            eo, ed, em, en, ew = st.text_input("📍 Retiro"), st.text_input("🏁 Entrega"), st.text_input("📦 Mercadería"), st.text_input("🏢 Empresa"), st.text_input("📱 WhatsApp")
             if st.form_submit_button("PUBLICAR CARGA AHORA"):
                 requests.post(FORM_EM_URL, data={ID_EM[0]:eo, ID_EM[1]:ed, ID_EM[2]:em, ID_EM[3]:en, ID_EM[4]:ew})
                 st.success("✅ Publicado"); time.sleep(1); st.rerun()
     with c2:
-        st.markdown("### 🚛 Camiones Disponibles (Últimas 24hs)")
+        st.markdown("### 🚛 Camiones Disponibles")
         try:
             dfh = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}")
             dfh = filtrar_24hs(dfh)
@@ -138,10 +122,9 @@ with t2:
                     <div class="card-white" style="border-left: 8px solid #2ecc71;">
                         <div>
                             <p class="route-style">🚛 {str(o).upper()} ➔ {str(d).upper()}</p>
-                            <div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 10px;">
-                                <span class="label-style">⚙️ Equipo: {eq}</span>
-                                <span class="label-style">{bandera} Tel: {tel}</span>
-                                <span class="label-style">🕒 {f.strftime('%H:%M')} hs</span>
+                            <div style="margin-top:8px; display: flex; gap: 10px;">
+                                <span class="label-style">⚙️ {eq}</span>
+                                <span class="label-style">{bandera} {tel}</span>
                             </div>
                         </div>
                         <a href="https://api.whatsapp.com/send?phone={t_final}" target="_blank" class="btn-green">WHATSAPP</a>
@@ -149,15 +132,24 @@ with t2:
                 """, unsafe_allow_html=True)
         except: st.info("Sincronizando...")
 
-# --- PIE DE PÁGINA / CRÉDITOS ---
-st.markdown("---") 
-st.markdown(
-    """
-    <div style='text-align: center; padding: 20px;'>
-        <p style='color: rgba(255,255,255,0.6); font-size: 14px; letter-spacing: 1px;'>
-            Creado por <b>IGNACIO DIAZ</b>
+# --- 4. PIE DE PÁGINA LEGAL ---
+st.markdown("---")
+st.markdown(f"""
+    <div class="footer-text">
+        <p>© {datetime.now().year} <b>RETORNO MATCH</b> - Todos los derechos reservados.</p>
+        <p>Desarrollado y Patentado por <b>IGNACIO DIAZ</b> | San Jorge, Santa Fe.</p>
+        <p style="font-size: 10px; opacity: 0.7;">
+            Queda prohibida la reproducción total o parcial de la estructura, diseño y código de esta plataforma.<br>
+            Retorno Match es una plataforma de enlace. No se responsabiliza por los acuerdos contractuales entre las partes.
         </p>
     </div>
-    """, 
-    unsafe_allow_html=True
-)
+    """, unsafe_allow_html=True)
+
+# Botón opcional de TyC en Streamlit para no recargar la página
+with st.expander("⚖️ Ver Términos y Condiciones de Uso"):
+    st.write("""
+        **1. Propiedad Intelectual:** Toda la estructura, código y diseño de 'Retorno Match' son propiedad exclusiva de Ignacio Diaz.
+        **2. Uso del Servicio:** La plataforma funciona como un tablero de anuncios gratuito para facilitar el contacto logístico.
+        **3. Responsabilidad:** Ignacio Diaz y Retorno Match no intervienen en las negociaciones, fletes ni pagos, por lo que no se responsabilizan por incumplimientos entre choferes y empresas.
+        **4. Datos:** Los usuarios aceptan que su número de WhatsApp sea público para facilitar el contacto.
+    """)
