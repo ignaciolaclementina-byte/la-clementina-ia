@@ -21,19 +21,12 @@ st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", lay
 # --- 2. LÓGICA DE APOYO ---
 def obtener_color_urgencia(estado):
     est = str(estado).lower()
-    if "hoy" in est: return "#FF4B4B", "🚨 SALE HOY"
-    if "mañana" in est: return "#F1C40F", "⏳ SALE MAÑANA"
-    if "apuro" in est: return "#2ECC71", "✅ SIN APURO"
-    return "#3498DB", "📦 DISPONIBLE"
+    if "hoy" in est: return "#FF4B4B"  # Rojo
+    if "mañana" in est: return "#F1C40F"  # Amarillo
+    if "apuro" in est: return "#2ECC71"  # Verde
+    return "#3498DB" # Azul
 
-def detectar_pais_y_whatsapp(tel_sucio):
-    num = "".join(filter(str.isdigit, str(tel_sucio)))
-    if not num: return "🌐", ""
-    bandera = "🇦🇷" if num.startswith("54") or len(num) == 10 else "🌐"
-    if len(num) == 10: num = "549" + num
-    return bandera, num
-
-# --- 3. ESTILOS ---
+# --- 3. ESTILOS (INTERFAZ ORIGINAL) ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -46,7 +39,7 @@ st.markdown("""
         background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
         display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
-    .route-style { font-size: 20px; font-weight: 800; color: #1e3799 !important; margin: 0; }
+    .route-style { font-size: 20px; font-weight: 800; color: #1e3799 !important; margin: 0; margin-bottom: 8px; }
     .label-style { 
         background: #f1f2f6; padding: 5px 12px; border-radius: 8px; font-size: 14px; 
         color: #2f3542; border: 1px solid #dcdde1; display: flex; align-items: center; gap: 6px; 
@@ -64,61 +57,79 @@ with st.container():
     with c_b1: b_orig = st.text_input("🔍 Buscar Origen:")
     with c_b2: b_dest = st.text_input("🔍 Buscar Destino:")
 
-t1, t2 = st.tabs(["🚀 CHOFERES (Ver Cargas)", "🏢 EMPRESAS (Ver Camiones)"])
+t1, t2 = st.tabs(["🚀 SOY CHOFER (Busco Carga)", "🏢 SOY EMPRESA (Busco Camión)"])
 
-# === PESTAÑA CHOFERES ===
+# === PESTAÑA 1: CHOFERES ===
 with t1:
     c1, c2 = st.columns([1, 2.2])
     with c1:
         st.markdown("### 📢 Publicar mi Camión")
         with st.form("f1", clear_on_submit=True):
-            o, d, e, w = st.text_input("📍 Mi Ubicación"), st.text_input("🏁 Destino deseado"), st.selectbox("🚛 Equipo", ["Chasis", "Semi", "Sider", "Térmico"]), st.text_input("📱 WhatsApp")
+            o, d, e, w = st.text_input("📍 Origen"), st.text_input("🏁 Destino"), st.selectbox("🚛 Equipo", ["Chasis", "Semi", "Sider", "Térmico"]), st.text_input("📱 WhatsApp")
             if st.form_submit_button("PUBLICAR DISPONIBILIDAD"):
                 requests.post(FORM_CH_URL, data={ID_CH[0]:o, ID_CH[1]:d, ID_CH[2]:e, ID_CH[3]:w})
-                st.balloons(); st.success("¡Publicado!"); time.sleep(1); st.rerun()
+                st.success("✅ Publicado!"); time.sleep(1); st.rerun()
     with c2:
         st.markdown("### 📦 Cargas Disponibles")
         try:
-            # Cargamos el CSV y llenamos vacíos para que no salga "nan"
             df = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}").fillna("S/D")
-            
             for _, r in df.iloc[::-1].iterrows():
-                # --- MAPEO CORREGIDO SEGÚN TU EXCEL ---
-                # r[0]=Fecha, r[1]=Retiro, r[2]=Entrega, r[3]=Mercadería, r[4]=WhatsApp, r[5]=Empresa, r[6]=Urgencia
-                ret = r[1]
-                ent = r[2]
-                mer = r[3]
-                tel = r[4]
-                emp = r[5]
-                urg = r[6]
+                # MAPEO FIJO SEGÚN TU EXCEL (Imagen e88ceb.png)
+                # B=1(Retiro), C=2(Entrega), D=3(Mercadería), E=4(WhatsApp), F=5(Empresa), G=6(Urgencia)
+                ret, ent, mer, tel, emp, urg = r[1], r[2], r[3], r[4], r[5], r[6]
                 
                 if b_orig and b_orig.lower() not in str(ret).lower(): continue
                 if b_dest and b_dest.lower() not in str(ent).lower(): continue
 
-                color, txt_urg = obtener_color_urgencia(urg)
-                bandera, t_final = detectar_pais_y_whatsapp(tel)
-                msg = urllib.parse.quote(f"Hola! Vi tu carga en Retorno Match: {ret} -> {ent}. ¿Sigue disponible?")
+                color_urg = obtener_color_urgencia(urg)
+                msg = urllib.parse.quote(f"Hola! Vi tu carga: {ret}->{ent}. ¿Sigue disponible?")
                 
                 st.markdown(f"""
-                    <div class="card-white" style="border-left: 10px solid {color};">
+                    <div class="card-white" style="border-left: 10px solid {color_urg};">
                         <div>
                             <p class="route-style">📍 {str(ret).upper()} ➔ {str(ent).upper()}</p>
-                            <div style="margin-top:10px; display: flex; flex-wrap: wrap; gap: 10px;">
-                                <div class="label-style" style="border: 2px solid {color};"><b>{txt_urg}</b></div>
-                                <div class="label-style">📦 <b>Carga:</b> {mer}</div>
-                                <div class="label-style">🏢 <b>Empresa:</b> {emp}</div>
-                                <div class="label-style">{bandera} <b>Tel:</b> {tel}</div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                <div class="label-style"><img src="https://img.icons8.com/color/24/000000/skyscrapers.png" width="16"/> {emp}</div>
+                                <div class="label-style"><img src="https://img.icons8.com/color/24/000000/box.png" width="16"/> {mer}</div>
+                                <div class="label-style"><img src="https://img.icons8.com/color/24/000000/whatsapp.png" width="16"/> {tel}</div>
+                                <div class="label-style"><img src="https://img.icons8.com/color/24/000000/clock.png" width="16"/> {urg}</div>
                             </div>
                         </div>
-                        <a href="https://api.whatsapp.com/send?phone={t_final}&text={msg}" target="_blank" class="btn-tomar">TOMAR CARGA</a>
+                        <a href="https://api.whatsapp.com/send?phone=549{tel}&text={msg}" target="_blank" class="btn-tomar">TOMAR CARGA</a>
                     </div>
                 """, unsafe_allow_html=True)
-        except: st.info("Actualizando...")
+        except: st.info("Cargando...")
 
-# === PESTAÑA EMPRESAS (Mantiene estructura) ===
+# === PESTAÑA 2: EMPRESAS ===
 with t2:
-    st.info("Aquí los camiones se muestran igual que siempre.")
-    # (El resto del código de la pestaña 2 se mantiene igual que antes)
+    c1, c2 = st.columns([1, 2.2])
+    with c1:
+        st.markdown("### 🏢 Publicar Nueva Carga")
+        with st.form("f2", clear_on_submit=True):
+            eo, ed, em, en = st.text_input("📍 Origen"), st.text_input("🏁 Destino"), st.text_input("📦 Mercadería"), st.text_input("🏢 Empresa")
+            eu = st.selectbox("⏳ ¿Cuándo carga?", ["Sale hoy", "Sale mañana", "Sin apuro"])
+            ew = st.text_input("📱 WhatsApp")
+            if st.form_submit_button("PUBLICAR CARGA AHORA"):
+                requests.post(FORM_EM_URL, data={ID_EM[0]:eo, ID_EM[1]:ed, ID_EM[2]:em, ID_EM[5]:en, ID_EM[3]:ew, ID_EM[4]:eu})
+                st.success("✅ Carga subida!"); time.sleep(1); st.rerun()
+    with c2:
+        st.markdown("### 🚛 Camiones Disponibles")
+        try:
+            dfh = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}").fillna("S/D")
+            for _, r in dfh.iloc[::-1].iterrows():
+                o, d, eq, tel = r[1], r[2], r[3], r[4]
+                st.markdown(f"""
+                    <div class="card-white" style="border-left: 8px solid #2ecc71;">
+                        <div>
+                            <p class="route-style">🚛 {str(o).upper()} ➔ {str(d).upper()}</p>
+                            <div style="display: flex; gap: 10px;">
+                                <div class="label-style">⚙️ {eq}</div>
+                                <div class="label-style">📱 {tel}</div>
+                            </div>
+                        </div>
+                        <a href="https://api.whatsapp.com/send?phone=549{tel}" target="_blank" class="btn-tomar" style="background:#2ecc71">WHATSAPP</a>
+                    </div>
+                """, unsafe_allow_html=True)
+        except: st.info("Cargando camiones...")
 
-# --- PIE DE PÁGINA ---
-st.markdown("<br><hr><div style='color:white; text-align:center; opacity:0.6; font-size:12px;'>© 2026 RETORNO MATCH - Ignacio Diaz | San Jorge, Santa Fe</div>", unsafe_allow_html=True)
+st.markdown("<br><hr><div style='color:white; text-align:center; opacity:0.6; font-size:12px;'>© 2026 RETORNO MATCH - Ignacio Diaz</div>", unsafe_allow_html=True)
