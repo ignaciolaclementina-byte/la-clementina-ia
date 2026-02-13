@@ -14,6 +14,7 @@ FORM_CH_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35C
 ID_CH = ["entry.1304806144", "entry.1519265625", "entry.597193898", "entry.1574172378"]
 
 FORM_EM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
+# ORDEN FORMULARIO: Origen(0), Destino(1), Carga(2), Empresa(3), Urgencia(4), WhatsApp(5)
 ID_EM = ["entry.610070407", "entry.170847116", "entry.576675281", "entry.1930562861", "entry.1064058502", "entry.466540450"]
 
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
@@ -33,7 +34,7 @@ def detectar_pais_y_whatsapp(tel_sucio):
     if len(num) <= 10: num = "549" + num
     return bandera, num
 
-# --- 3. INTERFAZ Y ESTILOS ---
+# --- 3. ESTILOS (IDÉNTICOS A TU CAPTURA) ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -43,20 +44,15 @@ st.markdown("""
     }
     .stApp { background: transparent !important; }
     .card-white {
-        background: white !important; border-radius: 15px; padding: 22px; margin-bottom: 15px;
-        display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
+        display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
-    .route-style { font-size: 22px; font-weight: 800; color: #1e3799 !important; margin-bottom: 10px; }
-    /* CÁPSULAS MEJORADAS */
+    .route-style { font-size: 20px; font-weight: 800; color: #1e3799 !important; margin: 0; }
     .label-style { 
-        background: #f8f9fa; padding: 6px 14px; border-radius: 10px; font-size: 13px; 
-        color: #333; border: 1px solid #dee2e6; display: flex; align-items: center; gap: 8px; font-weight: 500;
+        background: #f1f2f6; padding: 5px 12px; border-radius: 8px; font-size: 14px; 
+        color: #2f3542; border: 1px solid #dcdde1; display: flex; align-items: center; gap: 6px; 
     }
-    .btn-tomar { 
-        background-color: #3498db; color: white !important; padding: 15px 30px; 
-        border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 16px;
-        transition: 0.3s; display: inline-block;
-    }
+    .btn-tomar { background-color: #3498db; color: white !important; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: bold; }
     h1, h3, p, label { color: white !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -66,8 +62,8 @@ st.markdown("<div style='text-align:center;'><h1 style='font-size: 50px; font-we
 # --- BUSCADORES ---
 with st.container():
     c_b1, c_b2 = st.columns(2)
-    with c_b1: b_orig = st.text_input("📍 Buscar Origen:")
-    with c_b2: b_dest = st.text_input("🏁 Buscar Destino:")
+    with c_b1: b_orig = st.text_input("🔍 Buscar Origen:")
+    with c_b2: b_dest = st.text_input("🔍 Buscar Destino:")
 
 t1, t2 = st.tabs(["🚀 CHOFERES (Ver Cargas)", "🏢 EMPRESAS (Ver Camiones)"])
 
@@ -84,9 +80,14 @@ with t1:
     with c2:
         st.markdown("### 📦 Cargas Disponibles")
         try:
-            df = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}").fillna("No especificado")
+            # Forzamos la limpieza de datos para evitar el "nan"
+            df = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}").fillna("S/D")
+            
             for _, r in df.iloc[::-1].iterrows():
+                # AJUSTE DE COLUMNAS SEGÚN TU EXCEL:
+                # 0:Marca temporal, 1:Origen, 2:Destino, 3:Carga, 4:Empresa, 5:Urgencia, 6:WhatsApp
                 f, ret, ent, mer, emp, urg, tel = r[0], r[1], r[2], r[3], r[4], r[5], r[6]
+                
                 if b_orig and b_orig.lower() not in str(ret).lower(): continue
                 if b_dest and b_dest.lower() not in str(ent).lower(): continue
 
@@ -95,11 +96,11 @@ with t1:
                 msg = urllib.parse.quote(f"Hola! Vi tu carga en Retorno Match: {ret} -> {ent}. ¿Sigue disponible?")
                 
                 st.markdown(f"""
-                    <div class="card-white" style="border-left: 12px solid {color};">
+                    <div class="card-white" style="border-left: 10px solid {color};">
                         <div>
                             <p class="route-style">📍 {str(ret).upper()} ➔ {str(ent).upper()}</p>
-                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                                <div class="label-style" style="border-left: 4px solid {color};"><b>{txt_urg}</b></div>
+                            <div style="margin-top:10px; display: flex; flex-wrap: wrap; gap: 10px;">
+                                <div class="label-style" style="border: 2px solid {color};"><b>{txt_urg}</b></div>
                                 <div class="label-style">📦 <b>Carga:</b> {mer}</div>
                                 <div class="label-style">🏢 <b>Empresa:</b> {emp}</div>
                                 <div class="label-style">{bandera} <b>Tel:</b> {tel}</div>
@@ -108,7 +109,7 @@ with t1:
                         <a href="https://api.whatsapp.com/send?phone={t_final}&text={msg}" target="_blank" class="btn-tomar">TOMAR CARGA</a>
                     </div>
                 """, unsafe_allow_html=True)
-        except: st.info("Actualizando tablero...")
+        except: st.info("Actualizando...")
 
 # === PESTAÑA EMPRESAS ===
 with t2:
@@ -116,9 +117,9 @@ with t2:
     with c1:
         st.markdown("### 🏢 Publicar Nueva Carga")
         with st.form("f2", clear_on_submit=True):
-            eo, ed, em, en = st.text_input("📍 Origen"), st.text_input("🏁 Destino"), st.text_input("📦 Qué mercadería es?"), st.text_input("🏢 Nombre de Empresa")
+            eo, ed, em, en = st.text_input("📍 Origen"), st.text_input("🏁 Destino"), st.text_input("📦 Carga"), st.text_input("🏢 Empresa")
             eu = st.selectbox("⏳ Urgencia", ["Sale hoy", "Sale mañana", "Sin apuro"])
-            ew = st.text_input("📱 WhatsApp de contacto")
+            ew = st.text_input("📱 WhatsApp")
             if st.form_submit_button("PUBLICAR CARGA AHORA"):
                 requests.post(FORM_EM_URL, data={ID_EM[0]:eo, ID_EM[1]:ed, ID_EM[2]:em, ID_EM[3]:en, ID_EM[4]:eu, ID_EM[5]:ew})
                 st.balloons(); st.success("¡Carga publicada!"); time.sleep(1); st.rerun()
@@ -127,22 +128,19 @@ with t2:
         try:
             dfh = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}").fillna("S/D")
             for _, r in dfh.iloc[::-1].iterrows():
+                # Columnas Choferes: 0:Fecha, 1:Origen, 2:Destino, 3:Equipo, 4:WhatsApp
                 f, o, d, eq, tel = r[0], r[1], r[2], r[3], r[4]
                 bandera, t_final = detectar_pais_y_whatsapp(tel)
                 st.markdown(f"""
-                    <div class="card-white" style="border-left: 12px solid #2ecc71;">
+                    <div class="card-white" style="border-left: 10px solid #2ecc71;">
                         <div>
                             <p class="route-style">🚛 {str(o).upper()} ➔ {str(d).upper()}</p>
-                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                            <div style="margin-top:8px; display: flex; gap: 10px;">
                                 <div class="label-style">⚙️ <b>Equipo:</b> {eq}</div>
-                                <div class="label-style">{bandera} <b>WhatsApp:</b> {tel}</div>
-                                <div class="label-style">🕒 <b>Visto:</b> {f}</div>
+                                <div class="label-style">{bandera} <b>Tel:</b> {tel}</div>
                             </div>
                         </div>
                         <a href="https://api.whatsapp.com/send?phone={t_final}" target="_blank" class="btn-tomar" style="background:#2ecc71">WHATSAPP</a>
                     </div>
                 """, unsafe_allow_html=True)
         except: st.info("Sincronizando...")
-
-# --- PIE DE PÁGINA ---
-st.markdown("<br><hr><div style='color:white; text-align:center; opacity:0.6; font-size:12px;'>© 2026 RETORNO MATCH - Ignacio Diaz | San Jorge, Santa Fe</div>", unsafe_allow_html=True)
