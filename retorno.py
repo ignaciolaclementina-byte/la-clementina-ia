@@ -2,135 +2,175 @@ import streamlit as st
 import pandas as pd
 import time
 
-# 1. CONFIGURACIÓN (SIEMPRE PRIMERO)
-st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
+# 1. CONFIGURACIÓN
+st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
-# 2. CSS PARA FONDO Y DISEÑO PROFESIONAL
+# 2. CSS AVANZADO (Diseño Moderno y Limpio)
 st.markdown("""
     <style>
-    /* FONDO GLOBAL */
+    /* Fondo con overlay más suave para lectura */
     [data-testid="stAppViewContainer"] {
-        background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+        background-image: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), 
                         url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070&auto=format&fit=crop') !important;
         background-size: cover !important;
-        background-position: center !important;
         background-attachment: fixed !important;
     }
+    
+    .stApp, .stMain, [data-testid="stHeader"] { background: transparent !important; }
 
-    /* TRANSPARENCIAS */
-    .stApp, .stMain, [data-testid="stHeader"], .block-container {
-        background: transparent !important;
+    /* Contenedor Principal */
+    .block-container { padding-top: 2rem !important; }
+
+    /* Estilo de Pestañas Modernas */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        background-color: rgba(255,255,255,0.05);
+        padding: 10px;
+        border-radius: 15px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        background-color: rgba(255,255,255,0.1);
+        border-radius: 10px;
+        color: white !important;
+        font-weight: bold;
+        transition: 0.3s;
+        border: none;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #25D366 !important;
+        transform: scale(1.02);
     }
 
-    /* TARJETAS BLANCAS (Máxima legibilidad) */
-    .card {
+    /* TARJETAS MEJORADAS */
+    .card-container {
         background: white !important;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 15px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        border-radius: 15px;
+        padding: 18px;
+        margin-bottom: 12px;
+        border-left: 10px solid #25D366;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    
+    .info-section { flex-grow: 1; }
+    
+    .route-text {
+        font-size: 22px;
+        font-weight: 800;
+        color: #1a1a1a !important;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+    
+    .detail-text {
+        font-size: 15px;
+        color: #555 !important;
+        margin-top: 5px;
     }
 
-    /* ESTILO DE TEXTOS */
-    h1, h2, h3, label, p { color: white !important; }
-    .card-title { color: #1a1a1a !important; font-size: 20px; font-weight: bold; margin: 0; }
-    .card-sub { color: #555 !important; font-size: 16px; margin: 5px 0; }
-
-    /* BOTONES */
     .btn-wa {
         background-color: #25D366;
         color: white !important;
-        padding: 10px 20px;
-        border-radius: 8px;
+        padding: 12px 25px;
+        border-radius: 50px;
         text-decoration: none;
         font-weight: bold;
-        display: inline-block;
+        font-size: 14px;
+        box-shadow: 0 4px 10px rgba(37, 211, 102, 0.3);
+        transition: 0.3s;
+        white-space: nowrap;
     }
     
-    /* PESTAÑAS */
-    .stTabs [data-baseweb="tab-list"] { background-color: rgba(255,255,255,0.1); border-radius: 10px; }
-    .stTabs [data-baseweb="tab"] { color: white !important; padding: 10px 20px; }
-    .stTabs [aria-selected="true"] { background-color: #25D366 !important; border-radius: 8px; }
+    .btn-wa:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(37, 211, 102, 0.5); }
+
+    /* Formulario Estilizado */
+    .stForm {
+        background: rgba(255,255,255,0.05);
+        padding: 20px;
+        border-radius: 15px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. ENCABEZADO
-st.markdown("<h1 style='text-align:center;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#25D366 !important; font-weight:bold;'>LOGÍSTICA PROFESIONAL SAN JORGE</p>", unsafe_allow_html=True)
-
-# 4. PESTAÑAS
-tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER (Busco Carga)", "🏢 SOY EMPRESA (Busco Camión)"])
-
-# --- VISTA CHOFER ---
-with tab_chofer:
-    # A. Publicar Camión
-    with st.expander("📢 PUBLICAR MI CAMIÓN DISPONIBLE (Clic aquí)"):
-        with st.form("f_camion"):
-            c1, c2 = st.columns(2)
-            with c1:
-                orig = st.text_input("📍 ¿Desde dónde salís?")
-                equip = st.selectbox("🚛 Equipo", ["Chasis", "Acoplado", "Semi", "Sider", "Térmico"])
-            with c2:
-                dest = st.text_input("🏁 ¿Hacia dónde vas?")
-                wapp = st.text_input("📱 Tu WhatsApp")
-            if st.form_submit_button("PUBLICAR CAMIÓN"):
-                st.success("¡Camión publicado! Las empresas ahora pueden verte.")
-
-    st.markdown("### 📦 Cargas disponibles para llevar")
-    # Aquí es donde el chofer ve lo que las empresas publicaron
-    # Simulamos datos de una empresa
-    st.markdown("""
-        <div class="card" style="border-left: 8px solid #3498db;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <p class="card-title">📍 ROSARIO → SAN JORGE</p>
-                    <p class="card-sub">📦 15 Pallets (Alimento) | 🏢 Logística San Jorge</p>
-                </div>
-                <a href="#" class="btn-wa" style="background-color: #3498db;">ACEPTAR CARGA</a>
-            </div>
-        </div>
+# 3. HEADER PROFESIONAL
+st.markdown("""
+    <div style='text-align:center; padding-bottom: 20px;'>
+        <h1 style='font-size: 45px; color: white; margin-bottom:0;'>🚛 RETORNO MATCH</h1>
+        <p style='color: #25D366; font-size: 18px; font-weight: bold; letter-spacing: 2px;'>LOGÍSTICA PROFESIONAL SAN JORGE</p>
+    </div>
     """, unsafe_allow_html=True)
 
-# --- VISTA EMPRESA ---
-with tab_empresa:
-    # A. Formulario para que la Empresa cargue sus datos (LO QUE PREGUNTASTE)
-    with st.expander("📦 PUBLICAR UNA NECESIDAD DE CARGA (Clic aquí)"):
-        with st.form("f_carga"):
-            st.markdown("<p style='color:black !important;'>Cargue los datos de la mercadería que necesita mover:</p>", unsafe_allow_html=True)
-            col1, col2 = st.columns(2)
-            with col1:
-                e_orig = st.text_input("📍 Punto de Retiro")
-                e_merc = st.text_input("📦 Mercadería (Ej: 12 Pallets, Cereal)")
-            with col2:
-                e_dest = st.text_input("🏁 Punto de Entrega")
-                e_wapp = st.text_input("📱 WhatsApp de la Empresa")
-            
-            if st.form_submit_button("PUBLICAR CARGA"):
-                st.success("✅ ¡Carga publicada! Los choferes la verán en su pestaña.")
+# 4. NAVEGACIÓN PRINCIPAL
+tab1, tab2 = st.tabs(["👋 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-    st.markdown("### 🚛 Camiones buscando retorno")
-    # Aquí la empresa ve los datos del Google Sheets de los choferes
-    SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
-    URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%203&t={int(time.time())}"
+# --- SECCIÓN CHOFER ---
+with tab1:
+    col_a, col_b = st.columns([1, 2])
     
-    try:
-        df = pd.read_csv(URL).iloc[:, :5]
-        df.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
-        for _, row in df.iloc[::-1].iterrows():
-            tel = "".join(filter(str.isdigit, str(row['tel'])))
-            link = f"https://wa.me/{tel}"
-            st.markdown(f"""
-                <div class="card" style="border-left: 8px solid #25D366;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <p class="card-title">📍 {str(row['origen']).upper()} → {str(row['destino']).upper()}</p>
-                            <p class="card-sub">🚛 {row['equipo']} | 📅 {row['fecha']}</p>
-                        </div>
-                        <a href="{link}" target="_blank" class="btn-wa">WHATSAPP</a>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-    except:
-        st.info("No hay camiones publicados por ahora.")
+    with col_a:
+        st.markdown("### 📢 Publicar mi Camión")
+        with st.form("form_camion", clear_on_submit=True):
+            orig = st.text_input("📍 Origen", placeholder="Ej: San Jorge")
+            dest = st.text_input("🏁 Destino", placeholder="Ej: Rosario")
+            equi = st.selectbox("🚛 Equipo", ["Chasis", "Acoplado", "Semi", "Sider", "Térmico"])
+            tel = st.text_input("📱 WhatsApp", placeholder="3406123456")
+            if st.form_submit_button("PUBLICAR DISPONIBILIDAD", use_container_width=True):
+                st.success("¡Camión publicado!")
 
-st.markdown("<br><p style='text-align:center; opacity:0.5; color:white;'>San Jorge, Santa Fe | 2026</p>", unsafe_allow_html=True)
+    with col_b:
+        st.markdown("### 📦 Cargas esperando transporte")
+        # Esto debería venir de tu hoja de Google Sheets (Cargas)
+        # Ejemplo visual de como quedaría:
+        st.markdown(f"""
+            <div class="card-container" style="border-left-color: #3498db;">
+                <div class="info-section">
+                    <p class="route-text">📍 ROSARIO ➔ SAN JORGE</p>
+                    <p class="detail-text">📦 <b>Carga:</b> 12 Pallets Mercadería | 🏢 Logística SJ</p>
+                </div>
+                <a href="https://wa.me/3406000000" class="btn-wa" style="background-color: #3498db;">TOMAR CARGA</a>
+            </div>
+        """, unsafe_allow_html=True)
+
+# --- SECCIÓN EMPRESA ---
+with tab2:
+    col_c, col_d = st.columns([1, 2])
+    
+    with col_c:
+        st.markdown("### 📢 Publicar Carga")
+        with st.form("form_carga", clear_on_submit=True):
+            e_orig = st.text_input("📍 Punto de Retiro")
+            e_dest = st.text_input("🏁 Punto de Entrega")
+            e_merc = st.text_input("📦 ¿Qué mercadería es?")
+            e_tel = st.text_input("📱 WhatsApp Empresa")
+            if st.form_submit_button("BUSCAR CAMIÓN AHORA", use_container_width=True):
+                st.success("¡Carga publicada!")
+
+    with col_d:
+        st.markdown("### 🚛 Camiones buscando retorno")
+        # CONEXIÓN REAL CON TU SHEETS
+        SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
+        URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%203&t={int(time.time())}"
+        
+        try:
+            df = pd.read_csv(URL).iloc[:, :5]
+            df.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
+            for _, row in df.iloc[::-1].head(10).iterrows():
+                tel_clean = "".join(filter(str.isdigit, str(row['tel'])))
+                st.markdown(f"""
+                    <div class="card-container">
+                        <div class="info-section">
+                            <p class="route-text">📍 {str(row['origen']).upper()} ➔ {str(row['destino']).upper()}</p>
+                            <p class="detail-text">🚛 <b>Equipo:</b> {row['equipo']} | 📅 {row['fecha']}</p>
+                        </div>
+                        <a href="https://wa.me/{tel_clean}" target="_blank" class="btn-wa">WHATSAPP</a>
+                    </div>
+                """, unsafe_allow_html=True)
+        except:
+            st.warning("Conectando con la base de datos de camiones...")
+
+st.markdown("<br><p style='text-align:center; color:gray;'>San Jorge, Santa Fe | 2026</p>", unsafe_allow_html=True)
