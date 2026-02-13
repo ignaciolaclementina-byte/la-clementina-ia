@@ -18,7 +18,34 @@ ID_EM = ["entry.610070407", "entry.170847116", "entry.576675281", "entry.1930562
 
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
-# --- 2. INTERFAZ ORIGINAL (DEPÓSITOS) ---
+# --- 2. LÓGICA DE DETECCIÓN DE PAÍS Y BANDERA ---
+def detectar_pais_y_whatsapp(tel_sucio):
+    num = "".join(filter(str.isdigit, str(tel_sucio)))
+    if not num: return "❓", ""
+
+    # Diccionario de prefijos comunes
+    # Si el número empieza con el prefijo, asignamos bandera
+    if num.startswith("54"): 
+        return "🇦🇷", num
+    elif num.startswith("598"): 
+        return "🇺🇾", num
+    elif num.startswith("55"): 
+        return "🇧🇷", num
+    elif num.startswith("56"): 
+        return "🇨🇱", num
+    elif num.startswith("595"): 
+        return "🇵🇾", num
+    elif num.startswith("591"): 
+        return "🇧🇴", num
+    
+    # Si el número es corto (ej: 3406...), asumimos Argentina por defecto
+    if len(num) <= 10:
+        return "🇦🇷", "549" + num
+    
+    # Si no coincide con nada pero es largo, dejamos bandera neutra
+    return "🌐", num
+
+# --- 3. ESTILOS VISUALES ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -40,19 +67,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. LÓGICA DE TELÉFONO INTERNACIONAL ---
-def formatear_whatsapp(tel_sucio):
-    # Solo deja números
-    num = "".join(filter(str.isdigit, str(tel_sucio)))
-    if not num: return ""
-    
-    # Si el número es largo (11+ dígitos), asumimos que ya tiene código de país
-    if len(num) >= 11:
-        return num
-    # Si es un número corto de Argentina (ej: 3406...), le pone el 549
-    else:
-        return "549" + num
-
 def filtrar_24hs(df):
     try:
         df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0], dayfirst=True)
@@ -72,7 +86,7 @@ with t1:
         with st.form("f1", clear_on_submit=True):
             o, d = st.text_input("📍 Origen"), st.text_input("🏁 Destino")
             e = st.selectbox("🚛 Equipo", ["Chasis", "Acoplado", "Semi", "Sider", "Térmico"])
-            w = st.text_input("📱 WhatsApp (Ej: 5493406...)")
+            w = st.text_input("📱 WhatsApp (Ej: 3406...)")
             if st.form_submit_button("PUBLICAR DISPONIBILIDAD"):
                 requests.post(FORM_CH_URL, data={ID_CH[0]:o, ID_CH[1]:d, ID_CH[2]:e, ID_CH[3]:w})
                 st.success("✅ Publicado"); time.sleep(1); st.rerun()
@@ -83,7 +97,7 @@ with t1:
             df = filtrar_24hs(df)
             for _, r in df.iloc[::-1].iterrows():
                 f, ret, ent, mer, tel, emp = r[0], r[1], r[2], r[3], r[4], r[5]
-                t_final = formatear_whatsapp(tel)
+                bandera, t_final = detectar_pais_y_whatsapp(tel)
                 st.markdown(f"""
                     <div class="card-white" style="border-left: 8px solid #3498db;">
                         <div>
@@ -91,7 +105,7 @@ with t1:
                             <div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 10px;">
                                 <span class="label-style">📦 Carga: {mer}</span>
                                 <span class="label-style">🏢 Empresa: {emp if pd.notna(emp) else 'S/D'}</span>
-                                <span class="label-style">📱 Tel: {tel}</span>
+                                <span class="label-style">{bandera} Tel: {tel}</span>
                                 <span class="label-style">🕒 {f.strftime('%H:%M')} hs</span>
                             </div>
                         </div>
@@ -119,14 +133,14 @@ with t2:
             dfh = filtrar_24hs(dfh)
             for _, r in dfh.iloc[::-1].iterrows():
                 f, o, d, eq, tel = r[0], r[1], r[2], r[3], r[4]
-                t_final = formatear_whatsapp(tel)
+                bandera, t_final = detectar_pais_y_whatsapp(tel)
                 st.markdown(f"""
                     <div class="card-white" style="border-left: 8px solid #2ecc71;">
                         <div>
                             <p class="route-style">🚛 {str(o).upper()} ➔ {str(d).upper()}</p>
                             <div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 10px;">
                                 <span class="label-style">⚙️ Equipo: {eq}</span>
-                                <span class="label-style">📱 Tel: {tel}</span>
+                                <span class="label-style">{bandera} Tel: {tel}</span>
                                 <span class="label-style">🕒 {f.strftime('%H:%M')} hs</span>
                             </div>
                         </div>
