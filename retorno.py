@@ -10,6 +10,7 @@ SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
 
+# URLs de Google Forms
 FORM_CH_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 ID_CH = ["entry.1304806144", "entry.1519265625", "entry.597193898", "entry.1574172378"]
 
@@ -18,13 +19,12 @@ ID_EM = ["entry.610070407", "entry.170847116", "entry.576675281", "entry.1930562
 
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
-# --- 2. LÓGICA DE DETECCIÓN DE PAÍS Y BANDERA ---
+# --- 2. LÓGICA DE DETECCIÓN DE PAÍS Y BANDERA (ACTUALIZADA) ---
 def detectar_pais_y_whatsapp(tel_sucio):
     num = "".join(filter(str.isdigit, str(tel_sucio)))
-    if not num: return "❓", ""
+    if not num: return "🌐", ""
 
-    # Diccionario de prefijos comunes
-    # Si el número empieza con el prefijo, asignamos bandera
+    # Detección por prefijo internacional
     if num.startswith("54"): 
         return "🇦🇷", num
     elif num.startswith("598"): 
@@ -38,14 +38,13 @@ def detectar_pais_y_whatsapp(tel_sucio):
     elif num.startswith("591"): 
         return "🇧🇴", num
     
-    # Si el número es corto (ej: 3406...), asumimos Argentina por defecto
+    # Si el número es corto (local Argentina sin 54), asumimos AR y agregamos 549
     if len(num) <= 10:
         return "🇦🇷", "549" + num
     
-    # Si no coincide con nada pero es largo, dejamos bandera neutra
     return "🌐", num
 
-# --- 3. ESTILOS VISUALES ---
+# --- 3. ESTILOS VISUALES (TU INTERFAZ DE DEPÓSITOS) ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
