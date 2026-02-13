@@ -1,16 +1,17 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
+import time  # 1. Agregado para forzar la actualización de datos
 
-# 1. CONFIGURACIÓN DE PÁGINA
+# 2. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
-# 2. ESTILO VISUAL PREMIUM (Tarjetas blancas con borde verde)
+# 3. ESTILO VISUAL PREMIUM
 st.markdown("""
     <style>
     .stApp {
         background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), 
-                    url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1920&q=80');
+                    url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-attachment: fixed;
     }
@@ -54,46 +55,48 @@ st.markdown("<h1 style='text-align:center; color:white; font-size: 55px; font-we
 st.markdown("<p style='text-align:center; color:#00FF41; font-size: 18px; margin-top: -10px;'>LOGÍSTICA SAN JORGE - CONECTANDO CARGAS</p>", unsafe_allow_html=True)
 st.write("---")
 
-# 3. CONEXIÓN A LA BASE DE DATOS (Pestaña 3)
+# 4. CONEXIÓN A LA BASE DE DATOS (Con truco anti-cache)
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
-URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%203"
+# El parámetro &t={int(time.time())} hace que la URL sea única cada segundo
+URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%203&t={int(time.time())}"
 
 try:
     df = pd.read_csv(URL)
     
-    # Mapeo de columnas: [Fecha, Origen, Destino, Equipo, WhatsApp]
+    # Mapeo de columnas: [Marca temporal, origen, destino, equipo, whatsapp]
     df = df.iloc[:, :5]
     df.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
     
-    # Limpieza de datos vacíos
-    df = df.dropna(subset=['origen', 'destino'])
+    # Limpieza: quitamos filas donde el origen sea nulo
+    df = df.dropna(subset=['origen'])
 
-    # 4. BUSCADOR Y BOTÓN DE CARGA
+    # 5. BUSCADOR Y BOTÓN DE CARGA
     col_search, col_btn = st.columns([3, 1])
     
     with col_search:
-        search = st.text_input("", placeholder="🔍 Buscar ciudad o destino...")
+        search = st.text_input("", placeholder="🔍 Buscar ciudad de origen o destino...")
     
     with col_btn:
-        # AQUÍ ACTUALIZAMOS TU LINK NUEVO
         LINK_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScC-OLmU8VbJgv0BLkLZ-9CH4i27bkwKa3zbv-QiguLbNE9pQ/viewform?usp=header"
         st.link_button("➕ CARGAR CAMIÓN", LINK_FORM, use_container_width=True)
 
-    # 5. MOSTRAR TARJETAS DE CAMIONES
+    # 6. MOSTRAR TARJETAS
     if not df.empty:
+        # Si hay búsqueda, filtramos
         if search:
             df = df[df['destino'].str.contains(search, case=False, na=False) | 
                     df['origen'].str.contains(search, case=False, na=False)]
 
+        # Mostramos de más nuevo a más viejo
         for _, row in df.iloc[::-1].iterrows():
-            # Limpiamos el teléfono (quitamos puntos, espacios y +)
+            # Limpiamos el teléfono (solo números)
             tel_limpio = "".join(filter(str.isdigit, str(row['tel'])))
             
-            # Texto para el mensaje de WhatsApp
+            # Texto para WhatsApp
             texto = f"Hola! Vi tu camion de {row['origen']} a {row['destino']} en Retorno Match. ¿Seguís disponible?"
             link_wa = f"https://wa.me/{tel_limpio}?text={urllib.parse.quote(texto)}"
             
-            # Tarjeta Visual
+            # Render de la tarjeta
             st.markdown(f"""
             <div class="camion-card">
                 <div class="card-content">
