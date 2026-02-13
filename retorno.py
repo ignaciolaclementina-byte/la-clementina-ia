@@ -1,12 +1,17 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
-import time  # 1. Agregado para forzar la actualización de datos
+import time
 
-# 2. CONFIGURACIÓN DE PÁGINA
+# --- NUEVO: Función para auto-refrescar cada 2 minutos ---
+def autorefresh(interval_seconds):
+    time.sleep(interval_seconds)
+    st.rerun()
+
+# 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
-# 3. ESTILO VISUAL PREMIUM
+# 2. ESTILO VISUAL PREMIUM
 st.markdown("""
     <style>
     .stApp {
@@ -26,17 +31,8 @@ st.markdown("""
         justify-content: space-between;
         align-items: center;
     }
-    .card-content h3 {
-        color: #1a1a1a;
-        margin: 0 0 5px 0;
-        font-size: 24px;
-        font-weight: 800;
-    }
-    .card-content p {
-        color: #555;
-        margin: 0;
-        font-size: 16px;
-    }
+    .card-content h3 { color: #1a1a1a; margin: 0 0 5px 0; font-size: 24px; font-weight: 800; }
+    .card-content p { color: #555; margin: 0; font-size: 16px; }
     .btn-wa {
         background-color: #25D366;
         color: white !important;
@@ -45,7 +41,6 @@ st.markdown("""
         text-decoration: none;
         font-weight: bold;
         font-size: 16px;
-        box-shadow: 0 4px 6px rgba(37, 211, 102, 0.4);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -55,48 +50,35 @@ st.markdown("<h1 style='text-align:center; color:white; font-size: 55px; font-we
 st.markdown("<p style='text-align:center; color:#00FF41; font-size: 18px; margin-top: -10px;'>LOGÍSTICA SAN JORGE - CONECTANDO CARGAS</p>", unsafe_allow_html=True)
 st.write("---")
 
-# 4. CONEXIÓN A LA BASE DE DATOS (Con truco anti-cache)
+# 3. CONEXIÓN A LA BASE DE DATOS (Truco anti-cache)
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
-# El parámetro &t={int(time.time())} hace que la URL sea única cada segundo
 URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%203&t={int(time.time())}"
 
 try:
     df = pd.read_csv(URL)
-    
-    # Mapeo de columnas: [Marca temporal, origen, destino, equipo, whatsapp]
     df = df.iloc[:, :5]
     df.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
-    
-    # Limpieza: quitamos filas donde el origen sea nulo
     df = df.dropna(subset=['origen'])
 
-    # 5. BUSCADOR Y BOTÓN DE CARGA
+    # 4. BUSCADOR Y BOTÓN DE CARGA
     col_search, col_btn = st.columns([3, 1])
-    
     with col_search:
-        search = st.text_input("", placeholder="🔍 Buscar ciudad de origen o destino...")
-    
+        search = st.text_input("", placeholder="🔍 Buscar ciudad...")
     with col_btn:
         LINK_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScC-OLmU8VbJgv0BLkLZ-9CH4i27bkwKa3zbv-QiguLbNE9pQ/viewform?usp=header"
         st.link_button("➕ CARGAR CAMIÓN", LINK_FORM, use_container_width=True)
 
-    # 6. MOSTRAR TARJETAS
+    # 5. MOSTRAR TARJETAS
     if not df.empty:
-        # Si hay búsqueda, filtramos
         if search:
             df = df[df['destino'].str.contains(search, case=False, na=False) | 
                     df['origen'].str.contains(search, case=False, na=False)]
 
-        # Mostramos de más nuevo a más viejo
         for _, row in df.iloc[::-1].iterrows():
-            # Limpiamos el teléfono (solo números)
             tel_limpio = "".join(filter(str.isdigit, str(row['tel'])))
-            
-            # Texto para WhatsApp
-            texto = f"Hola! Vi tu camion de {row['origen']} a {row['destino']} en Retorno Match. ¿Seguís disponible?"
+            texto = f"Hola! Vi tu camion de {row['origen']} a {row['destino']} en Retorno Match."
             link_wa = f"https://wa.me/{tel_limpio}?text={urllib.parse.quote(texto)}"
             
-            # Render de la tarjeta
             st.markdown(f"""
             <div class="camion-card">
                 <div class="card-content">
@@ -110,9 +92,13 @@ try:
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.markdown("<h3 style='text-align:center; color:white;'>No hay camiones reportados en este momento.</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align:center; color:white;'>No hay camiones reportados.</h3>", unsafe_allow_html=True)
 
 except Exception as e:
-    st.info("Sincronizando con la red de transportistas...")
+    st.info("Sincronizando...")
 
 st.markdown("<br><br><p style='text-align:center; color:gray; font-size:12px;'>San Jorge, Santa Fe - 2026</p>", unsafe_allow_html=True)
+
+# 6. ACTIVAR EL AUTO-REFRESCO AL FINAL (120 segundos)
+# Nota: Esto hará que la App se refresque sola.
+# autorefresh(120)
