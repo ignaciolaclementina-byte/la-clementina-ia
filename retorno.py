@@ -3,11 +3,6 @@ import pandas as pd
 import urllib.parse
 import time
 
-# --- NUEVO: Función para auto-refrescar cada 2 minutos ---
-def autorefresh(interval_seconds):
-    time.sleep(interval_seconds)
-    st.rerun()
-
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="RETORNO MATCH | San Jorge", page_icon="🚛", layout="wide")
 
@@ -50,8 +45,9 @@ st.markdown("<h1 style='text-align:center; color:white; font-size: 55px; font-we
 st.markdown("<p style='text-align:center; color:#00FF41; font-size: 18px; margin-top: -10px;'>LOGÍSTICA SAN JORGE - CONECTANDO CARGAS</p>", unsafe_allow_html=True)
 st.write("---")
 
-# 3. CONEXIÓN A LA BASE DE DATOS (Truco anti-cache)
+# 3. CONEXIÓN A LA BASE DE DATOS (Con truco anti-cache para refresco real)
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
+# Usamos time.time() para que cada vez que se ejecute pida datos nuevos a Google
 URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%203&t={int(time.time())}"
 
 try:
@@ -60,10 +56,17 @@ try:
     df.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
     df = df.dropna(subset=['origen'])
 
-    # 4. BUSCADOR Y BOTÓN DE CARGA
-    col_search, col_btn = st.columns([3, 1])
+    # 4. FILA DE ACCIONES: BUSCADOR + ACTUALIZAR + CARGAR
+    col_search, col_refresh, col_btn = st.columns([2, 1, 1])
+    
     with col_search:
         search = st.text_input("", placeholder="🔍 Buscar ciudad...")
+    
+    with col_refresh:
+        # BOTÓN DE ACTUALIZAR: Al tocarlo, Streamlit vuelve a ejecutar todo el código
+        if st.button("🔄 ACTUALIZAR LISTADO", use_container_width=True):
+            st.rerun()
+            
     with col_btn:
         LINK_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScC-OLmU8VbJgv0BLkLZ-9CH4i27bkwKa3zbv-QiguLbNE9pQ/viewform?usp=header"
         st.link_button("➕ CARGAR CAMIÓN", LINK_FORM, use_container_width=True)
@@ -76,7 +79,7 @@ try:
 
         for _, row in df.iloc[::-1].iterrows():
             tel_limpio = "".join(filter(str.isdigit, str(row['tel'])))
-            texto = f"Hola! Vi tu camion de {row['origen']} a {row['destino']} en Retorno Match."
+            texto = f"Hola! Vi tu camion de {row['origen']} a {row['destino']} en Retorno Match. ¿Seguís disponible?"
             link_wa = f"https://wa.me/{tel_limpio}?text={urllib.parse.quote(texto)}"
             
             st.markdown(f"""
@@ -98,7 +101,3 @@ except Exception as e:
     st.info("Sincronizando...")
 
 st.markdown("<br><br><p style='text-align:center; color:gray; font-size:12px;'>San Jorge, Santa Fe - 2026</p>", unsafe_allow_html=True)
-
-# 6. ACTIVAR EL AUTO-REFRESCO AL FINAL (120 segundos)
-# Nota: Esto hará que la App se refresque sola.
-# autorefresh(120)
