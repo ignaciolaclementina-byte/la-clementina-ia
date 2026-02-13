@@ -3,6 +3,7 @@ import pandas as pd
 import time
 import requests
 import urllib.parse
+from datetime import datetime, timedelta
 
 # --- 1. CONFIGURACIÓN DE CONEXIÓN ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
@@ -50,6 +51,16 @@ st.markdown("<div style='text-align:center;'><h1 style='font-size: 48px;'>🚛 R
 
 tab1, tab2 = st.tabs(["👋 SOY CHOFER (Busco Carga)", "🏢 SOY EMPRESA (Busco Camión)"])
 
+# --- LÓGICA DE FILTRADO POR DÍA ---
+# Esta función asegura que solo veamos lo publicado en las últimas 24hs
+def filtrar_solo_hoy(df):
+    try:
+        df['fecha'] = pd.to_datetime(df['fecha'], dayfirst=True)
+        hace_24hs = datetime.now() - timedelta(hours=24)
+        return df[df['fecha'] >= hace_24hs]
+    except:
+        return df # Si falla el formato de fecha, muestra todo para no romper la app
+
 # ==========================================
 # PESTAÑA 1: VISTA CHOFER
 # ==========================================
@@ -65,28 +76,34 @@ with tab1:
                         st.success("✅ ¡Publicado!"); time.sleep(1.2); st.rerun()
 
     with col_f2:
-        st.markdown("### 📦 Cargas Disponibles")
+        st.markdown("### 📦 Cargas Disponibles (Últimas 24hs)")
         try:
             df_c = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}")
             df_c.columns = ['fecha', 'origen', 'destino', 'mercaderia', 'tel']
-            for _, row in df_c.iloc[::-1].head(15).iterrows():
-                t_clean = "".join(filter(str.isdigit, str(row['tel'])))
-                if t_clean.startswith('0'): t_clean = t_clean[1:]
-                t_final = t_clean if t_clean.startswith('549') else "549" + t_clean
-                
-                # --- NUEVO LINK CON API.WHATSAPP ---
-                msg = urllib.parse.quote(f"Hola! Vi tu carga en Retorno Match: {row['origen']} -> {row['destino']} ({row['mercaderia']}). Sigue disponible?")
-                link_wa = f"https://api.whatsapp.com/send?phone={t_final}&text={msg}"
-                
-                st.markdown(f"""
-                    <div class="card-container" style="border-left: 8px solid #3498db;">
-                        <div style="flex-grow:1;">
-                            <p class="route-text">📍 {str(row['origen']).upper()} ➔ {str(row['destino']).upper()}</p>
-                            <p class="detail-text">📦 <b>Carga:</b> {row['mercaderia']} | 📅 {row['fecha']}</p>
+            
+            # APLICAMOS EL FILTRO DE 24 HORAS
+            df_c = filtrar_solo_hoy(df_c)
+            
+            if df_c.empty:
+                st.info("No hay cargas nuevas de hoy. ¡Sé el primero en publicar!")
+            else:
+                for _, row in df_c.iloc[::-1].iterrows():
+                    t_clean = "".join(filter(str.isdigit, str(row['tel'])))
+                    if t_clean.startswith('0'): t_clean = t_clean[1:]
+                    t_final = t_clean if t_clean.startswith('549') else "549" + t_clean
+                    
+                    msg = urllib.parse.quote(f"Hola! Vi tu carga en Retorno Match: {row['origen']} -> {row['destino']} ({row['mercaderia']}). Sigue disponible?")
+                    link_wa = f"https://api.whatsapp.com/send?phone={t_final}&text={msg}"
+                    
+                    st.markdown(f"""
+                        <div class="card-container" style="border-left: 8px solid #3498db;">
+                            <div style="flex-grow:1;">
+                                <p class="route-text">📍 {str(row['origen']).upper()} ➔ {str(row['destino']).upper()}</p>
+                                <p class="detail-text">📦 <b>Carga:</b> {row['mercaderia']} | 📅 {row['fecha'].strftime('%H:%M hs')}</p>
+                            </div>
+                            <a href="{link_wa}" target="_blank" class="btn-wa" style="background-color: #3498db;">TOMAR CARGA</a>
                         </div>
-                        <a href="{link_wa}" target="_blank" class="btn-wa" style="background-color: #3498db;">TOMAR CARGA</a>
-                    </div>
-                """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
         except: st.info("Sincronizando...")
 
 # ==========================================
@@ -104,26 +121,32 @@ with tab2:
                         st.success("✅ ¡En línea!"); time.sleep(1.2); st.rerun()
 
     with col_e2:
-        st.markdown("### 🚛 Camiones Disponibles")
+        st.markdown("### 🚛 Camiones Disponibles (Últimas 24hs)")
         try:
             df_h = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}")
             df_h.columns = ['fecha', 'origen', 'destino', 'equipo', 'tel']
-            for _, row in df_h.iloc[::-1].head(15).iterrows():
-                t_clean = "".join(filter(str.isdigit, str(row['tel'])))
-                if t_clean.startswith('0'): t_clean = t_clean[1:]
-                t_final = t_clean if t_clean.startswith('549') else "549" + t_clean
-                
-                # --- NUEVO LINK CON API.WHATSAPP ---
-                msg_ch = urllib.parse.quote(f"Hola! Vi tu camión en Retorno Match: {row['origen']} -> {row['destino']} (Equipo: {row['equipo']}). Te interesa una carga?")
-                link_wa_ch = f"https://api.whatsapp.com/send?phone={t_final}&text={msg_ch}"
-                
-                st.markdown(f"""
-                    <div class="card-container" style="border-left: 8px solid #25D366;">
-                        <div style="flex-grow:1;">
-                            <p class="route-text">📍 {str(row['origen']).upper()} ➔ {str(row['destino']).upper()}</p>
-                            <p class="detail-text">🚛 <b>Equipo:</b> {row['equipo']} | 📅 {row['fecha']}</p>
+            
+            # APLICAMOS EL FILTRO DE 24 HORAS
+            df_h = filtrar_solo_hoy(df_h)
+            
+            if df_h.empty:
+                st.info("No hay camiones disponibles de hoy.")
+            else:
+                for _, row in df_h.iloc[::-1].iterrows():
+                    t_clean = "".join(filter(str.isdigit, str(row['tel'])))
+                    if t_clean.startswith('0'): t_clean = t_clean[1:]
+                    t_final = t_clean if t_clean.startswith('549') else "549" + t_clean
+                    
+                    msg_ch = urllib.parse.quote(f"Hola! Vi tu camión en Retorno Match: {row['origen']} -> {row['destino']} (Equipo: {row['equipo']}). Te interesa una carga?")
+                    link_wa_ch = f"https://api.whatsapp.com/send?phone={t_final}&text={msg_ch}"
+                    
+                    st.markdown(f"""
+                        <div class="card-container" style="border-left: 8px solid #25D366;">
+                            <div style="flex-grow:1;">
+                                <p class="route-text">📍 {str(row['origen']).upper()} ➔ {str(row['destino']).upper()}</p>
+                                <p class="detail-text">🚛 <b>Equipo:</b> {row['equipo']} | 📅 {row['fecha'].strftime('%H:%M hs')}</p>
+                            </div>
+                            <a href="{link_wa_ch}" target="_blank" class="btn-wa">WHATSAPP</a>
                         </div>
-                        <a href="{link_wa_ch}" target="_blank" class="btn-wa">WHATSAPP</a>
-                    </div>
-                """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
         except: st.info("Sincronizando...")
