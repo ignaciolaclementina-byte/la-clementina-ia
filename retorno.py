@@ -10,6 +10,7 @@ GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"    
 ADMIN_PASSWORD = "1323" 
 
+# URLs de Google Forms
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 
@@ -38,6 +39,7 @@ st.markdown("""
         background-color: #25D366; color: white !important; padding: 12px; 
         border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px;
     }
+    .badge-verif { color: #2ecc71; font-weight: 900; font-size: 14px; border: 2px solid #2ecc71; padding: 4px 8px; border-radius: 20px; float: right; }
     .footer { text-align: center; color: white; opacity: 0.8; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
     </style>
     """, unsafe_allow_html=True)
@@ -57,19 +59,28 @@ with c_act:
 tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
 # ==========================================
-# PESTAÑA 1: SOY CHOFER (Ve Cargas)
+# PESTAÑA 1: SOY CHOFER
 # ==========================================
 with tab_chofer:
     col_i, col_d = st.columns([1, 2.2])
     with col_i:
-        st.markdown("### 📢 Publicar mi Camión")
+        st.markdown("### 📢 Publicar Camión")
         with st.form("form_ch", clear_on_submit=True):
-            o, d = st.text_input("📍 Mi Ubicación"), st.text_input("🏁 Mi Destino")
-            e = st.selectbox("🚛 Equipo", ["Chasis", "Semi", "Sider", "Acoplado", "Batea"])
-            w = st.text_input("📱 Mi WhatsApp")
+            o = st.text_input("📍 Ubicación Actual")
+            d = st.text_input("🏁 Destino")
+            e = st.selectbox("🚛 Equipo", ["Chasis", "Semi", "Sider", "Acoplado", "Batea", "Térmico"])
+            cuit = st.text_input("🆔 CUIT")
+            linti = st.text_input("💳 LINTI / Carnet")
+            link_doc = st.text_input("📂 Link Documentación (Drive/Foto)")
+            w = st.text_input("📱 WhatsApp (Sin 0 ni 15)")
             if st.form_submit_button("PUBLICAR"):
-                requests.post(URL_CHOFERES_POST, data={"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1574172378": w})
-                st.success("✅ Publicado"); time.sleep(1); st.rerun()
+                payload = {
+                    "entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e,
+                    "entry.1542650763": cuit, "entry.1837643722": linti, "entry.769375120": link_doc,
+                    "entry.1574172378": w
+                }
+                requests.post(URL_CHOFERES_POST, data=payload)
+                st.success("✅ ¡Publicado!"); time.sleep(1); st.rerun()
 
     with col_d:
         st.markdown("### 📦 Cargas Disponibles")
@@ -79,42 +90,23 @@ with tab_chofer:
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
                 
-                # --- MENSAJE WHATSAPP MEJORADO PARA CARGA ---
-                texto_wsp = (
-                    f"*RETORNO MATCH* 🚛💨\n\n"
-                    f"Hola! Me contacto por la *CARGA* que publicaste:\n\n"
-                    f"📍 *RETIRO:* {r[1]}\n"
-                    f"🏁 *ENTREGA:* {r[2]}\n"
-                    f"📦 *MERCADERÍA:* {r[3]}\n"
-                    f"🏢 *EMPRESA:* {r[5]}\n"
-                    f"🗓️ *CUÁNDO:* {r[6]}\n\n"
-                    f"Soy chofer, ¿sigue disponible? Gracias!"
-                )
-                link = f"https://api.whatsapp.com/send?phone=549{r[4]}&text={urllib.parse.quote(texto_wsp)}"
-                
-                st.markdown(f"""
-                <div class="card-white">
-                    <div class="route-txt">📍 {r[1]} ➔ {r[2]}</div>
-                    <b>📦 {r[3]}</b> | 🏢 {r[5]}<br>
-                    <a href="{link}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
-                </div>
-                """, unsafe_allow_html=True)
-        except: st.info("Cargando...")
+                msg = urllib.parse.quote(f"*RETORNO MATCH*\n\nHola! Me interesa la carga:\n📍 {r[1]} -> {r[2]}\n📦 {r[3]}")
+                st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 {r[3]}</b> | 🏢 {r[5]}<br><a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>', unsafe_allow_html=True)
+        except: st.info("Esperando cargas...")
 
 # ==========================================
-# PESTAÑA 2: SOY EMPRESA (Ve Camiones)
+# PESTAÑA 2: SOY EMPRESA (Vista con Seguridad)
 # ==========================================
 with tab_empresa:
     col_a, col_b = st.columns([1, 2.2])
     with col_a:
         st.markdown("### 🏢 Publicar Carga")
         with st.form("form_em", clear_on_submit=True):
-            o, d, m, n = st.text_input("📍 Retiro"), st.text_input("🏁 Entrega"), st.text_input("📦 Carga"), st.text_input("Empresa")
-            f = st.selectbox("⏳ Cuándo", ["Hoy", "Mañana", "A convenir"])
-            w = st.text_input("📱 WhatsApp")
+            eo, ed, ec, en = st.text_input("📍 Origen"), st.text_input("🏁 Destino"), st.text_input("📦 Carga"), st.text_input("Empresa")
+            ef, ew = st.selectbox("⏳ Cuándo", ["Hoy", "Mañana", "A convenir"]), st.text_input("📱 WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
-                requests.post(URL_CARGAS_POST, data={"entry.610070407": o, "entry.170847116": d, "entry.576675281": m, "entry.1930562861": n, "entry.1064058502": f, "entry.466540450": w})
-                st.success("✅ Subida"); time.sleep(1); st.rerun()
+                requests.post(URL_CARGAS_POST, data={"entry.610070407":eo,"entry.170847116":ed,"entry.576675281":ec,"entry.1930562861":en,"entry.1064058502":ef,"entry.466540450":ew})
+                st.success("✅ Carga publicada"); time.sleep(1); st.rerun()
 
     with col_b:
         st.markdown("### 🚛 Camiones Disponibles")
@@ -124,24 +116,25 @@ with tab_empresa:
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
 
-                # --- MENSAJE WHATSAPP MEJORADO PARA CAMIÓN ---
-                texto_chofer = (
-                    f"*RETORNO MATCH* 🏢🚛\n\n"
-                    f"Hola! Vi tu *CAMIÓN DISPONIBLE* en la App:\n\n"
-                    f"🛣️ *TRAYECTO:* {r[1]} ➔ {r[2]}\n"
-                    f"⚙️ *EQUIPO:* {r[3]}\n\n"
-                    f"Tengo una carga que te puede interesar. ¿Estás disponible?"
-                )
-                link_h = f"https://api.whatsapp.com/send?phone=549{r[4]}&text={urllib.parse.quote(texto_chofer)}"
+                # Lógica de Verificación (Busca la palabra VERIFICADO en cualquier parte de la fila)
+                is_verif = "VERIFICADO" in str(r).upper()
+                badge = '<div class="badge-verif">✅ VERIFICADO</div>' if is_verif else '<div class="badge-verif" style="color:#888; border-color:#888;">⏳ PENDIENTE</div>'
                 
                 st.markdown(f"""
-                <div class="card-white" style="border-left-color: #2ecc71;">
+                <div class="card-white" style="border-left-color: {'#2ecc71' if is_verif else '#3498db'};">
+                    {badge}
                     <div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div>
-                    <b>⚙️ {r[3]}</b> | 📱 {r[4]}<br>
-                    <a href="{link_h}" target="_blank" class="btn-wsp" style="background:#2c3e50">💬 CONTACTAR CHOFER</a>
+                    <div style="font-size:14px; margin-top:5px; color:#555;">
+                        <b>⚙️ EQUIPO:</b> {r[3]} | <b>🆔 CUIT:</b> {r[4]}<br>
+                        <b>💳 LINTI:</b> {r[5]}
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <a href="https://api.whatsapp.com/send?phone=549{r[7]}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR CON CHOFER</a>
+                        <a href="{r[6]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
-        except: st.info("Buscando...")
+        except: st.info("Buscando camiones...")
 
 # --- FOOTER ---
 st.markdown(f"""
