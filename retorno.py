@@ -9,12 +9,13 @@ SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349" 
 GID_CARGAS = "1267917528"    
 
+# URLs de Google Forms (Basadas en tus Entry IDs confirmados)
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 2. ESTILOS ---
+# --- 2. ESTILOS (CSS) ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -32,7 +33,7 @@ st.markdown("""
         background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
         border-left: 10px solid #3498db; color: #333; box-shadow: 0 6px 12px rgba(0,0,0,0.4);
     }
-    .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
+    .route-txt { font-size: 24px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { 
         background-color: #25D366; color: white !important; padding: 12px; 
         border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center;
@@ -44,7 +45,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- BUSCADORES ---
+# --- 3. BUSCADORES ---
 c_b1, c_b2, c_act = st.columns([2, 2, 1])
 with c_b1: b_origen = st.text_input("🔍 FILTRAR ORIGEN:").strip()
 with c_b2: b_destino = st.text_input("🏁 FILTRAR DESTINO:").strip()
@@ -54,6 +55,7 @@ with c_act:
         st.cache_data.clear()
         st.rerun()
 
+# --- 4. TABS ---
 tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
 # ==========================================
@@ -78,7 +80,7 @@ with tab_chofer:
                     "entry.1837643722": linti, "entry.769375120": link_doc
                 }
                 requests.post(URL_CHOFERES_POST, data=data)
-                st.success("✅ ¡Publicado!"); time.sleep(1); st.rerun()
+                st.success("✅ ¡Publicado correctamente!"); time.sleep(1); st.rerun()
 
     with col_d:
         st.markdown("### 📦 Cargas Disponibles")
@@ -96,7 +98,7 @@ with tab_chofer:
                     <a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
                 </div>
                 """, unsafe_allow_html=True)
-        except: st.info("Buscando...")
+        except: st.info("Buscando cargas...")
 
 # ==========================================
 # PESTAÑA 2: SOY EMPRESA (Vista Detallada)
@@ -108,23 +110,27 @@ with tab_empresa:
         with st.form("form_em", clear_on_submit=True):
             eo, ed, ec, en = st.text_input("📍 Origen"), st.text_input("🏁 Destino"), st.text_input("📦 Carga"), st.text_input("Empresa")
             ef, ew = st.selectbox("⏳ Cuándo", ["Hoy", "Mañana", "A convenir"]), st.text_input("📱 WhatsApp")
-            if st.form_submit_button("SUBIR"):
+            if st.form_submit_button("SUBIR CARGA"):
                 requests.post(URL_CARGAS_POST, data={"entry.610070407":eo,"entry.170847116":ed,"entry.576675281":ec,"entry.1930562861":en,"entry.1064058502":ef,"entry.466540450":ew})
                 st.success("✅ Carga publicada"); time.sleep(1); st.rerun()
 
     with col_b:
         st.markdown("### 🚛 Camiones Disponibles")
         try:
+            # Forzamos la descarga del CSV del Excel para ver los cambios en tiempo real
             df_h = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}").fillna("-")
             for _, r in df_h.iloc[::-1].iterrows():
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
 
-                # Mapeo según tu Excel: r[4]:Wsp, r[5]:CUIT, r[6]:LINTI, r[7]:Link, r[8]:Estado
-                is_verif = "VERIFICADO" in str(r[8]).upper()
+                # Mapeo según tu última captura de Excel: 
+                # r[4]:Wsp, r[5]:CUIT, r[6]:LINTI, r[7]:Link, r[8]:Estado
+                estado_raw = str(r[8]).upper()
+                is_verif = "VERIFICADO" in estado_raw
                 badge = '<div class="badge-verif">✅ CHOFER VERIFICADO</div>' if is_verif else '<div class="badge-verif" style="color:#888; border-color:#888;">⏳ PENDIENTE</div>'
                 color_b = '#2ecc71' if is_verif else '#3498db'
 
+                # ESTE BLOQUE CORRIGE EL ERROR DE VISUALIZACIÓN HTML
                 st.markdown(f"""
                 <div class="card-white" style="border-left-color: {color_b};">
                     {badge}
@@ -144,6 +150,7 @@ with tab_empresa:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-        except: st.info("Actualizando lista...")
+        except: 
+            st.info("Actualizando lista de camiones...")
 
 st.markdown(f'<div class="footer"><p>© 2026 <b>RETORNO MATCH</b> - San Jorge, Santa Fe</p><p>Creado por <b>Ignacio Díaz</b></p></div>', unsafe_allow_html=True)
