@@ -88,12 +88,29 @@ with tab_chofer:
             for _, r in df_c.iloc[::-1].iterrows():
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
-                msg = urllib.parse.quote(f"*RETORNO MATCH*\n\nHola! Me interesa la carga:\n📍 {r[1]} -> {r[2]}")
-                st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 {r[3]}</b> | 🏢 {r[5]}<br><a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>', unsafe_allow_html=True)
+                
+                # MENSAJE POTENCIADO CHOFER -> EMPRESA
+                msg_ch = urllib.parse.quote(
+                    f"*RETORNO MATCH* 🚛💨\n"
+                    f"----------------------------\n"
+                    f"Hola! Me interesa la *CARGA* que publicaste:\n"
+                    f"📍 *ORIGEN:* {r[1]}\n"
+                    f"🏁 *DESTINO:* {r[2]}\n"
+                    f"📦 *MERCADERÍA:* {r[3]}\n\n"
+                    f"¿Sigue disponible? Soy chofer y estoy listo para cargar."
+                )
+                
+                st.markdown(f"""
+                <div class="card-white">
+                    <div class="route-txt">📍 {r[1]} ➔ {r[2]}</div>
+                    <div style="margin: 10px 0;"><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}</div>
+                    <a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_ch}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
+                </div>
+                """, unsafe_allow_html=True)
         except: st.info("Buscando cargas...")
 
 # ==========================================
-# PESTAÑA 2: SOY EMPRESA (Corregida según Excel)
+# PESTAÑA 2: SOY EMPRESA
 # ==========================================
 with tab_empresa:
     col_a, col_b = st.columns([1, 2.2])
@@ -109,18 +126,26 @@ with tab_empresa:
     with col_b:
         st.markdown("### 🚛 Camiones Disponibles")
         try:
-            # Forzamos la lectura de todas las columnas (0 al 8)
             df_h = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}").fillna("-")
             for _, r in df_h.iloc[::-1].iterrows():
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
 
-                # MAPEO SEGÚN TU EXCEL:
-                # r[1]:Origen, r[2]:Destino, r[3]:Equipo, r[4]:WhatsApp, r[5]:CUIT, r[6]:LINTI, r[7]:Link, r[8]:ESTADO
-                
                 is_verif = "VERIFICADO" in str(r[8]).upper()
                 badge = '<div class="badge-verif">✅ VERIFICADO</div>' if is_verif else '<div class="badge-verif" style="color:#888; border-color:#888;">⏳ PENDIENTE</div>'
                 
+                # MENSAJE POTENCIADO EMPRESA -> CHOFER
+                msg_em = urllib.parse.quote(
+                    f"*RETORNO MATCH* 🏢🤝\n"
+                    f"----------------------------\n"
+                    f"Hola! Vi tu *CAMIÓN* disponible en la App:\n"
+                    f"🛣️ *RUTA:* {r[1]} ➔ {r[2]}\n"
+                    f"⚙️ *EQUIPO:* {r[3]}\n"
+                    f"🆔 *CUIT:* {r[5]}\n"
+                    f"💳 *LINTI:* {r[6]}\n\n"
+                    f"Tengo una carga disponible que te puede interesar. ¿Podemos hablar?"
+                )
+
                 st.markdown(f"""
                 <div class="card-white" style="border-left-color: {'#2ecc71' if is_verif else '#3498db'};">
                     {badge}
@@ -130,7 +155,7 @@ with tab_empresa:
                         <b>🆔 CUIT:</b> {r[5]} | <b>💳 LINTI:</b> {r[6]}
                     </div>
                     <div style="display:flex; gap:10px;">
-                        <a href="https://api.whatsapp.com/send?phone=549{r[4]}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR CON CHOFER</a>
+                        <a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_em}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR CON CHOFER</a>
                         <a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
                     </div>
                 </div>
