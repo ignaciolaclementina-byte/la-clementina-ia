@@ -1,118 +1,168 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+import time
+import requests
+import urllib.parse
 
-# 1. CONFIGURACIÓN DE PÁGINA E INTERFAZ ANTERIOR
-st.set_page_config(page_title="Retorno Match", layout="wide")
+# --- 1. CONFIGURACIÓN ---
+SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
+GID_CHOFERES = "1392659349" 
+GID_CARGAS = "1267917528"    
+ADMIN_PASSWORD = "1323" 
+# Tu URL de Apps Script actualizada
+SCRIPT_BORRAR = "https://script.google.com/macros/s/AKfycbwtc_n-zJL-yS-3wpQAXW6mYOALNb19vsiOYCDBWbc-tWsiSCdSh1_AC-3Mon--vZ3E/exec"
 
-# Mantenemos tu estilo personalizado (Fondo oscuro y botones)
+st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
+
+# --- FUNCIÓN DE CARGA DE DATOS ---
+@st.cache_data(ttl=5)
+def get_data(gid):
+    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={gid}&t={int(time.time())}"
+    return pd.read_csv(url).fillna("-")
+
+# --- FUNCIÓN PARA PUBLICAR (USA TU SCRIPT) ---
+def publicar_dato(tipo, datos):
+    params = {"action": "publicar", "tipo": tipo}
+    params.update(datos)
+    try:
+        response = requests.get(SCRIPT_BORRAR, params=params)
+        return response.status_code == 200
+    except:
+        return False
+
+# --- 2. DISEÑO ---
 st.markdown("""
     <style>
-    .stApp {
-        background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
-                    url("https://images.unsplash.com/photo-1519003722824-194d4455a60c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1740&q=80");
-        background-size: cover;
+    [data-testid="stAppViewContainer"] {
+        background-image: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
+                        url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075&auto=format&fit=crop') !important;
+        background-size: cover !important; background-attachment: fixed !important;
     }
-    .stButton>button {
-        width: 100%;
-        border-radius: 10px;
-        height: 3em;
-        background-color: #1E1E1E;
-        color: white;
-        border: 1px solid #444;
+    .stTabs [data-baseweb="tab"] {
+        flex: 1; height: 60px !important; background-color: #2c3e50 !important;
+        border-radius: 10px !important; color: white !important; font-size: 16px !important;
+        font-weight: 900 !important;
     }
-    .main-title {
-        color: white;
-        font-size: 40px;
-        font-weight: bold;
-        text-align: left;
+    .stTabs [aria-selected="true"] { background-color: #3498db !important; }
+    .card-white {
+        background: white !important; border-radius: 12px; padding: 12px; margin-bottom: 10px;
+        border-left: 8px solid #3498db; color: #333; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     }
+    .route-txt { font-size: 18px; font-weight: 900; color: #1e3799; }
+    .btn-wsp { 
+        background-color: #25D366; color: white !important; padding: 8px; 
+        border-radius: 6px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 8px;
+    }
+    .stButton>button { width: 100%; border-radius: 10px; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXIÓN A BASE DE DATOS
-conn = st.connection("gsheets", type=GSheetsConnection)
+st.markdown("<h1 style='text-align:center;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# Título con el emoji de camión de tu interfaz
-st.markdown('<p class="main-title">🚚 Sistema de Retorno Match</p>', unsafe_allow_html=True)
+# --- BUSCADORES Y BOTÓN ACTUALIZAR ---
+col_busc1, col_busc2, col_refresh = st.columns([2, 2, 1])
 
-# Selector de Perfil (SOY CHOFER / SOY EMPRESA)
-col_btn1, col_btn2 = st.columns(2)
-with col_btn1:
-    st.button("🚀 SOY CHOFER")
-with col_btn2:
-    st.button("🏢 SOY EMPRESA")
+with col_busc1: 
+    b_origen = st.text_input("🔍 ORIGEN:").strip()
+with col_busc2: 
+    b_destino = st.text_input("🏁 DESTINO:").strip()
+with col_refresh:
+    st.write("<br>", unsafe_allow_html=True)
+    if st.button("🔄 ACTUALIZAR"):
+        st.cache_data.clear()
+        st.rerun()
 
-st.markdown("---")
+tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-# 3. ESTRUCTURA DE DOS COLUMNAS
-col_form, col_view = st.columns([1, 1.2])
-
-# --- COLUMNA IZQUIERDA: PUBLICAR CAMIÓN ---
-with col_form:
-    st.subheader("📢 Publicar Camión")
-    
-    with st.container(border=True):
-        # Campos con los nombres exactos de tu UI
-        ubicacion = st.text_input("📍 Ubicación (Punto de Retiro)")
-        destino = st.text_input("🏁 Destino (Punto de Entrega)")
-        equipo = st.selectbox("🚛 Equipo", ["Chasis", "Acoplado", "Semi", "Sider", "Térmico"])
-        whatsapp = st.text_input("📱 WhatsApp (ej: 543406123456)")
-        nombre_empresa = st.text_input("🏢 Nombre de Empresa")
-        
-        if st.button("PUBLICAR"):
-            if ubicacion and destino and whatsapp:
-                try:
-                    # LEER: Usamos el nombre de pestaña que se ve en tu imagen
-                    df_original = conn.read(worksheet="Respuestas de formulario 5")
-                    
-                    # NUEVA FILA: Respetando el orden de tus columnas de Google Sheets
-                    nueva_carga = pd.DataFrame([{
-                        "Marca temporal": pd.Timestamp.now().strftime("%d/%m/%Y %H:%M:%S"),
-                        "Punto de Retiro": ubicacion,
-                        "Punto de Entrega": destino,
-                        "Mercadería": equipo,
-                        "WhatsApp Empresa ( sin 0 ni 15 ej: 54 3406 640000 )": whatsapp,
-                        "empresa": nombre_empresa,
-                        "¿Cuándo carga?": "Inmediato"
-                    }])
-                    
-                    # ACTUALIZAR
-                    df_actualizado = pd.concat([df_original, nueva_carga], ignore_index=True)
-                    conn.update(worksheet="Respuestas de formulario 5", data=df_actualizado)
-                    
-                    st.success("✅ Carga publicada en el sistema")
+# ==========================================
+# PESTAÑA 1: SOY CHOFER (Ve Cargas / Publica Camión)
+# ==========================================
+with tab_chofer:
+    col_i, col_d = st.columns([1, 2])
+    with col_i:
+        st.markdown("### 📢 Publicar Camión")
+        with st.form("f_chofer", clear_on_submit=True):
+            ch_o = st.text_input("📍 Ubicación")
+            ch_d = st.text_input("🏁 Destino")
+            ch_e = st.selectbox("🚛 Equipo", ["Chasis", "Semi", "Sider", "Acoplado", "Batea"])
+            ch_w = st.text_input("📱 WhatsApp")
+            if st.form_submit_button("PUBLICAR"):
+                exito = publicar_dato("chofer", {"origen": ch_o, "destino": ch_d, "equipo": ch_e, "wsp": ch_w})
+                if exito:
+                    st.cache_data.clear()
+                    st.success("✅ Publicado con éxito")
+                    time.sleep(1)
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Error de conexión: {e}")
-            else:
-                st.warning("⚠️ Por favor completa los campos con emoji de ubicación, destino y WhatsApp")
+                else:
+                    st.error("❌ Error de conexión")
 
-# --- COLUMNA DERECHA: CARGAS DISPONIBLES ---
-with col_view:
-    st.subheader("📦 Cargas Disponibles")
-    
-    try:
-        # Leemos la misma pestaña para visualizar
-        df_cargas = conn.read(worksheet="Respuestas de formulario 5")
-        
-        if not df_cargas.empty:
-            # Mostramos las últimas cargas arriba (invertido)
-            for i, row in df_cargas.iloc[::-1].iterrows():
-                # Verificamos que la fila no esté vacía
-                if pd.notna(row['Punto de Retiro']) and row['Punto de Retiro'] != "":
-                    with st.expander(f"📍 {row['Punto de Retiro']} ⮕ {row['Punto de Entrega']}"):
-                        st.write(f"**🚛 Equipo:** {row['Mercadería']}")
-                        st.write(f"**🏢 Empresa:** {row.get('empresa', 'Particular')}")
-                        
-                        # Link de WhatsApp limpio
-                        num_tel = str(row['WhatsApp Empresa ( sin 0 ni 15 ej: 54 3406 640000 )']).replace(" ", "").replace("+", "")
-                        st.markdown(f"[💬 Contactar por WhatsApp](https://wa.me/{num_tel})")
-                        
-                        st.caption(f"Publicado: {row.get('Marca temporal', 'Reciente')}")
-        else:
-            st.info("No hay cargas publicadas actualmente.")
-            
-    except Exception as e:
-        # Este bloque soluciona el mensaje rojo de tus capturas
-        st.error("🔄 Sincronizando con Google Sheets... Verifica los permisos de 'Editor' para la cuenta de servicio.")
+    with col_d:
+        st.markdown("### 📦 Cargas Disponibles")
+        try:
+            df_c = get_data(GID_CARGAS)
+            for i, r in df_c.iloc[::-1].iterrows(): 
+                if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
+                if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
+                
+                txt = urllib.parse.quote(f"*RETORNO MATCH*\nMe interesa la carga: {r[1]} -> {r[2]}")
+                st.markdown(f"""<div class="card-white">
+                    <div class="route-txt">📍 {r[1]} ➔ {r[2]}</div>
+                    <b>📦 {r[3]}</b> | 🏢 {r[5]}<br>
+                    <a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={txt}" target="_blank" class="btn-wsp">CONTACTAR</a>
+                </div>""", unsafe_allow_html=True)
+                
+                with st.expander(f"⚙️ Borrar Fila {i+2}"):
+                    if st.text_input(f"Psw {i}", type="password", key=f"p_c_{i}") == ADMIN_PASSWORD:
+                        if st.button(f"Confirmar", key=f"b_c_{i}"):
+                            requests.get(f"{SCRIPT_BORRAR}?gid={GID_CARGAS}&fila={i+2}")
+                            st.cache_data.clear()
+                            st.rerun()
+        except: st.warning("Conectando con Google...")
+
+# ==========================================
+# PESTAÑA 2: SOY EMPRESA (Ve Camiones / Publica Carga)
+# ==========================================
+with tab_empresa:
+    col_a, col_b = st.columns([1, 2])
+    with col_a:
+        st.markdown("### 🏢 Publicar Carga")
+        with st.form("f_empresa", clear_on_submit=True):
+            em_o = st.text_input("📍 Retiro")
+            em_d = st.text_input("🏁 Entrega")
+            em_c = st.text_input("📦 Carga")
+            em_n = st.text_input("Empresa")
+            em_w = st.text_input("WhatsApp")
+            if st.form_submit_button("SUBIR"):
+                exito = publicar_dato("carga", {"origen": em_o, "destino": em_d, "carga": em_c, "empresa": em_n, "wsp": em_w})
+                if exito:
+                    st.cache_data.clear()
+                    st.success("✅ Carga subida")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Error al publicar")
+
+    with col_b:
+        st.markdown("### 🚛 Camiones Disponibles")
+        try:
+            df_h = get_data(GID_CHOFERES)
+            for i, r in df_h.iloc[::-1].iterrows():
+                if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
+                if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
+
+                txt_h = urllib.parse.quote(f"*RETORNO MATCH*\nVi tu camión en {r[1]}")
+                st.markdown(f"""<div class="card-white" style="border-left-color:#2ecc71">
+                    <div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div>
+                    <b>⚙️ {r[3]}</b> | 📱 {r[4]}<br>
+                    <a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={txt_h}" target="_blank" class="btn-wsp" style="background:#2c3e50">HABLAR</a>
+                </div>""", unsafe_allow_html=True)
+
+                with st.expander(f"⚙️ Borrar Fila {i+2}"):
+                    if st.text_input(f"Psw Ch {i}", type="password", key=f"p_h_{i}") == ADMIN_PASSWORD:
+                        if st.button(f"Confirmar", key=f"b_h_{i}"):
+                            requests.get(f"{SCRIPT_BORRAR}?gid={GID_CHOFERES}&fila={i+2}")
+                            st.cache_data.clear()
+                            st.rerun()
+        except: st.warning("Actualizando camiones...")
+
+st.markdown("<br><center><p style='color:gray; font-size:10px;'>v3.0 - San Jorge</p></center>", unsafe_allow_html=True)
