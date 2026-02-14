@@ -6,37 +6,33 @@ import urllib.parse
 
 # --- 1. CONFIGURACIÓN ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
-
-# GIDs verificados (Pestañas violetas en tu Excel)
 GID_CHOFERES = "1392659349" 
 GID_CARGAS = "1267917528"    
-
 ADMIN_PASSWORD = "1323" 
 
-# TU URL DE APPS SCRIPT (Reemplázala si generaste una nueva)
-SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtc_n-zJL-yS-3wpQAXW6mYOALNb19vsiOYCDBWbc-tWsiSCdSh1_AC-3Mon--vZ3E/exec"
+# TU URL DE APPS SCRIPT ACTUALIZADA
+SCRIPT_URL = "https://script.google.com/macros/s/AKfycbJhQM3aKllFtkbIR7YSFeOyPMiWpB2qzH8ZaA9duVC0_ENT47H2xxtKNspwhK8iyZI/exec"
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
 # --- FUNCIONES DE COMUNICACIÓN ---
-@st.cache_data(ttl=2)
+@st.cache_data(ttl=1)
 def get_data(gid):
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={gid}&t={int(time.time())}"
     try:
         df = pd.read_csv(url)
         return df.fillna("-")
-    except Exception as e:
+    except:
         return pd.DataFrame()
 
 def ejecutar_accion(params):
     try:
-        # Enviamos los datos al Script de Google
         response = requests.get(SCRIPT_URL, params=params, timeout=10)
         return response.status_code == 200
     except:
         return False
 
-# --- 2. DISEÑO Y ESTILOS CSS ---
+# --- 2. DISEÑO Y ESTILOS ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -59,27 +55,26 @@ st.markdown("""
         background-color: #25D366; color: white !important; padding: 10px; 
         border-radius: 8px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px;
     }
-    .stButton>button { width: 100%; border-radius: 10px; font-weight: bold; height: 3em; }
     label { color: white !important; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- BUSCADORES Y REFRESH ---
+# --- BUSCADORES ---
 col_b1, col_b2, col_ref = st.columns([2, 2, 1])
-with col_b1: b_origen = st.text_input("🔍 FILTRAR ORIGEN:").strip()
-with col_b2: b_destino = st.text_input("🏁 FILTRAR DESTINO:").strip()
+with col_b1: b_origen = st.text_input("🔍 FILTRAR ORIGEN:")
+with col_b2: b_destino = st.text_input("🏁 FILTRAR DESTINO:")
 with col_ref:
     st.write("<br>", unsafe_allow_html=True)
-    if st.button("🔄 ACTUALIZAR"):
+    if st.button("🔄 REFRESCAR"):
         st.cache_data.clear()
         st.rerun()
 
 tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
 # ==========================================
-# PESTAÑA 1: SOY CHOFER (Busca Carga / Publica Camión)
+# PESTAÑA 1: SOY CHOFER (Ve Cargas / Publica Camión)
 # ==========================================
 with tab_chofer:
     col_i, col_d = st.columns([1, 2.2])
@@ -94,14 +89,9 @@ with tab_chofer:
                 if o and d and w:
                     p = {"action": "publicar", "tipo": "chofer", "orig": o, "dest": d, "equi": e, "wsp": w}
                     if ejecutar_accion(p):
-                        st.success("✅ Publicado con éxito")
-                        st.cache_data.clear()
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error("❌ Error de conexión con el Script")
-                else:
-                    st.warning("⚠️ Completa los campos")
+                        st.success("✅ ¡Publicado!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                    else: st.error("❌ Error al guardar en Excel.")
+                else: st.warning("⚠️ Completa los datos.")
 
     with col_d:
         st.markdown("<h3 style='color:white;'>📦 Cargas Disponibles</h3>", unsafe_allow_html=True)
@@ -111,15 +101,23 @@ with tab_chofer:
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
                 
-                msg = urllib.parse.quote(f"*RETORNO MATCH*\nMe interesa la carga: {r[1]} -> {r[2]}")
-                st.markdown(f"""<div class="card-white">
+                msg = urllib.parse.quote(f"Hola! Me interesa la carga {r[1]} -> {r[2]}")
+                st.markdown(f"""
+                <div class="card-white">
                     <div class="route-txt">📍 {str(r[1]).upper()} ➔ {str(r[2]).upper()}</div>
-                    <b>📦 CARGA:</b> {r[3]} | 🏢 {r[5]}<br>
-                    <a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg}" target="_blank" class="btn-wsp">CONTACTAR EMPRESA</a>
-                </div>""", unsafe_allow_html=True)
+                    <b>📦 CARGA:</b> {r[3]} | <b>🏢 EMPRESA:</b> {r[5]}<br>
+                    <a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg}" target="_blank" class="btn-wsp">TOMAR CARGA</a>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                with st.expander(f"⚙️ Borrar Fila {i+2}"):
+                    if st.text_input(f"Psw C-{i}", type="password") == ADMIN_PASSWORD:
+                        if st.button(f"Confirmar Borrar", key=f"del_c_{i}"):
+                            ejecutar_accion({"gid": GID_CARGAS, "fila": i+2})
+                            st.cache_data.clear(); st.rerun()
 
 # ==========================================
-# PESTAÑA 2: SOY EMPRESA (Busca Camión / Publica Carga)
+# PESTAÑA 2: SOY EMPRESA (Ve Camiones / Publica Carga)
 # ==========================================
 with tab_empresa:
     col_a, col_b = st.columns([1, 2.2])
@@ -129,20 +127,15 @@ with tab_empresa:
             em_o = st.text_input("📍 Punto de Retiro")
             em_d = st.text_input("🏁 Punto de Entrega")
             em_c = st.text_input("📦 ¿Qué cargás?")
-            em_n = st.text_input("🏢 Empresa / Nombre")
+            em_n = st.text_input("🏢 Empresa")
             em_w = st.text_input("📱 WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
                 if em_o and em_d and em_w:
                     p = {"action": "publicar", "tipo": "carga", "reti": em_o, "entreg": em_d, "merc": em_c, "empr": em_n, "wsp": em_w}
                     if ejecutar_accion(p):
-                        st.success("✅ Carga subida")
-                        st.cache_data.clear()
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error("❌ Error al subir")
-                else:
-                    st.warning("⚠️ Faltan datos")
+                        st.success("✅ Carga subida"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                    else: st.error("❌ Error de servidor.")
+                else: st.warning("⚠️ Faltan datos.")
 
     with col_b:
         st.markdown("<h3 style='color:white;'>🚛 Camiones Disponibles</h3>", unsafe_allow_html=True)
@@ -152,11 +145,18 @@ with tab_empresa:
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
 
-                msg_h = urllib.parse.quote(f"*RETORNO MATCH*\nVi tu camión de {r[1]} a {r[2]}")
-                st.markdown(f"""<div class="card-white" style="border-left-color: #2ecc71;">
+                st.markdown(f"""
+                <div class="card-white" style="border-left-color: #2ecc71;">
                     <div class="route-txt">🚛 {str(r[1]).upper()} ➔ {str(r[2]).upper()}</div>
-                    <b>⚙️ {r[3]}</b> | 📱 {r[4]}<br>
-                    <a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_h}" target="_blank" class="btn-wsp" style="background:#2c3e50">HABLAR CON CHOFER</a>
-                </div>""", unsafe_allow_html=True)
+                    <b>⚙️ EQUIPO:</b> {r[3]} | 📱 {r[4]}<br>
+                    <a href="https://api.whatsapp.com/send?phone=549{r[4]}" target="_blank" class="btn-wsp" style="background:#2c3e50">HABLAR CON CHOFER</a>
+                </div>
+                """, unsafe_allow_html=True)
 
-st.markdown("<br><center><p style='color:white; opacity:0.5; font-size:12px;'>v4.3 - San Jorge</p></center>", unsafe_allow_html=True)
+                with st.expander(f"⚙️ Borrar Fila {i+2}"):
+                    if st.text_input(f"Psw Ch-{i}", type="password") == ADMIN_PASSWORD:
+                        if st.button(f"Confirmar Borrar", key=f"del_h_{i}"):
+                            ejecutar_accion({"gid": GID_CHOFERES, "fila": i+2})
+                            st.cache_data.clear(); st.rerun()
+
+st.markdown("<br><center><p style='color:white; opacity:0.5; font-size:12px;'>v4.4 Final - San Jorge</p></center>", unsafe_allow_html=True)
