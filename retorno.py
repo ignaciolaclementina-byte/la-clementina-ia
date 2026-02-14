@@ -66,11 +66,15 @@ with tab_chofer:
             ch_w = st.text_input("📱 WhatsApp")
             if st.form_submit_button("PUBLICAR"):
                 requests.post(URL_CHOFERES_POST, data={"entry.1304806144": ch_o, "entry.1519265625": ch_d, "entry.597193898": ch_e, "entry.1574172378": ch_w})
-                st.success("✅ Publicado"); time.sleep(1); st.rerun()
+                st.cache_data.clear() # Limpia datos viejos
+                st.success("✅ Publicado")
+                time.sleep(0.5)
+                st.rerun() # Actualiza al toque
 
     with col_d:
         st.markdown("### 📦 Cargas Disponibles")
         try:
+            # Agregamos un timestamp dinámico al final de la URL para que Google no mande datos viejos
             df_c = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}")
             for i, r in df_c.iterrows():
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
@@ -85,12 +89,14 @@ with tab_chofer:
                     <a href="{link}" target="_blank" class="btn-wsp">CONTACTAR EMPRESA</a>
                 </div>""", unsafe_allow_html=True)
                 
-                # Botón de borrar para el Admin
                 with st.expander(f"⚙️ Admin: Borrar Carga {i+2}"):
                     if st.text_input(f"Clave borrar carga {i}", type="password") == ADMIN_PASSWORD:
                         if st.button(f"Confirmar Borrar Fila {i+2}", key=f"del_c_{i}"):
                             requests.get(f"{SCRIPT_BORRAR}?gid={GID_CARGAS}&fila={i+2}")
-                            st.error("Eliminado"); time.sleep(1); st.rerun()
+                            st.cache_data.clear()
+                            st.error("Eliminado")
+                            time.sleep(0.5)
+                            st.rerun()
         except: st.write("Cargando datos...")
 
 # ==========================================
@@ -108,7 +114,10 @@ with tab_empresa:
             em_w = st.text_input("📱 WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
                 requests.post(URL_CARGAS_POST, data={"entry.610070407": em_o, "entry.170847116": em_d, "entry.576675281": em_c, "entry.1930562861": em_n, "entry.466540450": em_w})
-                st.success("✅ Carga subida"); time.sleep(1); st.rerun()
+                st.cache_data.clear()
+                st.success("✅ Carga subida")
+                time.sleep(0.5)
+                st.rerun()
 
     with col_b:
         st.markdown("### 🚛 Camiones Disponibles")
@@ -131,7 +140,10 @@ with tab_empresa:
                     if st.text_input(f"Clave borrar chofer {i}", type="password") == ADMIN_PASSWORD:
                         if st.button(f"Confirmar Borrar Fila {i+2}", key=f"del_h_{i}"):
                             requests.get(f"{SCRIPT_BORRAR}?gid={GID_CHOFERES}&fila={i+2}")
-                            st.error("Eliminado"); time.sleep(1); st.rerun()
+                            st.cache_data.clear()
+                            st.error("Eliminado")
+                            time.sleep(0.5)
+                            st.rerun()
         except: st.write("Cargando datos...")
 
 st.markdown("<br><center><p style='color:gray;'>© 2026 RETORNO MATCH - San Jorge</p></center>", unsafe_allow_html=True)
