@@ -9,13 +9,12 @@ SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349" 
 GID_CARGAS = "1267917528"    
 
-# URLs de POST (Verificadas según tu captura de inspección)
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- Estilos CSS (Iguales a los anteriores) ---
+# --- ESTILOS ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -78,20 +77,19 @@ with tab_chofer:
                     "entry.1574172378": w, "entry.1542650763": cuit, 
                     "entry.1837643722": linti, "entry.769375120": link_doc
                 }
-                requests.post(URL_CHOFERES_POST, data=data)
-                st.success("✅ ¡Publicado!"); time.sleep(1); st.rerun()
+                resp = requests.post(URL_CHOFERES_POST, data=data)
+                if resp.status_code == 200:
+                    st.success("✅ ¡Publicado!")
+                    time.sleep(1); st.rerun()
+                else:
+                    st.error(f"❌ Error de Google Forms ({resp.status_code}). Revisar IDs.")
 
     with col_d:
         st.markdown("### 📦 Cargas Disponibles")
         try:
-            # Forzamos descarga fresca
             url_cargas = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}"
             df_c = pd.read_csv(url_cargas)
-            
-            # --- LIMPIEZA CRÍTICA ---
-            # Eliminamos filas donde la columna de Origen (columna 1) esté vacía
             df_c = df_c.dropna(subset=[df_c.columns[1]]) 
-            # Nos quedamos solo con las que tienen texto real
             df_c = df_c[df_c[df_c.columns[1]].astype(str).str.strip() != ""]
 
             if df_c.empty:
@@ -103,7 +101,7 @@ with tab_chofer:
                     
                     msg_ch = urllib.parse.quote(f"*RETORNO MATCH* 🚛💨\n\nHola! Me interesa la carga:\n📍 {r[1]} -> {r[2]}\n📦 {r[3]}\n\n¿Sigue disponible?")
                     st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 {r[3]}</b> | 🏢 {r[5]}<br><a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_ch}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>', unsafe_allow_html=True)
-        except: st.warning("Cargando base de datos...")
+        except: st.warning("Conectando con base de datos...")
 
 # ==========================================
 # PESTAÑA 2: SOY EMPRESA (Ver Camiones)
@@ -116,16 +114,24 @@ with tab_empresa:
             eo, ed, ec, en = st.text_input("📍 Origen"), st.text_input("🏁 Destino"), st.text_input("📦 Carga"), st.text_input("Empresa")
             ef, ew = st.selectbox("⏳ Cuándo", ["Hoy", "Mañana", "A convenir"]), st.text_input("📱 WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
-                requests.post(URL_CARGAS_POST, data={"entry.610070407":eo,"entry.170847116":ed,"entry.576675281":ec,"entry.1930562861":en,"entry.1064058502":ef,"entry.466540450":ew})
-                st.success("✅ Carga publicada"); time.sleep(1); st.rerun()
+                payload = {
+                    "entry.610070407": eo, "entry.170847116": ed, 
+                    "entry.576675281": ec, "entry.1930562861": en, 
+                    "entry.1064058502": ef, "entry.466540450": ew
+                }
+                # AQUÍ ESTÁ EL DETECTOR DE ERRORES:
+                resp = requests.post(URL_CARGAS_POST, data=payload)
+                if resp.status_code == 200:
+                    st.success("✅ Carga publicada exitosamente.")
+                    time.sleep(1); st.rerun()
+                else:
+                    st.error(f"❌ Falló el envío (Error {resp.status_code}). Google Forms rechazó los datos.")
 
     with col_b:
         st.markdown("### 🚛 Camiones Disponibles")
         try:
             url_choferes = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}"
             df_h = pd.read_csv(url_choferes)
-            
-            # --- LIMPIEZA CRÍTICA ---
             df_h = df_h.dropna(subset=[df_h.columns[1]])
             df_h = df_h[df_h[df_h.columns[1]].astype(str).str.strip() != ""]
 
