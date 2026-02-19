@@ -9,6 +9,7 @@ SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349" 
 GID_CARGAS = "1267917528"    
 
+# URLs de POST
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 
@@ -57,7 +58,7 @@ with c_act:
 tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
 # ==========================================
-# PESTAÑA 1: SOY CHOFER (Ver Cargas)
+# PESTAÑA 1: SOY CHOFER (Ver Cargas / Publicar Camión)
 # ==========================================
 with tab_chofer:
     col_i, col_d = st.columns([1, 2.2])
@@ -72,17 +73,14 @@ with tab_chofer:
             linti = st.text_input("💳 N° LINTI")
             link_doc = st.text_input("📂 Link Documentación")
             if st.form_submit_button("PUBLICAR"):
-                data = {
+                # IDs extraídos de tu link prellenado de camiones
+                data_ch = {
                     "entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e,
-                    "entry.1574172378": w, "entry.1542650763": cuit, 
-                    "entry.1837643722": linti, "entry.769375120": link_doc
+                    "entry.1542650763": cuit, "entry.1837643722": linti, 
+                    "entry.769375120": link_doc, "entry.1574172378": w
                 }
-                resp = requests.post(URL_CHOFERES_POST, data=data)
-                if resp.status_code == 200:
-                    st.success("✅ ¡Publicado!")
-                    time.sleep(1); st.rerun()
-                else:
-                    st.error(f"❌ Error de Google Forms ({resp.status_code}). Revisar IDs.")
+                requests.post(URL_CHOFERES_POST, data=data_ch)
+                st.success("✅ ¡Camión publicado!"); time.sleep(1); st.rerun()
 
     with col_d:
         st.markdown("### 📦 Cargas Disponibles")
@@ -100,11 +98,11 @@ with tab_chofer:
                     if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
                     
                     msg_ch = urllib.parse.quote(f"*RETORNO MATCH* 🚛💨\n\nHola! Me interesa la carga:\n📍 {r[1]} -> {r[2]}\n📦 {r[3]}\n\n¿Sigue disponible?")
-                    st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 {r[3]}</b> | 🏢 {r[5]}<br><a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_ch}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>', unsafe_allow_html=True)
-        except: st.warning("Conectando con base de datos...")
+                    st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 {r[3]}</b> | 🏢 {r[5]}<br><a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_ch}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
+        except: st.warning("Sincronizando base de datos...")
 
 # ==========================================
-# PESTAÑA 2: SOY EMPRESA (Ver Camiones)
+# PESTAÑA 2: SOY EMPRESA (Ver Camiones / Publicar Carga)
 # ==========================================
 with tab_empresa:
     col_a, col_b = st.columns([1, 2.2])
@@ -114,18 +112,14 @@ with tab_empresa:
             eo, ed, ec, en = st.text_input("📍 Origen"), st.text_input("🏁 Destino"), st.text_input("📦 Carga"), st.text_input("Empresa")
             ef, ew = st.selectbox("⏳ Cuándo", ["Hoy", "Mañana", "A convenir"]), st.text_input("📱 WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
-                payload = {
+                # IDs extraídos de tu link prellenado de cargas
+                payload_em = {
                     "entry.610070407": eo, "entry.170847116": ed, 
                     "entry.576675281": ec, "entry.1930562861": en, 
                     "entry.1064058502": ef, "entry.466540450": ew
                 }
-                # AQUÍ ESTÁ EL DETECTOR DE ERRORES:
-                resp = requests.post(URL_CARGAS_POST, data=payload)
-                if resp.status_code == 200:
-                    st.success("✅ Carga publicada exitosamente.")
-                    time.sleep(1); st.rerun()
-                else:
-                    st.error(f"❌ Falló el envío (Error {resp.status_code}). Google Forms rechazó los datos.")
+                requests.post(URL_CARGAS_POST, data=payload_em)
+                st.success("✅ Carga publicada exitosamente."); time.sleep(1); st.rerun()
 
     with col_b:
         st.markdown("### 🚛 Camiones Disponibles")
@@ -142,6 +136,8 @@ with tab_empresa:
                 is_verif = "VERIFICADO" in str(r[8]).upper()
                 badge = '<div class="badge-verif">✅ VERIFICADO</div>' if is_verif else '<div class="badge-verif" style="color:#888; border-color:#888;">⏳ PENDIENTE</div>'
                 
+                msg_em = urllib.parse.quote(f"*RETORNO MATCH* 🏢🤝\n\nHola! Vi tu camión disponible:\n🚛 {r[1]} -> {r[2]}\n⚙️ Equipo: {r[3]}\n\n¿Hablamos?")
+
                 st.markdown(f"""
                 <div class="card-white" style="border-left-color: {'#2ecc71' if is_verif else '#3498db'};">
                     {badge}
@@ -151,11 +147,11 @@ with tab_empresa:
                         <b>🆔 CUIT:</b> {r[5]} | <b>💳 LINTI:</b> {r[6]}
                     </div>
                     <div style="display:flex; gap:10px;">
-                        <a href="https://api.whatsapp.com/send?phone=549{r[4]}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR CON CHOFER</a>
+                        <a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_em}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR CON CHOFER</a>
                         <a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-        except: st.info("Sincronizando...")
+        except: st.info("Sincronizando camiones...")
 
 st.markdown(f'<div class="footer"><p>© 2026 <b>RETORNO MATCH</b> - San Jorge, Santa Fe</p></div>', unsafe_allow_html=True)
