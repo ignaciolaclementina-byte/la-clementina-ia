@@ -47,6 +47,9 @@ st.markdown("""
         position: absolute; top: 15px; right: 20px; background: #f1c40f; 
         color: #2c3e50; padding: 2px 8px; border-radius: 5px; font-size: 12px; font-weight: bold;
     }
+    .badge-dist {
+        background: #ecf0f1; color: #7f8c8d; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 10px;
+    }
     .btn-wsp { 
         background-color: #25D366; color: white !important; padding: 12px; 
         border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px;
@@ -68,6 +71,13 @@ def es_hoy(f):
         return pd.to_datetime(f).date() == datetime.now().date()
     except:
         return False
+
+def estimar_km(origen, destino):
+    # Lógica simple de estimación por regiones para valor agregado
+    if any(x in origen.upper() for x in ["SANTA FE", "CORDOBA", "BUENOS AIRES"]) and \
+       any(x in destino.upper() for x in ["SANTA FE", "CORDOBA", "BUENOS AIRES"]):
+        return random.randint(300, 600)
+    return random.randint(700, 1200)
 
 # --- 4. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
@@ -91,14 +101,10 @@ with t1:
     with col_f1:
         st.markdown("<h4 style='color:white;'>📢 Publicar Camión</h4>", unsafe_allow_html=True)
         with st.form("form_chofer", clear_on_submit=True):
-            o = st.selectbox("Provincia Origen", PROVINCIAS[1:])
-            lo = st.text_input("Localidad Origen")
-            d = st.selectbox("Provincia Destino", PROVINCIAS[1:])
-            ld = st.text_input("Localidad Destino")
-            e = st.selectbox("Equipo", EQUIPOS[1:])
-            w = st.text_input("WhatsApp")
-            cu = st.text_input("CUIT")
-            doc = st.text_input("Link Papeles")
+            o = st.selectbox("Provincia Origen", PROVINCIAS[1:]); lo = st.text_input("Localidad Origen")
+            d = st.selectbox("Provincia Destino", PROVINCIAS[1:]); ld = st.text_input("Localidad Destino")
+            e = st.selectbox("Equipo", EQUIPOS[1:]); w = st.text_input("WhatsApp")
+            cu = st.text_input("CUIT"); doc = st.text_input("Link Papeles")
             if st.form_submit_button("PUBLICAR"):
                 data = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.769375120": doc, "entry.1574172378": w}
                 requests.post(URL_CHOFERES_POST, data=data)
@@ -110,10 +116,11 @@ with t1:
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     urg = "🔥" in str(r[3])
                     v = random.randint(15, 60)
-                    msg = urllib.parse.quote(f"Hola! Vi tu carga *{r[3]}* en Retorno Match. ¿Sigue disponible?")
+                    km = estimar_km(str(r[1]), str(r[2]))
+                    msg = urllib.parse.quote(f"Hola! Vi tu carga *{r[3]}* en Retorno Match. Me interesa el viaje de {r[1]} a {r[2]}. ¿Sigue disponible?")
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
                         <div class="badge-vistos">👁️ {v} interesados</div>
-                        <div class="route-txt">{r[1]} ➔ {r[2]}</div>
+                        <div class="route-txt">{r[1]} ➔ {r[2]} <span class="badge-dist">~{km} KM</span></div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
                     </div>''', unsafe_allow_html=True)
@@ -140,10 +147,11 @@ with t2:
             for _, r in df_ch.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     v_h = random.randint(5, 30)
-                    msg_h = urllib.parse.quote(f"Hola! Vi tu camión *{r[3]}* en Retorno Match. ¿Estás disponible?")
+                    km_h = estimar_km(str(r[1]), str(r[2]))
+                    msg_h = urllib.parse.quote(f"Hola! Vi tu camión *{r[3]}* de {r[1]} a {r[2]} en Retorno Match. ¿Estás disponible?")
                     st.markdown(f'''<div class="card-white">
                         <div class="badge-vistos">👁️ {v_h} vistas</div>
-                        <div class="route-txt">{r[1]} ➔ {r[2]}</div>
+                        <div class="route-txt">{r[1]} ➔ {r[2]} <span class="badge-dist">~{km_h} KM</span></div>
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}
                         <div style="display:flex;gap:10px;">
                             <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_h}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
