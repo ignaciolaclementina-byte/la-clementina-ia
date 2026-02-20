@@ -40,8 +40,7 @@ st.markdown("""
     }
     .card-urgent {
         background: #fff5f5 !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        border-left: 10px solid #e74c3c; color: #333; position: relative; 
-        box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);
+        border-left: 10px solid #e74c3c; color: #333; position: relative; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .badge-vistos { 
@@ -52,10 +51,6 @@ st.markdown("""
         background-color: #25D366; color: white !important; padding: 12px; 
         border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px;
     }
-    .btn-share {
-        background-color: #3498db; color: white !important; padding: 8px; 
-        border-radius: 8px; text-decoration: none; font-size: 12px; display: inline-block; margin-top: 5px;
-    }
     .footer { text-align: center; color: white; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
 </style>
 """, unsafe_allow_html=True)
@@ -63,11 +58,8 @@ st.markdown("""
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
 # --- 3. FUNCIONES ---
-def limpiar_dato(val):
-    return "".join(filter(str.isdigit, str(val)))
-
 def limpiar_wsp(num):
-    clean = limpiar_dato(num)
+    clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
     return "549" + clean if not clean.startswith("549") else clean
 
@@ -100,16 +92,15 @@ with t1:
         st.markdown("<h4 style='color:white;'>📢 Publicar Camión</h4>", unsafe_allow_html=True)
         with st.form("form_chofer", clear_on_submit=True):
             o = st.selectbox("Provincia Origen", PROVINCIAS[1:])
-            lo = st.text_input("Localidad")
+            lo = st.text_input("Localidad Origen")
             d = st.selectbox("Provincia Destino", PROVINCIAS[1:])
-            ld = st.text_input("Localidad")
+            ld = st.text_input("Localidad Destino")
             e = st.selectbox("Equipo", EQUIPOS[1:])
             w = st.text_input("WhatsApp")
             cu = st.text_input("CUIT")
             doc = st.text_input("Link Papeles")
             if st.form_submit_button("PUBLICAR"):
-                cuit_f = limpiar_dato(cu)
-                data = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cuit_f, "entry.769375120": doc, "entry.1574172378": w}
+                data = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.769375120": doc, "entry.1574172378": w}
                 requests.post(URL_CHOFERES_POST, data=data)
                 st.success("¡Publicado!"); time.sleep(1); st.rerun()
     with col_r1:
@@ -120,16 +111,14 @@ with t1:
                     urg = "🔥" in str(r[3])
                     v = random.randint(15, 60)
                     msg = urllib.parse.quote(f"Hola! Vi tu carga *{r[3]}* en Retorno Match. ¿Sigue disponible?")
-                    share_msg = urllib.parse.quote(f"Mirá esta carga en Retorno Match:\n📍 {r[1]} -> {r[2]}\n📦 {r[3]}")
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
                         <div class="badge-vistos">👁️ {v} interesados</div>
                         <div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
-                        <a href="https://api.whatsapp.com/send?text={share_msg}" target="_blank" class="btn-share">🔗 Compartir</a>
                     </div>''', unsafe_allow_html=True)
         except:
-            st.info("Buscando cargas...")
+            st.info("Buscando cargas del día...")
 
 # --- PESTAÑA EMPRESA ---
 with t2:
@@ -144,26 +133,25 @@ with t2:
             if st.form_submit_button("SUBIR"):
                 payload = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": f"🔥 {ec}" if u_ch else ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
                 requests.post(URL_CARGAS_POST, data=payload)
-                st.success("Subida!"); time.sleep(1); st.rerun()
+                st.success("¡Subida!"); time.sleep(1); st.rerun()
     with col_r2:
         try:
             df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
             for _, r in df_ch.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     v_h = random.randint(5, 30)
-                    tiene_doc = str(r[7]).startswith("http")
+                    msg_h = urllib.parse.quote(f"Hola! Vi tu camión *{r[3]}* en Retorno Match. ¿Estás disponible?")
                     st.markdown(f'''<div class="card-white">
                         <div class="badge-vistos">👁️ {v_h} vistas</div>
                         <div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}<br>
-                        <small style="color:{"green" if tiene_doc else "#d35400"}; font-weight:bold;">{"🟢 Papeles Listos" if tiene_doc else "⚠️ Consultar Papeles"}</small>
+                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}
                         <div style="display:flex;gap:10px;">
-                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text=Hola!" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
-                            <a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1; display:{"block" if tiene_doc else "none"}">📂 PAPELES</a>
+                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_h}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
+                            <a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
                         </div>
                     </div>''', unsafe_allow_html=True)
         except:
-            st.info("Buscando camiones...")
+            st.info("Buscando camiones del día...")
 
 # --- FOOTER ---
 st.markdown(f"""
