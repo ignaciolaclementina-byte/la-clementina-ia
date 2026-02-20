@@ -15,18 +15,17 @@ URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7c
 
 # --- 2. GESTIÓN DE ESTADO ---
 if 'anuncios' not in st.session_state:
-    st.session_state.anuncios = "📢 ¡NUEVO! Sistema VIP Activado -- Consultas aquí -- 🚛 Creado por Ignacio Diaz"
+    st.session_state.anuncios = "📢 ¡SISTEMA VIP ACTIVADO! -- Consultas aquí -- 🚛 Creado por Ignacio Diaz"
 
 if 'socios_activos' not in st.session_state:
     st.session_state.socios_activos = "20334445551, TRANSPORTES SAN JORGE, LOGISTICA DIAZ"
 
 PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBUT", "CORDOBA", "CORRIENTES", "ENTRE RIOS", "FORMOSA", "JUJUY", "LA PAMPA", "LA RIOJA", "MENDOZA", "MISIONES", "NEUQUEN", "RIO NEGRO", "SALTA", "SAN JUAN", "SAN LUIS", "SANTA CRUZ", "SANTA FE", "SANTIAGO DEL ESTERO", "TIERRA DEL FUEGO", "TUCUMAN"]
 EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
-TIPOS_CARGA = ["General", "Paletizado", "Granel", "Peligrosa", "Refrigerada"]
 
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
-# --- 3. ESTILOS VIP (Súper resaltados) ---
+# --- 3. ESTILOS VIP ---
 st.markdown("""
 <style>
     .stApp {
@@ -43,10 +42,6 @@ st.markdown("""
         background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
         border-left: 10px solid #3498db; color: #333;
     }
-    .card-urgent {
-        background: #fff5f5 !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        border-left: 10px solid #e74c3c; color: #333;
-    }
     .card-vip {
         background: #fff9e6 !important; border: 3px solid #f1c40f !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
         color: #333; box-shadow: 0px 4px 20px rgba(241, 196, 15, 0.5);
@@ -56,10 +51,13 @@ st.markdown("""
         font-weight: 900; font-size: 14px; display: inline-block; margin-bottom: 10px;
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
-    .footer { text-align: center; color: white; padding: 40px; font-size: 12px; border-top: 0.5px solid rgba(255,255,255,0.2); }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
     .stTabs [data-baseweb="tab"] { flex: 1; height: 70px !important; background-color: #2c3e50 !important; color: white !important; font-size: 18px !important; font-weight: 900 !important; }
     .stTabs [aria-selected="true"] { background-color: #3498db !important; }
+    .legal-footer { 
+        text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; 
+        font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -87,7 +85,7 @@ except:
     df_ch_raw, df_ca_raw = pd.DataFrame(), pd.DataFrame()
 
 # --- 5. RADAR ---
-st.markdown(f"""<div class="radar-container"><marquee scrollamount="8">⭐ {st.session_state.anuncios} -- 🚛 Creado por Ignacio Diaz y sus legales.</marquee></div>""", unsafe_allow_html=True)
+st.markdown(f"""<div class="radar-container"><marquee scrollamount="8">⭐ {st.session_state.anuncios} -- 🚛 Creado por Ignacio Diaz.</marquee></div>""", unsafe_allow_html=True)
 
 # --- 6. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
@@ -97,12 +95,11 @@ with c3: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
 with c4:
     st.write("<br>", unsafe_allow_html=True)
     if st.button("🔄 ACTUALIZAR", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
+        st.cache_data.clear(); st.rerun()
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
-# PESTAÑA: SOY EMPRESA (Busca Camiones)
+# PESTAÑA: SOY EMPRESA
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -118,23 +115,15 @@ with t1:
         if not df_ch_raw.empty:
             df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 5].apply(es_vip)
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(es_hoy)].sort_values(by='es_vip', ascending=False)
-            
             for _, r in df_final_ch.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
-                    if r['es_vip']:
-                        st.markdown(f'''<div class="card-vip"><div class="vip-label">⭐ CHOFER VIP</div>
-                            <div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                            <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}<br>
-                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">💬 CONTACTAR VIP</a>
-                        </div>''', unsafe_allow_html=True)
-                    else:
-                        st.markdown(f'''<div class="card-white">
-                            <div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                            <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}<br>
-                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">💬 CONTACTAR</a>
-                        </div>''', unsafe_allow_html=True)
+                    clase = "card-vip" if r['es_vip'] else "card-white"
+                    label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
+                    st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
+                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}<br>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">💬 CONTACTAR</a></div>''', unsafe_allow_html=True)
 
-# PESTAÑA: SOY CHOFER (Busca Cargas)
+# PESTAÑA: SOY CHOFER
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -150,42 +139,33 @@ with t2:
         if not df_ca_raw.empty:
             df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(es_hoy)].sort_values(by='es_vip', ascending=False)
-
             for _, r in df_final_ca.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
-                    urg = "🔥" in str(r[3])
-                    if r['es_vip']:
-                        st.markdown(f'''<div class="card-vip"><div class="vip-label">⭐ EMPRESA VIP</div>
-                            <div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                            <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
-                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">💬 CONSULTAR VIP</a>
-                        </div>''', unsafe_allow_html=True)
-                    else:
-                        st.markdown(f'''<div class="card-{"urgent" if urg else "white"}">
-                            <div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                            <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
-                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">💬 CONSULTAR</a>
-                        </div>''', unsafe_allow_html=True)
+                    clase = "card-vip" if r['es_vip'] else "card-white"
+                    label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
+                    st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
+                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>''', unsafe_allow_html=True)
 
 # --- 7. PANEL DE CONTROL ---
 st.markdown("---")
-with st.expander("⚙️ PANEL DE CONTROL (ADMINISTRACIÓN VIP)"):
-    st.subheader("❌ Dar de baja VIP")
-    c_baja1, c_baja2 = st.columns([3, 1])
-    baja = c_baja1.text_input("CUIT o Empresa a quitar de VIP:")
-    if c_baja2.button("QUITAR VIP"):
-        lista = [s.strip().upper() for s in st.session_state.socios_activos.split(",") if s.strip()]
-        if baja.strip().upper() in lista:
-            lista.remove(baja.strip().upper())
-            st.session_state.socios_activos = ", ".join(lista)
-            st.success("Baja realizada!"); time.sleep(1); st.rerun()
+with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
+    st.session_state.anuncios = st.text_area("Radar publicitario:", st.session_state.anuncios)
+    st.session_state.socios_activos = st.text_area("Lista VIP (separada por comas):", st.session_state.socios_activos)
+    if st.button("🚀 ACTUALIZAR SISTEMA"): st.rerun()
 
-    st.subheader("📝 Gestión General")
-    nuevo_an = st.text_area("Radar publicitario:", st.session_state.anuncios)
-    lista_vip = st.text_area("Lista VIP completa (separada por comas):", st.session_state.socios_activos)
-    if st.button("🚀 GUARDAR Y ACTUALIZAR"):
-        st.session_state.anuncios = nuevo_an
-        st.session_state.socios_activos = lista_vip
-        st.rerun()
-
-st.markdown(f"""<div class="footer"><p>Desarrollado por <b>Ignacio Diaz</b></p><div style="font-size: 10px; color: rgba(255,255,255,0.5);">AVISO LEGAL: PROHIBIDA LA RÉPLICA TOTAL O PARCIAL. Creado por Ignacio Diaz y sus legales.</div></div>""", unsafe_allow_html=True)
+# --- 8. PIE DE PÁGINA LEGAL BLINDADO ---
+st.markdown(f"""
+<div class="legal-footer">
+    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
+    <p><b>AVISO LEGAL Y TÉRMINOS DE USO</b></p>
+    <p style="max-width: 800px; margin: 0 auto; line-height: 1.6;">
+        Queda terminantemente <b>prohibida la réplica, copia o distribución total o parcial</b> de esta interfaz, 
+        código o marca sin autorización expresa de Ignacio Diaz. <br>
+        El desarrollador <b>no se responsabiliza</b> por la veracidad de los datos cargados por los usuarios, 
+        ni por los acuerdos, fletes o transacciones comerciales derivados del uso de esta plataforma. 
+        El uso de esta herramienta es bajo absoluta responsabilidad de los usuarios.
+    </p>
+    <p style="margin-top: 20px; color: #f1c40f; font-weight: bold;">© 2026 RETORNO MATCH VIP - Todos los derechos reservados.</p>
+</div>
+""", unsafe_allow_html=True)
