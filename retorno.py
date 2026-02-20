@@ -5,10 +5,10 @@ import requests
 import urllib.parse
 from datetime import datetime
 
-# --- 1. CONFIGURACIÓN (BASE FIJA) ---
+# --- 1. CONFIGURACIÓN ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349" 
-GID_CARGAS = "1267917528"     
+GID_CARGAS = "1267917528"    
 ADMIN_PASSWORD = "1323" 
 
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
@@ -16,21 +16,29 @@ URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7c
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 2. ESTILOS (ESTRUCTURA BLINDADA) ---
+# --- 2. ESTILOS (TU INTERFAZ ORIGINAL BLINDADA) ---
 st.markdown("""
     <style>
     .stApp {
         background-image: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
                         url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075&auto=format&fit=crop') !important;
-        background-size: cover !important; background-attachment: fixed !important;
+        background-size: cover !important; 
+        background-attachment: fixed !important;
     }
+    [data-testid="stHeader"] { background-color: transparent !important; }
+    .stTabs [data-baseweb="tab"] {
+        flex: 1; height: 70px !important; background-color: #2c3e50 !important;
+        border-radius: 12px !important; color: white !important; font-size: 18px !important;
+        font-weight: 900 !important; margin: 5px; border: 1px solid #34495e !important;
+    }
+    .stTabs [aria-selected="true"] { background-color: #3498db !important; }
     .card-white {
         background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
         border-left: 10px solid #3498db; color: #333; box-shadow: 0 6px 12px rgba(0,0,0,0.4);
     }
     .card-concretada {
-        background: #e0e0e0 !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        border-left: 10px solid #7f8c8d; color: #666; opacity: 0.8;
+        background: #f2f2f2 !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
+        border-left: 10px solid #95a5a6; color: #7f8c8d; opacity: 0.7;
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { 
@@ -55,9 +63,10 @@ with c_act:
         st.cache_data.clear()
         st.rerun()
 
-# --- BUSCADOR DE HISTORIAL (Sutil) ---
-with st.expander("📅 BUSCAR CARGAS POR FECHA (HISTORIAL)"):
-    fecha_busqueda = st.date_input("Selecciona una fecha", value=None)
+# --- FILTRO DE FECHA (Integrado sin romper interfaz) ---
+c_f1, c_f2, c_f3 = st.columns([2, 1, 2])
+with c_f2:
+    fecha_filtro = st.date_input("📅 FECHA:", datetime.now())
 
 tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
@@ -70,9 +79,9 @@ with tab_chofer:
             o = st.text_input("📍 Ubicación Actual"); d = st.text_input("🏁 Destino")
             e = st.selectbox("🚛 Equipo", ["Chasis", "Semi", "Sider", "Acoplado", "Batea", "Térmico"])
             w = st.text_input("📱 WhatsApp"); cuit = st.text_input("🆔 CUIT")
-            linti = st.text_input("💳 LINTI"); ld = st.text_input("📂 Link Documentación")
+            linti = st.text_input("💳 LINTI"); link_doc = st.text_input("📂 Link Documentación")
             if st.form_submit_button("PUBLICAR"):
-                requests.post(URL_CHOFERES_POST, data={"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1542650763": cuit, "entry.1837643722": linti, "entry.769375120": ld, "entry.1574172378": w})
+                requests.post(URL_CHOFERES_POST, data={"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1542650763": cuit, "entry.1837643722": linti, "entry.769375120": link_doc, "entry.1574172378": w})
                 st.success("✅ ¡Publicado!"); time.sleep(1); st.rerun()
 
     with col_d:
@@ -80,32 +89,27 @@ with tab_chofer:
         try:
             csv_url_c = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}"
             df_c = pd.read_csv(csv_url_c).fillna("-")
-            df_c['fecha_dt'] = pd.to_datetime(df_c.iloc[:, 0], errors='coerce').dt.date
+            df_c['Marca temporal'] = pd.to_datetime(df_c.iloc[:, 0]).dt.date
+            
+            # FILTRO POR FECHA
+            df_final = df_c[df_c['Marca temporal'] == fecha_filtro]
 
-            for _, r in df_c.iloc[::-1].iterrows():
+            for _, r in df_final.iloc[::-1].iterrows():
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
                 
-                estado_val = str(r[7]).upper()
-                es_concretada = "CONCRETADA" in estado_val
+                estado_carga = str(r[7]).upper()
+                es_concretada = "CONCRETADA" in estado_carga
+                card_style = "card-concretada" if es_concretada else "card-white"
                 
-                # LÓGICA DE FILTRADO:
-                # Si el usuario NO busca fecha: mostrar solo las NO concretadas (Nuevas).
-                # Si el usuario BUSCA fecha: mostrar las de ese día.
-                if fecha_busqueda is None:
-                    if es_concretada: continue # Oculta las viejas/concretadas por defecto
-                else:
-                    if r['fecha_dt'] != fecha_busqueda: continue
-
-                card_clase = "card-concretada" if es_concretada else "card-white"
+                msg_ch = urllib.parse.quote(f"*RETORNO MATCH* 🚛💨\n\n¡Hola! Me interesa la carga:\n📍 {r[1]} a {r[2]}")
                 badge = '<div class="badge-concretada">✅ CONCRETADA</div>' if es_concretada else ""
-                msg_ch = urllib.parse.quote(f"*RETORNO MATCH* 🚛💨\n\nMe interesa la carga: {r[1]} a {r[2]}")
                 btn = f'<a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_ch}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>' if not es_concretada else "<b>CARGA FINALIZADA</b>"
 
-                st.markdown(f'<div class="{card_clase}">{badge}<div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}{btn}</div>', unsafe_allow_html=True)
-        except: st.info("Cargando información...")
+                st.markdown(f'<div class="{card_style}">{badge}<div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}{btn}</div>', unsafe_allow_html=True)
+        except: st.info("Buscando...")
 
-# --- PESTAÑA 2: SOY EMPRESA ---
+# --- PESTAÑA 2: SOY EMPRESA (Camiones) ---
 with tab_empresa:
     col_a, col_b = st.columns([1, 2.2])
     with col_a:
@@ -129,17 +133,15 @@ with tab_empresa:
                 estado = str(r[8]).upper()
                 is_verif = "VERIFICADO" in estado or "APROBADO" in estado
                 badge = '<div class="badge-verif">✅ VERIFICADO</div>' if is_verif else '<div class="badge-verif" style="color:#f1c40f; border-color:#f1c40f;">⏳ PENDIENTE</div>'
-                msg_em = urllib.parse.quote(f"*RETORNO MATCH* 🏢🤝\n\nVi tu camión {r[3]} de {r[1]} a {r[2]}.")
-                st.markdown(f'<div class="card-white">{badge}<div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div><b>⚙️ EQUIPO:</b> {r[3]}<br><b>🆔 CUIT:</b> {r[5]} | <b>💳 LINTI:</b> {r[6]}<div style="display:flex;gap:10px;"><a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_em}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR</a><a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a></div></div>', unsafe_allow_html=True)
-        except: st.info("Actualizando camiones...")
+                
+                st.markdown(f'<div class="card-white">{badge}<div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div><b>⚙️ EQUIPO:</b> {r[3]}<br><b>🆔 CUIT:</b> {r[5]} | <b>💳 LINTI:</b> {r[6]}<div style="display:flex;gap:10px;"><a href="https://api.whatsapp.com/send?phone=549{r[4]}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR</a><a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a></div></div>', unsafe_allow_html=True)
+        except: st.info("Actualizando...")
 
 # --- PANEL DE CONTROL ---
 st.markdown("---")
 with st.expander("🛠️ PANEL DE ADMINISTRACIÓN"):
-    pw = st.text_input("Introduce la Clave Maestra", type="password")
+    pw = st.text_input("Clave Maestra", type="password")
     if pw == ADMIN_PASSWORD:
-        col_adm1, col_adm2 = st.columns(2)
-        with col_adm1: st.link_button("📂 EXCEL: CHOFERES", f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_CHOFERES}", use_container_width=True)
-        with col_adm2: st.link_button("🗑️ EXCEL: CARGAS", f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_CARGAS}", use_container_width=True)
+        st.link_button("🗑️ EXCEL: CARGAS", f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_CARGAS}", use_container_width=True)
 
 st.markdown(f"""<div class="footer"><p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p><p>Creado por <b>Ignacio Diaz</b></p></div>""", unsafe_allow_html=True)
