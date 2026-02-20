@@ -49,30 +49,23 @@ st.markdown("""
         color: white; padding: 10px; border-radius: 10px;
         margin-bottom: 20px; font-weight: bold; border: 1px solid #f1c40f;
     }
-    .status-bar {
-        background: rgba(52, 152, 219, 0.15);
-        padding: 15px; border-radius: 12px; border: 1px dashed #3498db;
-        margin-bottom: 20px; text-align: center; color: white;
-    }
-    .stTabs [data-baseweb="tab"] {
-        flex: 1; height: 70px !important; background-color: #2c3e50 !important;
-        border-radius: 12px !important; color: white !important; font-size: 18px !important;
-        font-weight: 900 !important; margin: 5px; border: 1px solid #34495e !important;
-    }
-    .stTabs [aria-selected="true"] { background-color: #3498db !important; }
     .card-white {
         background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        border-left: 10px solid #3498db; color: #333; position: relative; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        border-left: 10px solid #3498db; color: #333; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     .card-urgent {
         background: #fff5f5 !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        border-left: 10px solid #e74c3c; color: #333; position: relative;
+        border-left: 10px solid #e74c3c; color: #333;
+    }
+    .card-taken {
+        background: #f1f2f6 !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
+        border-left: 10px solid #bdc3c7; color: #7f8c8d; opacity: 0.8;
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .badge-dist { background: #f1c40f; color: #2c3e50; padding: 4px 8px; border-radius: 6px; font-size: 14px; font-weight: bold; margin-left: 10px; border: 1px solid #2c3e50; }
     .badge-type { background: #f1f2f6; color: #2f3542; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 800; border: 1px solid #ced6e0; margin-top: 8px; display: inline-block; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
-    .btn-status { background-color: #3498db; color: white !important; padding: 8px 15px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; margin: 5px; }
+    .btn-taken { background-color: #bdc3c7; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; cursor: not-allowed; }
     .footer { text-align: center; color: white; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
 </style>
 """, unsafe_allow_html=True)
@@ -83,21 +76,12 @@ st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>
 st.markdown("""
 <div class="radar-container">
     <marquee scrollamount="8">
-        ⚠️ ATENCIÓN: Nuevas cargas publicadas desde Rosario y San Jorge -- 🔥 Recordá verificar los papeles antes de cargar -- 🚛 RETORNO MATCH: El aliado del transportista santafesino.
+        ⚠️ ATENCIÓN: Nuevas cargas publicadas -- 🔥 Para marcar una carga como "TOMADA", agregá la palabra "TOMADA" al nombre de tu empresa al publicar.
     </marquee>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 5. BARRA DE ESTADO RÁPIDO ---
-wsp_msg_llegada = urllib.parse.quote("✅ ¡Llegada confirmada! Ya descargué y estoy disponible para un nuevo retorno en Retorno Match.")
-st.markdown(f"""
-<div class="status-bar">
-    <span>📍 ¿Llegaste a destino? Avisale a todos:</span><br><br>
-    <a href="https://api.whatsapp.com/send?text={wsp_msg_llegada}" target="_blank" class="btn-status">🚩 CONFIRMAR LLEGADA</a>
-</div>
-""", unsafe_allow_html=True)
-
-# --- 6. FUNCIONES AUXILIARES ---
+# --- 5. FUNCIONES AUXILIARES ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
@@ -107,19 +91,12 @@ def es_hoy(f):
     try: return pd.to_datetime(f).date() == datetime.now().date()
     except: return False
 
-# --- 7. BÚSQUEDA MEJORADA (FILTRO POR TEXTO) ---
-with st.container():
-    c1, c2, c3 = st.columns([2, 2, 2])
-    with c1: b_o = st.selectbox("🔍 ORIGEN (Provincia):", PROVINCIAS)
-    with c2: b_d = st.selectbox("🏁 DESTINO (Provincia):", PROVINCIAS)
-    with c3: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
-    
-    # Nuevo filtro por texto de localidad
-    txt_search = st.text_input("📍 Buscar Localidad específica (Ej: Rosario, Rafaela...)", "").upper()
-
-    if st.button("🔄 ACTUALIZAR Y FILTRAR", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
+# --- 6. BÚSQUEDA ---
+c1, c2, c3 = st.columns([2, 2, 2])
+with c1: b_o = st.selectbox("🔍 ORIGEN (Provincia):", PROVINCIAS)
+with c2: b_d = st.selectbox("🏁 DESTINO (Provincia):", PROVINCIAS)
+with c3: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
+txt_search = st.text_input("📍 Buscar Localidad específica", "").upper()
 
 t1, t2 = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
@@ -141,19 +118,21 @@ with t1:
         try:
             df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
             for _, r in df_ca.iloc[::-1].iterrows():
-                # Lógica de filtrado combinada (Provincia + Localidad por texto)
                 match_prov = (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper())
                 match_txt = txt_search in str(r[1]).upper() or txt_search in str(r[2]).upper()
                 
                 if es_hoy(r[0]) and match_prov and match_txt:
+                    is_taken = "TOMADA" in str(r[5]).upper() or "TOMADA" in str(r[3]).upper()
                     urg = "🔥" in str(r[3])
                     km = obtener_distancia(r[1], r[2])
-                    msg = urllib.parse.quote(f"Hola! Vi tu carga de *{r[6]}* ({r[3]}) en Retorno Match. ¿Sigue disponible?")
-                    st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
+                    msg = urllib.parse.quote(f"Hola! Vi tu carga de *{r[6]}* en Retorno Match. ¿Sigue disponible?")
+                    
+                    card_class = "card-taken" if is_taken else ("card-urgent" if urg else "card-white")
+                    st.markdown(f'''<div class="{card_class}">
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km} KM </span>' if km else ''}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
                         <div class="badge-type">📑 TIPO: {r[6]}</div><br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
+                        {'<div class="btn-taken">❌ CARGA YA TOMADA</div>' if is_taken else f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>'}
                     </div>''', unsafe_allow_html=True)
         except: st.info("Buscando cargas...")
 
@@ -167,7 +146,7 @@ with t2:
             ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
             ec = st.text_input("Carga"); u_ch = st.checkbox("🔥 MARCAR URGENTE")
             tm = st.selectbox("Tipo de Mercadería", TIPOS_CARGA)
-            en = st.text_input("Empresa"); ef = st.text_input("Cuándo"); ew = st.text_input("WhatsApp")
+            en = st.text_input("Empresa (Escribí 'TOMADA' al lado para cerrar)"); ew = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR"):
                 payload = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": f"🔥 {ec}" if u_ch else ec, "entry.1930562861": en, "entry.1064058502": tm, "entry.466540450": ew}
                 requests.post(URL_CARGAS_POST, data=payload)
