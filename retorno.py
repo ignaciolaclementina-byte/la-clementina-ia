@@ -15,7 +15,7 @@ URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7c
 
 # --- 2. GESTIÓN DE ESTADO ---
 if 'anuncios' not in st.session_state:
-    st.session_state.anuncios = "📢 ¡SISTEMA VIP ACTIVADO! -- Consultas aquí -- 🚛 Creado por Ignacio Diaz"
+    st.session_state.anuncios = "📢 ¡SISTEMA VIP ACTIVADO! -- Consultas aquí --"
 
 if 'socios_activos' not in st.session_state:
     st.session_state.socios_activos = "20334445551, TRANSPORTES SAN JORGE, LOGISTICA DIAZ"
@@ -25,7 +25,7 @@ EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acopla
 
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
-# --- 3. ESTILOS VIP ---
+# --- 3. ESTILOS VIP (BLINDADOS) ---
 st.markdown("""
 <style>
     .stApp {
@@ -81,11 +81,21 @@ def es_vip(dato):
 try:
     df_ch_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
     df_ca_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
+    # Conteo de camiones de hoy para el radar
+    cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(es_hoy)])
 except:
     df_ch_raw, df_ca_raw = pd.DataFrame(), pd.DataFrame()
+    cant_camiones = 0
 
-# --- 5. RADAR ---
-st.markdown(f"""<div class="radar-container"><marquee scrollamount="8">⭐ {st.session_state.anuncios} -- 🚛 Creado por Ignacio Diaz.</marquee></div>""", unsafe_allow_html=True)
+# --- 5. RADAR AUTOMATIZADO ---
+# Se agrega el contador dinámico de camiones
+st.markdown(f"""
+<div class="radar-container">
+    <marquee scrollamount="8">
+        🚛 EN VIVO: {cant_camiones} CAMIONES DISPONIBLES AHORA -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz.
+    </marquee>
+</div>
+""", unsafe_allow_html=True)
 
 # --- 6. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
