@@ -15,6 +15,7 @@ URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7c
 
 PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBUT", "CORDOBA", "CORRIENTES", "ENTRE RIOS", "FORMOSA", "JUJUY", "LA PAMPA", "LA RIOJA", "MENDOZA", "MISIONES", "NEUQUEN", "RIO NEGRO", "SALTA", "SAN JUAN", "SAN LUIS", "SANTA CRUZ", "SANTA FE", "SANTIAGO DEL ESTERO", "TIERRA DEL FUEGO", "TUCUMAN"]
 EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
+TIPOS_CARGA = ["General", "Paletizado", "Granel", "Peligrosa", "Refrigerada"]
 
 # --- 2. BASE DE DISTANCIAS REALES (BLINDADA) ---
 def obtener_distancia(origen, destino):
@@ -35,7 +36,7 @@ def obtener_distancia(origen, destino):
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 3. ESTILOS ORIGINALES BLINDADOS + MEJORAS ---
+# --- 3. ESTILOS ORIGINALES BLINDADOS ---
 st.markdown("""
 <style>
     .stApp {
@@ -49,7 +50,7 @@ st.markdown("""
         margin-bottom: 20px; font-weight: bold; border: 1px solid #f1c40f;
     }
     .status-bar {
-        background: rgba(52, 152, 219, 0.2);
+        background: rgba(52, 152, 219, 0.15);
         padding: 15px; border-radius: 12px; border: 1px dashed #3498db;
         margin-bottom: 20px; text-align: center; color: white;
     }
@@ -69,6 +70,7 @@ st.markdown("""
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .badge-dist { background: #f1c40f; color: #2c3e50; padding: 4px 8px; border-radius: 6px; font-size: 14px; font-weight: bold; margin-left: 10px; border: 1px solid #2c3e50; }
+    .badge-type { background: #f8f9fa; color: #2c3e50; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; border: 1px solid #dfe6e9; margin-top: 8px; display: inline-block; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
     .btn-status { background-color: #3498db; color: white !important; padding: 8px 15px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; margin: 5px; }
     .footer { text-align: center; color: white; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
@@ -86,7 +88,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 5. MEJORA: BARRA DE ESTADO RÁPIDO ---
+# --- 5. BARRA DE ESTADO RÁPIDO ---
 wsp_msg_llegada = urllib.parse.quote("✅ ¡Llegada confirmada! Ya descargué y estoy disponible para un nuevo retorno.")
 st.markdown(f"""
 <div class="status-bar">
@@ -142,7 +144,8 @@ with t1:
                     msg = urllib.parse.quote(f"Hola! Vi tu carga *{r[3]}* en Retorno Match. ¿Sigue disponible?")
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km} KM </span>' if km else ''}</div>
-                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}
+                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
+                        <div class="badge-type">📑 TIPO: {r[6]}</div><br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
                     </div>''', unsafe_allow_html=True)
         except: st.info("Buscando cargas...")
@@ -156,9 +159,11 @@ with t2:
             eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
             ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
             ec = st.text_input("Carga"); u_ch = st.checkbox("🔥 MARCAR URGENTE")
+            tm = st.selectbox("Tipo de Mercadería", TIPOS_CARGA)
             en = st.text_input("Empresa"); ef = st.text_input("Cuándo"); ew = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR"):
-                payload = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": f"🔥 {ec}" if u_ch else ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
+                # entry.1064058502 es la columna donde guardamos el Tipo de Mercadería
+                payload = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": f"🔥 {ec}" if u_ch else ec, "entry.1930562861": en, "entry.1064058502": tm, "entry.466540450": ew}
                 requests.post(URL_CARGAS_POST, data=payload)
                 st.success("¡Subida!"); time.sleep(1); st.rerun()
     with col_r2:
