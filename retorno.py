@@ -5,7 +5,7 @@ import requests
 import urllib.parse
 from datetime import datetime
 
-# --- 1. CONFIGURACIÓN ---
+# --- 1. CONFIGURACIÓN (REVISADA CON TUS LINKS) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349" 
 GID_CARGAS = "1267917528"    
@@ -16,14 +16,13 @@ URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7c
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 2. ESTILOS (TU INTERFAZ ORIGINAL BLINDADA) ---
+# --- 2. ESTILOS (ESTRUCTURA BLINDADA) ---
 st.markdown("""
     <style>
     .stApp {
         background-image: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
                         url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075&auto=format&fit=crop') !important;
-        background-size: cover !important; 
-        background-attachment: fixed !important;
+        background-size: cover !important; background-attachment: fixed !important;
     }
     [data-testid="stHeader"] { background-color: transparent !important; }
     .stTabs [data-baseweb="tab"] {
@@ -53,7 +52,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- 3. LÓGICA DE BÚSQUEDA ---
+# --- 3. BÚSQUEDA ---
 c_b1, c_b2, c_act = st.columns([2, 2, 1])
 with c_b1: b_origen = st.text_input("🔍 ORIGEN:").strip()
 with c_b2: b_destino = st.text_input("🏁 DESTINO:").strip()
@@ -63,14 +62,14 @@ with c_act:
         st.cache_data.clear()
         st.rerun()
 
-# --- FILTRO DE FECHA (Integrado sin romper interfaz) ---
+# --- FILTRO FECHA ---
 c_f1, c_f2, c_f3 = st.columns([2, 1, 2])
 with c_f2:
     fecha_filtro = st.date_input("📅 FECHA:", datetime.now())
 
 tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-# --- PESTAÑA 1: SOY CHOFER (Cargas) ---
+# --- PESTAÑA 1: SOY CHOFER (Ve Cargas) ---
 with tab_chofer:
     col_i, col_d = st.columns([1, 2.2])
     with col_i:
@@ -79,9 +78,11 @@ with tab_chofer:
             o = st.text_input("📍 Ubicación Actual"); d = st.text_input("🏁 Destino")
             e = st.selectbox("🚛 Equipo", ["Chasis", "Semi", "Sider", "Acoplado", "Batea", "Térmico"])
             w = st.text_input("📱 WhatsApp"); cuit = st.text_input("🆔 CUIT")
-            linti = st.text_input("💳 LINTI"); link_doc = st.text_input("📂 Link Documentación")
+            linti = st.text_input("💳 LINTI"); ld = st.text_input("📂 Link Papeles")
             if st.form_submit_button("PUBLICAR"):
-                requests.post(URL_CHOFERES_POST, data={"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1542650763": cuit, "entry.1837643722": linti, "entry.769375120": link_doc, "entry.1574172378": w})
+                # IDs corregidos para choferes
+                data_ch = {"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1542650763": cuit, "entry.1837643722": linti, "entry.769375120": ld, "entry.1574172378": w}
+                requests.post(URL_CHOFERES_POST, data=data_ch)
                 st.success("✅ ¡Publicado!"); time.sleep(1); st.rerun()
 
     with col_d:
@@ -90,26 +91,23 @@ with tab_chofer:
             csv_url_c = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}"
             df_c = pd.read_csv(csv_url_c).fillna("-")
             df_c['Marca temporal'] = pd.to_datetime(df_c.iloc[:, 0]).dt.date
-            
-            # FILTRO POR FECHA
-            df_final = df_c[df_c['Marca temporal'] == fecha_filtro]
+            df_v = df_c[df_c['Marca temporal'] == fecha_filtro]
 
-            for _, r in df_final.iloc[::-1].iterrows():
+            for _, r in df_v.iloc[::-1].iterrows():
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
                 
-                estado_carga = str(r[7]).upper()
-                es_concretada = "CONCRETADA" in estado_carga
+                estado_c = str(r[7]).upper()
+                es_concretada = "CONCRETADA" in estado_c
                 card_style = "card-concretada" if es_concretada else "card-white"
-                
-                msg_ch = urllib.parse.quote(f"*RETORNO MATCH* 🚛💨\n\n¡Hola! Me interesa la carga:\n📍 {r[1]} a {r[2]}")
                 badge = '<div class="badge-concretada">✅ CONCRETADA</div>' if es_concretada else ""
+                
+                msg_ch = urllib.parse.quote(f"*RETORNO MATCH* 🚛💨\n\nMe interesa la carga: {r[1]} a {r[2]}")
                 btn = f'<a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_ch}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>' if not es_concretada else "<b>CARGA FINALIZADA</b>"
-
                 st.markdown(f'<div class="{card_style}">{badge}<div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}{btn}</div>', unsafe_allow_html=True)
         except: st.info("Buscando...")
 
-# --- PESTAÑA 2: SOY EMPRESA (Camiones) ---
+# --- PESTAÑA 2: SOY EMPRESA (Ve Camiones) ---
 with tab_empresa:
     col_a, col_b = st.columns([1, 2.2])
     with col_a:
@@ -118,7 +116,9 @@ with tab_empresa:
             eo = st.text_input("📍 Origen"); ed = st.text_input("🏁 Destino"); ec = st.text_input("📦 Carga")
             en = st.text_input("Empresa"); ef = st.selectbox("⏳ Cuándo", ["Hoy", "Mañana", "A convenir"]); ew = st.text_input("📱 WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
-                requests.post(URL_CARGAS_POST, data={"entry.610070407": eo, "entry.170847116": ed, "entry.576675281": ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew})
+                # IDs corregidos para cargas (según tu link)
+                data_em = {"entry.610070407": eo, "entry.170847116": ed, "entry.576675281": ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
+                requests.post(URL_CARGAS_POST, data=data_em)
                 st.success("✅ Carga Publicada"); time.sleep(1); st.rerun()
 
     with col_b:
@@ -133,15 +133,7 @@ with tab_empresa:
                 estado = str(r[8]).upper()
                 is_verif = "VERIFICADO" in estado or "APROBADO" in estado
                 badge = '<div class="badge-verif">✅ VERIFICADO</div>' if is_verif else '<div class="badge-verif" style="color:#f1c40f; border-color:#f1c40f;">⏳ PENDIENTE</div>'
-                
                 st.markdown(f'<div class="card-white">{badge}<div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div><b>⚙️ EQUIPO:</b> {r[3]}<br><b>🆔 CUIT:</b> {r[5]} | <b>💳 LINTI:</b> {r[6]}<div style="display:flex;gap:10px;"><a href="https://api.whatsapp.com/send?phone=549{r[4]}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR</a><a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a></div></div>', unsafe_allow_html=True)
         except: st.info("Actualizando...")
-
-# --- PANEL DE CONTROL ---
-st.markdown("---")
-with st.expander("🛠️ PANEL DE ADMINISTRACIÓN"):
-    pw = st.text_input("Clave Maestra", type="password")
-    if pw == ADMIN_PASSWORD:
-        st.link_button("🗑️ EXCEL: CARGAS", f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_CARGAS}", use_container_width=True)
 
 st.markdown(f"""<div class="footer"><p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p><p>Creado por <b>Ignacio Diaz</b></p></div>""", unsafe_allow_html=True)
