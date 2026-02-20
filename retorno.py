@@ -15,7 +15,7 @@ URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7c
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 2. ESTILOS ---
+# --- 2. ESTILOS (Mantenidos según tu pedido) ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -58,7 +58,7 @@ with c_act:
 tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
 # ==========================================
-# PESTAÑA 1: SOY CHOFER
+# PESTAÑA 1: SOY CHOFER (Busca Cargas)
 # ==========================================
 with tab_chofer:
     col_i, col_d = st.columns([1, 2.2])
@@ -89,17 +89,7 @@ with tab_chofer:
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
                 
-                # MENSAJE POTENCIADO CHOFER -> EMPRESA
-                msg_ch = urllib.parse.quote(
-                    f"*RETORNO MATCH* 🚛💨\n"
-                    f"----------------------------\n"
-                    f"Hola! Me interesa la *CARGA* que publicaste:\n"
-                    f"📍 *ORIGEN:* {r[1]}\n"
-                    f"🏁 *DESTINO:* {r[2]}\n"
-                    f"📦 *MERCADERÍA:* {r[3]}\n\n"
-                    f"¿Sigue disponible? Soy chofer y estoy listo para cargar."
-                )
-                
+                msg_ch = urllib.parse.quote(f"*RETORNO MATCH* 🚛💨\nHola! Me interesa la *CARGA* que publicaste: {r[1]} a {r[2]}.")
                 st.markdown(f"""
                 <div class="card-white">
                     <div class="route-txt">📍 {r[1]} ➔ {r[2]}</div>
@@ -110,7 +100,7 @@ with tab_chofer:
         except: st.info("Buscando cargas...")
 
 # ==========================================
-# PESTAÑA 2: SOY EMPRESA
+# PESTAÑA 2: SOY EMPRESA (Busca Camiones)
 # ==========================================
 with tab_empresa:
     col_a, col_b = st.columns([1, 2.2])
@@ -133,18 +123,7 @@ with tab_empresa:
 
                 is_verif = "VERIFICADO" in str(r[8]).upper()
                 badge = '<div class="badge-verif">✅ VERIFICADO</div>' if is_verif else '<div class="badge-verif" style="color:#888; border-color:#888;">⏳ PENDIENTE</div>'
-                
-                # MENSAJE POTENCIADO EMPRESA -> CHOFER
-                msg_em = urllib.parse.quote(
-                    f"*RETORNO MATCH* 🏢🤝\n"
-                    f"----------------------------\n"
-                    f"Hola! Vi tu *CAMIÓN* disponible en la App:\n"
-                    f"🛣️ *RUTA:* {r[1]} ➔ {r[2]}\n"
-                    f"⚙️ *EQUIPO:* {r[3]}\n"
-                    f"🆔 *CUIT:* {r[5]}\n"
-                    f"💳 *LINTI:* {r[6]}\n\n"
-                    f"Tengo una carga disponible que te puede interesar. ¿Podemos hablar?"
-                )
+                msg_em = urllib.parse.quote(f"*RETORNO MATCH* 🏢🤝\nHola! Vi tu *CAMIÓN* disponible en la App: {r[1]} a {r[2]}.")
 
                 st.markdown(f"""
                 <div class="card-white" style="border-left-color: {'#2ecc71' if is_verif else '#3498db'};">
@@ -155,12 +134,37 @@ with tab_empresa:
                         <b>🆔 CUIT:</b> {r[5]} | <b>💳 LINTI:</b> {r[6]}
                     </div>
                     <div style="display:flex; gap:10px;">
-                        <a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_em}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR CON CHOFER</a>
+                        <a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_em}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR</a>
                         <a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
         except: st.info("Actualizando lista de camiones...")
+
+# ==========================================
+# 🛠️ NUEVO: PANEL DE CONTROL (ADMIN)
+# ==========================================
+st.markdown("---")
+with st.expander("🛠️ PANEL DE CONTROL (Solo Administración)"):
+    pw = st.text_input("Contraseña de administrador", type="password")
+    if pw == ADMIN_PASSWORD:
+        st.success("Acceso autorizado")
+        tab_admin1, tab_admin2 = st.tabs(["📋 Lista Choferes", "📦 Lista Cargas"])
+        
+        with tab_admin1:
+            try:
+                df_admin_h = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}")
+                st.dataframe(df_admin_h, use_container_width=True)
+                st.info("Para borrar o editar, hacelo directamente en el Google Sheet.")
+            except: st.error("No se pudo cargar la lista.")
+
+        with tab_admin2:
+            try:
+                df_admin_c = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}")
+                st.dataframe(df_admin_c, use_container_width=True)
+            except: st.error("No se pudo cargar la lista.")
+    elif pw != "":
+        st.error("Contraseña incorrecta")
 
 # --- FOOTER ---
 st.markdown(f'<div class="footer"><p>© 2026 <b>RETORNO MATCH</b> - San Jorge, Santa Fe</p><p>Creado por <b>Ignacio Díaz</b></p></div>', unsafe_allow_html=True)
