@@ -4,17 +4,21 @@ import time
 import requests
 import urllib.parse
 from datetime import datetime
+from streamlit_autorefresh import st_autorefresh  # Requiere: pip install streamlit-autorefresh
 
 # --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - IGNACIO DIAZ) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
 
-# URLs de envío (formResponse) basadas en tus enlaces
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 
-# --- 2. GESTIÓN DE ESTADO ---
+# --- 2. SISTEMA ANTI-PAUSA (KEEP ALIVE) ---
+# Se actualiza automáticamente cada 15 minutos para que la web no se duerma
+st_autorefresh(interval=900000, key="keepalive")
+
+# --- 3. GESTIÓN DE ESTADO ---
 if 'anuncios' not in st.session_state:
     st.session_state.anuncios = "📢 ¡SISTEMA VIP ACTIVADO! -- Consultas aquí --"
 
@@ -26,7 +30,7 @@ EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acopla
 
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
-# --- 3. ESTILOS VIP (BLINDADOS) ---
+# --- 4. ESTILOS VIP (BLINDADOS) ---
 st.markdown("""
 <style>
     .stApp {
@@ -64,7 +68,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
 
-# --- 4. FUNCIONES ---
+# --- 5. FUNCIONES ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
@@ -87,7 +91,7 @@ except:
     df_ch_raw, df_ca_raw = pd.DataFrame(), pd.DataFrame()
     cant_camiones = 0
 
-# --- 5. RADAR AUTOMATIZADO ---
+# --- 6. RADAR AUTOMATIZADO ---
 st.markdown(f"""
 <div class="radar-container">
     <marquee scrollamount="8">
@@ -96,7 +100,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 6. BÚSQUEDA ---
+# --- 7. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
 with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
 with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
@@ -108,7 +112,7 @@ with c4:
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
-# PESTAÑA: SOY EMPRESA (Busca Camiones / Publica Carga)
+# PESTAÑA: SOY EMPRESA
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -132,7 +136,7 @@ with t1:
                 st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 7].apply(es_vip) # CUIT/ID en col 7 según tu form
+            df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 7].apply(es_vip)
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(es_hoy)].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ch.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
@@ -142,7 +146,7 @@ with t1:
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>ID:</b> {r[4]}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[7])}" target="_blank" class="btn-wsp">💬 CONTACTAR</a></div>''', unsafe_allow_html=True)
 
-# PESTAÑA: SOY CHOFER (Busca Cargas / Publica Camión)
+# PESTAÑA: SOY CHOFER
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -175,14 +179,14 @@ with t2:
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[4]}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[6])}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>''', unsafe_allow_html=True)
 
-# --- 7. PANEL DE CONTROL ---
+# --- 8. PANEL DE CONTROL ---
 st.markdown("---")
 with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
     st.session_state.anuncios = st.text_area("Radar publicitario:", st.session_state.anuncios)
     st.session_state.socios_activos = st.text_area("Lista VIP (separada por comas):", st.session_state.socios_activos)
     if st.button("🚀 ACTUALIZAR SISTEMA"): st.rerun()
 
-# --- 8. PIE DE PÁGINA LEGAL BLINDADO ---
+# --- 9. PIE DE PÁGINA LEGAL BLINDADO ---
 st.markdown(f"""
 <div class="legal-footer">
     <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
