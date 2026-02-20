@@ -35,7 +35,7 @@ def obtener_distancia(origen, destino):
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 3. ESTILOS ORIGINALES BLINDADOS + RADAR ---
+# --- 3. ESTILOS ORIGINALES BLINDADOS + MEJORAS ---
 st.markdown("""
 <style>
     .stApp {
@@ -47,6 +47,11 @@ st.markdown("""
         background: rgba(231, 76, 60, 0.9);
         color: white; padding: 10px; border-radius: 10px;
         margin-bottom: 20px; font-weight: bold; border: 1px solid #f1c40f;
+    }
+    .status-bar {
+        background: rgba(52, 152, 219, 0.2);
+        padding: 15px; border-radius: 12px; border: 1px dashed #3498db;
+        margin-bottom: 20px; text-align: center; color: white;
     }
     .stTabs [data-baseweb="tab"] {
         flex: 1; height: 70px !important; background-color: #2c3e50 !important;
@@ -65,6 +70,7 @@ st.markdown("""
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .badge-dist { background: #f1c40f; color: #2c3e50; padding: 4px 8px; border-radius: 6px; font-size: 14px; font-weight: bold; margin-left: 10px; border: 1px solid #2c3e50; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
+    .btn-status { background-color: #3498db; color: white !important; padding: 8px 15px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; margin: 5px; }
     .footer { text-align: center; color: white; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
 </style>
 """, unsafe_allow_html=True)
@@ -80,7 +86,16 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 5. FUNCIONES AUXILIARES ---
+# --- 5. MEJORA: BARRA DE ESTADO RÁPIDO ---
+wsp_msg_llegada = urllib.parse.quote("✅ ¡Llegada confirmada! Ya descargué y estoy disponible para un nuevo retorno.")
+st.markdown(f"""
+<div class="status-bar">
+    <span>📍 ¿Llegaste a destino? Avisale a todos:</span><br><br>
+    <a href="https://api.whatsapp.com/send?text={wsp_msg_llegada}" target="_blank" class="btn-status">🚩 CONFIRMAR LLEGADA</a>
+</div>
+""", unsafe_allow_html=True)
+
+# --- 6. FUNCIONES AUXILIARES ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
@@ -90,7 +105,7 @@ def es_hoy(f):
     try: return pd.to_datetime(f).date() == datetime.now().date()
     except: return False
 
-# --- 6. BÚSQUEDA ---
+# --- 7. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
 with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
 with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
