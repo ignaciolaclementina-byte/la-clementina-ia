@@ -13,21 +13,18 @@ ADMIN_PASSWORD = "1323"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 
-st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
+st.set_page_config(page_title="RETORNO MATCH", page_icon="Consultar", layout="wide")
 
-# --- 2. ESTILOS ORIGINALES (Fondo restaurado) ---
+# --- 2. ESTILOS ORIGINALES ---
 st.markdown("""
     <style>
-    /* Restaurando el fondo original en .stApp para mayor compatibilidad */
     .stApp {
         background-image: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
                         url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075&auto=format&fit=crop') !important;
         background-size: cover !important; 
         background-attachment: fixed !important;
     }
-    [data-testid="stHeader"] {
-        background-color: transparent !important;
-    }
+    [data-testid="stHeader"] { background-color: transparent !important; }
     .stTabs [data-baseweb="tab"] {
         flex: 1; height: 70px !important; background-color: #2c3e50 !important;
         border-radius: 12px !important; color: white !important; font-size: 18px !important;
@@ -62,7 +59,7 @@ with c_act:
 
 tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-# --- PESTAÑA 1: SOY CHOFER (Ve Cargas) ---
+# --- PESTAÑA 1: SOY CHOFER ---
 with tab_chofer:
     col_i, col_d = st.columns([1, 2.2])
     with col_i:
@@ -84,11 +81,14 @@ with tab_chofer:
             for _, r in df_c.iloc[::-1].iterrows():
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
-                msg_ch = urllib.parse.quote(f"*RETORNO MATCH*\nMe interesa tu carga: {r[1]} a {r[2]}")
+                
+                # MENSAJE WSP MEJORADO
+                msg_ch = urllib.parse.quote(f"*RETORNO MATCH* 🚛💨\n\nHola! Me contacto por la carga publicada:\n📍 *Origen:* {r[1]}\n🏁 *Destino:* {r[2]}\n📦 *Carga:* {r[3]}\n🏢 *Empresa:* {r[5]}\n\n¿Sigue disponible?")
+                
                 st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}<a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_ch}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
         except: st.info("Buscando cargas...")
 
-# --- PESTAÑA 2: SOY EMPRESA (Ve Camiones) ---
+# --- PESTAÑA 2: SOY EMPRESA ---
 with tab_empresa:
     col_a, col_b = st.columns([1, 2.2])
     with col_a:
@@ -107,14 +107,14 @@ with tab_empresa:
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
                 
-                # --- MAPEO CORRECTO DE COLUMNAS ---
                 whatsapp_chofer = r[4]
                 cuit_chofer = r[5]
-                linti_chofer = r[6]
-                papeles_link = r[7]
+                
+                # MENSAJE WSP MEJORADO
+                msg_em = urllib.parse.quote(f"*RETORNO MATCH* 🏢🤝\n\nHola! Vimos tu camión disponible en la App:\n🚛 *Tramo:* {r[1]} a {r[2]}\n⚙️ *Equipo:* {r[3]}\n\n¿Estas disponible para cargar?")
                 
                 is_verif = "VERIFICADO" in str(r[8]).upper()
-                badge = '<div class="badge-verif">✅ VERIFICADO</div>' if is_verif else '<div class="badge-verif" style="color:#888; border-color:#888;">⏳ PENDIENTE</div>'
+                badge = '<div class="badge-verif">✅ VERIFICADO</div>' if is_verif else '<div class="badge-verif" style="color:#f1c40f; border-color:#f1c40f;">⏳ PENDIENTE</div>'
                 
                 st.markdown(f"""
                 <div class="card-white">
@@ -122,22 +122,32 @@ with tab_empresa:
                     <div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div>
                     <div style="font-size:14px;margin-top:5px;">
                         <b>⚙️ EQUIPO:</b> {r[3]}<br>
-                        <b>🆔 CUIT:</b> {cuit_chofer} | <b>💳 LINTI:</b> {linti_chofer}
+                        <b>🆔 CUIT:</b> {cuit_chofer} | <b>💳 LINTI:</b> {r[6]}
                     </div>
                     <div style="display:flex;gap:10px;">
-                        <a href="https://api.whatsapp.com/send?phone=549{whatsapp_chofer}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR</a>
-                        <a href="{papeles_link}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
+                        <a href="https://api.whatsapp.com/send?phone=549{whatsapp_chofer}&text={msg_em}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR</a>
+                        <a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
         except: st.info("Actualizando lista...")
 
-# --- PANEL DE CONTROL ---
+# --- PANEL DE CONTROL (ADMIN CORREGIDO) ---
 st.markdown("---")
 with st.expander("🛠️ ADMIN"):
     pw = st.text_input("Clave", type="password")
     if pw == ADMIN_PASSWORD:
-        st.dataframe(pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}"))
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("### 🛠️ GESTIÓN RÁPIDA")
+            st.link_button("✅ APROBAR / ELIMINAR CHOFERES", f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_CHOFERES}", use_container_width=True)
+        with c2:
+            st.markdown("### 📦 GESTIÓN CARGAS")
+            st.link_button("🗑️ ELIMINAR CARGAS VIEJAS", f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_CARGAS}", use_container_width=True)
+        
+        st.write("---")
+        st.write("📋 **Vista previa de Choferes:**")
+        st.dataframe(pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}"), use_container_width=True)
     elif pw != "": st.error("Incorrecta")
 
 st.markdown(f'<div class="footer"><p>© 2026 <b>RETORNO MATCH</b> - San Jorge, Santa Fe</p></div>', unsafe_allow_html=True)
