@@ -60,7 +60,6 @@ st.markdown("""
         border-left: 10px solid #e74c3c; color: #333;
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
-    .badge-dist { background: #f1c40f; color: #2c3e50; padding: 4px 8px; border-radius: 6px; font-size: 14px; font-weight: bold; margin-left: 10px; border: 1px solid #2c3e50; }
     .footer { text-align: center; color: white; padding: 40px; font-size: 12px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
     .legal-box { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 20px; line-height: 1.2; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
@@ -124,13 +123,13 @@ with t1:
             for _, r in df_ca_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     urg = "🔥" in str(r[3])
-                    msg_cargas = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *CARGA DISPONIBLE*\n📍 *RUT:* {r[1]} -> {r[2]}\n📦 *CARGA:* {r[3]}\n🔗 *VER EN APP:* {url_app}")
+                    msg_share = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *CARGA DISPONIBLE*\n📍 *RUTA:* {r[1]} -> {r[2]}\n📦 *CARGA:* {r[3]}\n🔗 *VER EN APP:* {url_app}")
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
                         <div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
                         <div style="display:flex; gap:10px;">
                             <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONSULTAR</a>
-                            <a href="https://api.whatsapp.com/send?text={msg_cargas}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📲 COMPARTIR</a>
+                            <a href="https://api.whatsapp.com/send?text={msg_share}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📲 COMPARTIR</a>
                         </div>
                     </div>''', unsafe_allow_html=True)
 
@@ -139,18 +138,27 @@ with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
         st.markdown("<h4 style='color:white;'>🏢 Publicar Carga</h4>", unsafe_allow_html=True)
-        # Formulario original...
+        with st.form("form_empresa", clear_on_submit=True):
+            eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
+            ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
+            ec = st.text_input("Carga"); u_ch = st.checkbox("🔥 MARCAR URGENTE")
+            tm = st.selectbox("Tipo de Mercadería", TIPOS_CARGA)
+            en = st.text_input("Empresa"); ew = st.text_input("WhatsApp")
+            if st.form_submit_button("SUBIR"):
+                payload = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": f"🔥 {ec}" if u_ch else ec, "entry.1930562861": en, "entry.1064058502": tm, "entry.466540450": ew}
+                requests.post(URL_CARGAS_POST, data=payload)
+                st.success("¡Subida!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ch_raw.empty:
             for _, r in df_ch_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
-                    msg_camion = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *UNIDAD DISPONIBLE*\n📍 *RUT:* {r[1]} -> {r[2]}\n🚚 *EQUIPO:* {r[3]}\n🔗 *VER EN APP:* {url_app}")
+                    msg_share_ch = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *UNIDAD DISPONIBLE*\n📍 *RUTA:* {r[1]} -> {r[2]}\n🚚 *EQUIPO:* {r[3]}\n🔗 *VER EN APP:* {url_app}")
                     st.markdown(f'''<div class="card-white">
                         <div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}<br>
                         <div style="display:flex;gap:10px;">
                             <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
-                            <a href="https://api.whatsapp.com/send?text={msg_camion}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📲 COMPARTIR</a>
+                            <a href="https://api.whatsapp.com/send?text={msg_share_ch}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📲 COMPARTIR</a>
                         </div>
                     </div>''', unsafe_allow_html=True)
 
