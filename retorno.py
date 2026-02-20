@@ -8,8 +8,8 @@ import random
 
 # --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - IGNACIO DIAZ) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
-GID_CHOFERES = "1392659349" 
-GID_CARGAS = "1267917528"    
+GID_CHOFERES = "1392659349"
+GID_CARGAS = "1267917528"
 
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
@@ -23,7 +23,7 @@ PROVINCIAS = [
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 2. ESTILOS ORIGINALES (LA BASE QUE RECORDARÉ SIEMPRE) ---
+# --- 2. ESTILOS ORIGINALES ---
 st.markdown("""
     <style>
     .stApp {
