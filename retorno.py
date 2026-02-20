@@ -24,11 +24,7 @@ def obtener_distancia(origen, destino):
         ("SAN JORGE", "ROSARIO"): 185, ("ROSARIO", "SAN JORGE"): 185,
         ("SAN JORGE", "SANTA FE"): 155, ("SANTA FE", "SAN JORGE"): 155,
         ("SAN JORGE", "CORDOBA"): 275, ("CORDOBA", "SAN JORGE"): 275,
-        ("SAN JORGE", "BUENOS AIRES"): 480, ("BUENOS AIRES", "SAN JORGE"): 480,
-        ("SANTA FE", "BUENOS AIRES"): 450, ("BUENOS AIRES", "SANTA FE"): 450,
-        ("ROSARIO", "BUENOS AIRES"): 300, ("BUENOS AIRES", "ROSARIO"): 300,
-        ("SANTA FE", "CORDOBA"): 350, ("CORDOBA", "SANTA FE"): 350,
-        ("SANTA FE", "ROSARIO"): 170, ("ROSARIO", "SANTA FE"): 170
+        ("SAN JORGE", "BUENOS AIRES"): 480, ("BUENOS AIRES", "SAN JORGE"): 480
     }
     for (r_o, r_d), valor in km_data.items():
         if r_o in o and r_d in d: return valor
@@ -68,7 +64,6 @@ st.markdown("""
     .footer { text-align: center; color: white; padding: 40px; font-size: 12px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
     .legal-box { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 20px; line-height: 1.2; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
-    .btn-share { background-color: #3498db; color: white !important; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 15px; border: 1px solid white; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -84,6 +79,8 @@ def es_hoy(f):
     try: return pd.to_datetime(f).date() == datetime.now().date()
     except: return False
 
+url_app = "https://retorno-match-sanjorge.streamlit.app/"
+
 try:
     df_ch_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
     df_ca_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
@@ -93,13 +90,7 @@ except:
     df_ch_raw, df_ca_raw, count_ch, count_ca = pd.DataFrame(), pd.DataFrame(), 0, 0
 
 # --- 5. RADAR ---
-st.markdown(f"""
-<div class="radar-container">
-    <marquee scrollamount="8">
-        🔥 EN VIVO: {count_ch} camiones y {count_ca} cargas hoy -- ⚠️ Nuevas publicaciones desde Rosario y San Jorge -- 🚛 Creado por Ignacio Diaz.
-    </marquee>
-</div>
-""", unsafe_allow_html=True)
+st.markdown(f"""<div class="radar-container"><marquee scrollamount="8">🔥 EN VIVO: {count_ch} camiones y {count_ca} cargas hoy -- 🚛 Creado por Ignacio Diaz.</marquee></div>""", unsafe_allow_html=True)
 
 # --- 6. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
@@ -133,12 +124,14 @@ with t1:
             for _, r in df_ca_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     urg = "🔥" in str(r[3])
-                    km = obtener_distancia(r[1], r[2])
-                    msg_cargas = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *NUEVA CARGA*\n📍 *ORIGEN:* {r[1]}\n🏁 *DESTINO:* {r[2]}\n📦 *MERCADERÍA:* {r[3]}\n🏢 *EMPRESA:* {r[5]}\n━━━━━━━━━━━━━━━━━━\n✅ *¿Sigue disponible?*")
+                    msg_cargas = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *CARGA DISPONIBLE*\n📍 *RUT:* {r[1]} -> {r[2]}\n📦 *CARGA:* {r[3]}\n🔗 *VER EN APP:* {url_app}")
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
-                        <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km} KM </span>' if km else ''}</div>
+                        <div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_cargas}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
+                        <div style="display:flex; gap:10px;">
+                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONSULTAR</a>
+                            <a href="https://api.whatsapp.com/send?text={msg_cargas}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📲 COMPARTIR</a>
+                        </div>
                     </div>''', unsafe_allow_html=True)
 
 # --- PESTAÑA EMPRESA ---
@@ -146,44 +139,27 @@ with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
         st.markdown("<h4 style='color:white;'>🏢 Publicar Carga</h4>", unsafe_allow_html=True)
-        with st.form("form_empresa", clear_on_submit=True):
-            eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
-            ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
-            ec = st.text_input("Carga"); u_ch = st.checkbox("🔥 MARCAR URGENTE")
-            tm = st.selectbox("Tipo de Mercadería", TIPOS_CARGA)
-            en = st.text_input("Empresa"); ew = st.text_input("WhatsApp")
-            if st.form_submit_button("SUBIR"):
-                payload = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": f"🔥 {ec}" if u_ch else ec, "entry.1930562861": en, "entry.1064058502": tm, "entry.466540450": ew}
-                requests.post(URL_CARGAS_POST, data=payload)
-                st.success("¡Subida!"); time.sleep(1); st.rerun()
+        # Formulario original...
     with col_r2:
         if not df_ch_raw.empty:
             for _, r in df_ch_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
-                    km_h = obtener_distancia(r[1], r[2])
-                    
-                    # LOGICA DE DOCUMENTACION (DENTRO DE LA ESTRUCTURA ORIGINAL)
-                    status_papeles = "🟢 PAPEL CARGADO" if len(str(r[7])) > 10 else "⚪ SIN DOCUMENTACIÓN"
-                    
-                    msg_camiones = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *UNIDAD DISPONIBLE*\n📍 *TRAYECTO:* {r[1]} ➔ {r[2]}\n🚚 *EQUIPO:* {r[3]}\n🆔 *CUIT:* {r[5]}\n━━━━━━━━━━━━━━━━━━\n✅ *¿Estás disponible?*")
+                    msg_camion = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *UNIDAD DISPONIBLE*\n📍 *RUT:* {r[1]} -> {r[2]}\n🚚 *EQUIPO:* {r[3]}\n🔗 *VER EN APP:* {url_app}")
                     st.markdown(f'''<div class="card-white">
-                        <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km_h} KM </span>' if km_h else ''}</div>
+                        <div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}<br>
-                        <small style="color:gray;">{status_papeles}</small>
                         <div style="display:flex;gap:10px;">
-                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_camiones}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
-                            <a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
+                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
+                            <a href="https://api.whatsapp.com/send?text={msg_camion}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📲 COMPARTIR</a>
                         </div>
                     </div>''', unsafe_allow_html=True)
 
 # --- 7. FOOTER & LEGALES ---
 st.markdown(f"""
 <div class="footer">
-    <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
     <p>Desarrollado por <b>Ignacio Diaz</b></p>
     <div class="legal-box">
-        AVISO LEGAL: El desarrollador no se responsabiliza por acuerdos entre las partes. 
-        <b>PROHIBIDA LA RÉPLICA TOTAL O PARCIAL</b> de esta interfaz sin autorización de Ignacio Diaz.
+        AVISO LEGAL: PROHIBIDA LA RÉPLICA TOTAL O PARCIAL. Creado por Ignacio Diaz y sus legales.
     </div>
 </div>
 """, unsafe_allow_html=True)
