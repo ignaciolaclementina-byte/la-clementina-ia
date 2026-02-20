@@ -107,14 +107,17 @@ def es_hoy(f):
     try: return pd.to_datetime(f).date() == datetime.now().date()
     except: return False
 
-# --- 7. BÚSQUEDA ---
-c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
-with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
-with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
-with c3: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
-with c4:
-    st.write("<br>", unsafe_allow_html=True)
-    if st.button("🔄 ACTUALIZAR", use_container_width=True):
+# --- 7. BÚSQUEDA MEJORADA (FILTRO POR TEXTO) ---
+with st.container():
+    c1, c2, c3 = st.columns([2, 2, 2])
+    with c1: b_o = st.selectbox("🔍 ORIGEN (Provincia):", PROVINCIAS)
+    with c2: b_d = st.selectbox("🏁 DESTINO (Provincia):", PROVINCIAS)
+    with c3: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
+    
+    # Nuevo filtro por texto de localidad
+    txt_search = st.text_input("📍 Buscar Localidad específica (Ej: Rosario, Rafaela...)", "").upper()
+
+    if st.button("🔄 ACTUALIZAR Y FILTRAR", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
@@ -138,10 +141,13 @@ with t1:
         try:
             df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
             for _, r in df_ca.iloc[::-1].iterrows():
-                if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
+                # Lógica de filtrado combinada (Provincia + Localidad por texto)
+                match_prov = (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper())
+                match_txt = txt_search in str(r[1]).upper() or txt_search in str(r[2]).upper()
+                
+                if es_hoy(r[0]) and match_prov and match_txt:
                     urg = "🔥" in str(r[3])
                     km = obtener_distancia(r[1], r[2])
-                    # MEJORA: WhatsApp con Tipo de Mercadería incluido
                     msg = urllib.parse.quote(f"Hola! Vi tu carga de *{r[6]}* ({r[3]}) en Retorno Match. ¿Sigue disponible?")
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km} KM </span>' if km else ''}</div>
@@ -159,7 +165,7 @@ with t2:
         with st.form("form_empresa", clear_on_submit=True):
             eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
             ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
-            ec = st.text_input("Carga (Ej: 30 Ton Maíz)"); u_ch = st.checkbox("🔥 MARCAR URGENTE")
+            ec = st.text_input("Carga"); u_ch = st.checkbox("🔥 MARCAR URGENTE")
             tm = st.selectbox("Tipo de Mercadería", TIPOS_CARGA)
             en = st.text_input("Empresa"); ef = st.text_input("Cuándo"); ew = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR"):
@@ -170,7 +176,11 @@ with t2:
         try:
             df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
             for _, r in df_ch.iloc[::-1].iterrows():
-                if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
+                match_prov_h = (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper())
+                match_equi_h = (b_e == "CUALQUIERA" or b_e == str(r[3]))
+                match_txt_h = txt_search in str(r[1]).upper() or txt_search in str(r[2]).upper()
+                
+                if es_hoy(r[0]) and match_prov_h and match_equi_h and match_txt_h:
                     km_h = obtener_distancia(r[1], r[2])
                     msg_h = urllib.parse.quote(f"Hola! Vi tu camión *{r[3]}* en Retorno Match. ¿Estás disponible?")
                     st.markdown(f'''<div class="card-white">
