@@ -44,7 +44,7 @@ st.markdown("""
     }
     .badge-verif { color: #2ecc71; font-weight: 900; font-size: 14px; border: 2px solid #2ecc71; padding: 4px 10px; border-radius: 20px; float: right; }
     
-    /* Footer Mejorado */
+    /* Footer con corrección de selección de texto */
     .footer { 
         text-align: center; 
         color: white; 
@@ -53,7 +53,10 @@ st.markdown("""
         font-size: 14px; 
         margin-top: 50px; 
         border-top: 0.5px solid rgba(255,255,255,0.2);
-        user-select: text !important; /* Permite copiar el texto */
+        user-select: text !important; 
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -175,9 +178,13 @@ st.markdown(f"""
     <div class="footer">
         <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
         <p>Creado por <b>Ignacio Diaz</b></p>
-        <p style="font-size: 11px; color: rgba(255,255,255,0.6);">
-            <b>Aviso Legal:</b> Retorno Match es un tablero de anuncios. No intermedia en pagos ni se responsabiliza por la documentación de terceros. 
-            El uso de esta plataforma implica la aceptación de términos y condiciones.
-        </p>
+        <div style="max-width: 800px; margin: 0 auto;">
+            <p style="font-size: 11px; color: rgba(255,255,255,0.6); line-height: 1.4;">
+                <b>Aviso Legal:</b> Retorno Match funciona exclusivamente como un tablero de anuncios para conectar transportistas y dadores de carga. 
+                La plataforma no garantiza la veracidad de la documentación subida por terceros ni interviene en la contratación, pagos o seguros. 
+                Es responsabilidad de cada usuario verificar la vigencia de LINTI, seguros y CUIT antes de realizar cualquier operación. 
+                El uso de este sitio implica la plena aceptación de estos términos.
+            </p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
