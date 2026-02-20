@@ -28,7 +28,7 @@ def obtener_distancia(origen, destino):
         ("SANTA FE", "BUENOS AIRES"): 450, ("BUENOS AIRES", "SANTA FE"): 450,
         ("ROSARIO", "BUENOS AIRES"): 300, ("BUENOS AIRES", "ROSARIO"): 300,
         ("SANTA FE", "CORDOBA"): 350, ("CORDOBA", "SANTA FE"): 350,
-        ("SANTA FE", "ROSARIO"): 170, ("ROSARIO", "SANTA FE"): 170
+        ("SANTA FE", "ROSARIO"): 170, ("ROSARIO", "SAN Santa FE"): 170
     }
     for (r_o, r_d), valor in km_data.items():
         if r_o in o and r_d in d: return valor
@@ -74,16 +74,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- 4. RADAR DE ÚLTIMO MOMENTO ---
-st.markdown("""
-<div class="radar-container">
-    <marquee scrollamount="8">
-        ⚠️ ATENCIÓN: Nuevas cargas publicadas desde Rosario y San Jorge -- 🔥 Recordá verificar los papeles antes de cargar -- 🚛 Creado por Ignacio Diaz y sus legales.
-    </marquee>
-</div>
-""", unsafe_allow_html=True)
-
-# --- 5. FUNCIONES AUXILIARES ---
+# --- 4. FUNCIONES AUXILIARES Y LÓGICA DE DATOS ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
@@ -92,6 +83,24 @@ def limpiar_wsp(num):
 def es_hoy(f):
     try: return pd.to_datetime(f).date() == datetime.now().date()
     except: return False
+
+# Descarga de datos previa para contadores
+try:
+    df_ch_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
+    df_ca_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
+    count_ch = len([x for x in df_ch_raw.iloc[:,0] if es_hoy(x)])
+    count_ca = len([x for x in df_ca_raw.iloc[:,0] if es_hoy(x)])
+except:
+    count_ch, count_ca = 0, 0
+
+# --- 5. RADAR DE ÚLTIMO MOMENTO (ACTUALIZADO CON CONTADORES) ---
+st.markdown(f"""
+<div class="radar-container">
+    <marquee scrollamount="8">
+        🔥 EN VIVO: {count_ch} camiones buscando retorno y {count_ca} cargas disponibles hoy -- ⚠️ Nuevas publicaciones desde Rosario y San Jorge -- 🚛 Creado por Ignacio Diaz y sus legales.
+    </marquee>
+</div>
+""", unsafe_allow_html=True)
 
 # --- 6. BÚSQUEDA (INTERFAZ ORIGINAL BLINDADA) ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
@@ -122,8 +131,7 @@ with t1:
                 st.success("¡Publicado!"); time.sleep(1); st.rerun()
     with col_r1:
         try:
-            df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
-            for _, r in df_ca.iloc[::-1].iterrows():
+            for _, r in df_ca_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     urg = "🔥" in str(r[3])
                     km = obtener_distancia(r[1], r[2])
@@ -153,8 +161,7 @@ with t2:
                 st.success("¡Subida!"); time.sleep(1); st.rerun()
     with col_r2:
         try:
-            df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
-            for _, r in df_ch.iloc[::-1].iterrows():
+            for _, r in df_ch_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     km_h = obtener_distancia(r[1], r[2])
                     msg_h = urllib.parse.quote(f"Hola! Vi tu camión *{r[3]}* en Retorno Match. ¿Estás disponible?")
