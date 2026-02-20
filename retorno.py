@@ -78,7 +78,6 @@ with tab_chofer:
             link_doc = st.text_input("📂 Link Documentación")
             
             if st.form_submit_button("PUBLICAR"):
-                # Mapeo exacto según tu link de pre-llenado
                 data_ch = {
                     "entry.1304806144": o,
                     "entry.1519265625": d,
@@ -124,7 +123,6 @@ with tab_empresa:
             ew = st.text_input("📱 WhatsApp")
             
             if st.form_submit_button("SUBIR CARGA"):
-                # Mapeo exacto según tu link de pre-llenado de cargas
                 data_em = {
                     "entry.610070407": eo,
                     "entry.170847116": ed,
@@ -151,7 +149,12 @@ with tab_empresa:
             for _, r in df_h.iloc[::-1].iterrows():
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
-                is_verif = "VERIFICADO" in str(r[8]).upper()
+                
+                # --- SOLUCIÓN AL PROBLEMA DE APROBACIÓN ---
+                # Ahora busca tanto "VERIFICADO" como "APROBADO" (en la columna I del Excel, que es índice 8)
+                estado = str(r[8]).upper().strip()
+                is_verif = "VERIFICADO" in estado or "APROBADO" in estado
+                
                 badge = '<div class="badge-verif">✅ VERIFICADO</div>' if is_verif else '<div class="badge-verif" style="color:#f1c40f; border-color:#f1c40f;">⏳ PENDIENTE</div>'
                 msg_em = urllib.parse.quote(f"*RETORNO MATCH* 🏢🤝\n\n¡Hola! Vi tu camión {r[3]} de {r[1]} a {r[2]}.")
                 st.markdown(f'<div class="card-white">{badge}<div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div><b>⚙️ EQUIPO:</b> {r[3]}<br><b>🆔 CUIT:</b> {r[5]} | <b>💳 LINTI:</b> {r[6]}<div style="display:flex;gap:10px;"><a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_em}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR</a><a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a></div></div>', unsafe_allow_html=True)
