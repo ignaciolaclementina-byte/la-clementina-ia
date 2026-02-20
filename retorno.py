@@ -19,7 +19,6 @@ EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acopla
 # --- 2. BASE DE DISTANCIAS REALES (BLINDADA) ---
 def obtener_distancia(origen, destino):
     o, d = str(origen).upper(), str(destino).upper()
-    # Diccionario de rutas reales (podes agregar más aquí abajo)
     km_data = {
         ("SAN JORGE", "ROSARIO"): 185, ("ROSARIO", "SAN JORGE"): 185,
         ("SAN JORGE", "SANTA FE"): 155, ("SANTA FE", "SAN JORGE"): 155,
@@ -36,13 +35,23 @@ def obtener_distancia(origen, destino):
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 3. ESTILOS ORIGINALES BLINDADOS ---
+# --- 3. ESTILOS ORIGINALES BLINDADOS + MEJORA RADAR ---
 st.markdown("""
 <style>
     .stApp {
         background-image: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
         url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important;
         background-size: cover !important; background-attachment: fixed !important;
+    }
+    /* Estilo del Radar (Marquesina) */
+    .radar-container {
+        background: rgba(231, 76, 60, 0.9);
+        color: white;
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-weight: bold;
+        border: 1px solid #f1c40f;
     }
     .stTabs [data-baseweb="tab"] {
         flex: 1; height: 70px !important; background-color: #2c3e50 !important;
@@ -67,7 +76,16 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- 4. FUNCIONES AUXILIARES ---
+# --- 4. MEJORA: RADAR DE ÚLTIMO MOMENTO ---
+st.markdown("""
+<div class="radar-container">
+    <marquee scrollamount="8">
+        ⚠️ ATENCIÓN: Nuevas cargas publicadas desde Rosario y San Jorge -- 🔥 Recordá verificar los papeles antes de cargar -- 🚛 RETORNO MATCH: El aliado del transportista santafesino.
+    </marquee>
+</div>
+""", unsafe_allow_html=True)
+
+# --- 5. FUNCIONES AUXILIARES ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
@@ -77,7 +95,7 @@ def es_hoy(f):
     try: return pd.to_datetime(f).date() == datetime.now().date()
     except: return False
 
-# --- 5. BÚSQUEDA ---
+# --- 6. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
 with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
 with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
