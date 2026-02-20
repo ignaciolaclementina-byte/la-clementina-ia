@@ -35,7 +35,7 @@ def obtener_distancia(origen, destino):
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 3. ESTILOS ORIGINALES BLINDADOS + MEJORA RADAR ---
+# --- 3. ESTILOS ORIGINALES BLINDADOS + RADAR ---
 st.markdown("""
 <style>
     .stApp {
@@ -43,15 +43,10 @@ st.markdown("""
         url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important;
         background-size: cover !important; background-attachment: fixed !important;
     }
-    /* Estilo del Radar (Marquesina) */
     .radar-container {
         background: rgba(231, 76, 60, 0.9);
-        color: white;
-        padding: 10px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        font-weight: bold;
-        border: 1px solid #f1c40f;
+        color: white; padding: 10px; border-radius: 10px;
+        margin-bottom: 20px; font-weight: bold; border: 1px solid #f1c40f;
     }
     .stTabs [data-baseweb="tab"] {
         flex: 1; height: 70px !important; background-color: #2c3e50 !important;
@@ -76,7 +71,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- 4. MEJORA: RADAR DE ÚLTIMO MOMENTO ---
+# --- 4. RADAR DE ÚLTIMO MOMENTO ---
 st.markdown("""
 <div class="radar-container">
     <marquee scrollamount="8">
