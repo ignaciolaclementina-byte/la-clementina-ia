@@ -46,7 +46,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- FUNCIONES ---
+# --- FUNCIONES DE VALIDACIÓN ---
 def enviar_a_google(url, data):
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     try:
@@ -59,6 +59,13 @@ def es_de_hoy(fecha_str):
         fecha_dt = pd.to_datetime(fecha_str).date()
         return fecha_dt == datetime.now().date()
     except: return False
+
+def limpiar_wsp(num):
+    # Remueve todo lo que no sea número
+    clean = "".join(filter(str.isdigit, str(num)))
+    if clean.startswith("0"): clean = clean[1:]
+    if not clean.startswith("549"): clean = "549" + clean
+    return clean
 
 # --- BÚSQUEDA ---
 c_b1, c_b2, c_act = st.columns([2, 2, 1])
@@ -80,23 +87,32 @@ with tab_chofer:
         with st.form("form_ch", clear_on_submit=True):
             o = st.text_input("📍 Ubicación"); d = st.text_input("🏁 Destino")
             e = st.selectbox("🚛 Equipo", ["Chasis", "Semi", "Sider", "Acoplado", "Batea", "Térmico"])
-            w = st.text_input("📱 WhatsApp"); cuit = st.text_input("🆔 CUIT")
+            w = st.text_input("📱 WhatsApp (Ej: 3406123456)"); cuit = st.text_input("🆔 CUIT (11 dígitos)")
             linti = st.text_input("💳 LINTI"); ld = st.text_input("📂 Link Documentación")
-            if st.form_submit_button("PUBLICAR"):
-                payload = {"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1542650763": cuit, "entry.1837643722": linti, "entry.769375120": ld, "entry.1574172378": w}
-                if enviar_a_google(URL_CHOFERES_POST, payload):
-                    st.success("✅ Publicado"); time.sleep(1); st.rerun()
+            
+            # Validación simple antes de enviar
+            btn_ch = st.form_submit_button("PUBLICAR")
+            if btn_ch:
+                cuit_c = "".join(filter(str.isdigit, cuit))
+                if len(cuit_c) != 11:
+                    st.error("❌ El CUIT debe tener 11 números.")
+                elif len(w) < 10:
+                    st.error("❌ WhatsApp inválido.")
+                else:
+                    payload = {"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1542650763": cuit_c, "entry.1837643722": linti, "entry.769375120": ld, "entry.1574172378": w}
+                    if enviar_a_google(URL_CHOFERES_POST, payload):
+                        st.success("✅ Publicado con éxito"); time.sleep(1); st.rerun()
 
     with col_d:
         try:
             df_c = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}").fillna("-")
             count_c = 0
             for _, r in df_c.iloc[::-1].iterrows():
-                # FILTRO DE FECHA (SOLO HOY) Y BÚSQUEDA
                 if es_de_hoy(r[0]): 
                     if b_origen.lower() in str(r[1]).lower() and b_destino.lower() in str(r[2]).lower():
+                        num_f = limpiar_wsp(r[4])
                         msg = urllib.parse.quote(f"Hola! Vi tu carga en *RETORNO MATCH*:\n📍 Origen: {r[1]}\n🏁 Destino: {r[2]}\n📦 Carga: {r[3]}\n¿Sigue disponible?")
-                        st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}<a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}<a href="https://api.whatsapp.com/send?phone={num_f}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
                         count_c += 1
             if count_c == 0: st.info("No hay cargas nuevas para hoy.")
         except: st.info("Actualizando...")
@@ -110,20 +126,23 @@ with tab_empresa:
             eo = st.text_input("📍 Origen"); ed = st.text_input("🏁 Destino"); ec = st.text_input("📦 Carga")
             en = st.text_input("Empresa"); ef = st.text_input("⏳ Cuándo"); ew = st.text_input("📱 WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
-                payload = {"entry.610070407": eo, "entry.170847116": ed, "entry.576675281": ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
-                if enviar_a_google(URL_CARGAS_POST, payload):
-                    st.success("✅ Carga subida"); time.sleep(1); st.rerun()
+                if len(ew) < 10:
+                    st.error("❌ WhatsApp inválido.")
+                else:
+                    payload = {"entry.610070407": eo, "entry.170847116": ed, "entry.576675281": ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
+                    if enviar_a_google(URL_CARGAS_POST, payload):
+                        st.success("✅ Carga subida"); time.sleep(1); st.rerun()
 
     with col_b:
         try:
             df_h = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}").fillna("-")
             count_h = 0
             for _, r in df_h.iloc[::-1].iterrows():
-                # FILTRO DE FECHA (SOLO HOY) Y BÚSQUEDA
                 if es_de_hoy(r[0]):
                     if b_origen.lower() in str(r[1]).lower() and b_destino.lower() in str(r[2]).lower():
+                        num_h = limpiar_wsp(r[4])
                         msg_h = urllib.parse.quote(f"Hola! Vi tu camión en *RETORNO MATCH*:\n🚛 Equipo: {r[3]}\n📍 Ubicación: {r[1]}\n🏁 Destino: {r[2]}\n¿Estás disponible?")
-                        st.markdown(f'<div class="card-white"><div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div><b>⚙️ EQUIPO:</b> {r[3]}<br><b>🆔 CUIT:</b> {r[5]}<div style="display:flex;gap:10px;"><a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_h}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR CHOFER</a><a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 DOCUMENTACIÓN</a></div></div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="card-white"><div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div><b>⚙️ EQUIPO:</b> {r[3]}<br><b>🆔 CUIT:</b> {r[5]}<div style="display:flex;gap:10px;"><a href="https://api.whatsapp.com/send?phone={num_h}&text={msg_h}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR CHOFER</a><a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 DOCUMENTACIÓN</a></div></div>', unsafe_allow_html=True)
                         count_h += 1
             if count_h == 0: st.info("No hay camiones publicados hoy.")
         except: st.info("Actualizando...")
