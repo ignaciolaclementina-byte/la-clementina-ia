@@ -65,7 +65,8 @@ st.markdown("""
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .badge-dist { background: #f1c40f; color: #2c3e50; padding: 4px 8px; border-radius: 6px; font-size: 14px; font-weight: bold; margin-left: 10px; border: 1px solid #2c3e50; }
-    .footer { text-align: center; color: white; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
+    .footer { text-align: center; color: white; padding: 40px; font-size: 12px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
+    .legal-box { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 20px; line-height: 1.2; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
     .btn-share { background-color: #3498db; color: white !important; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 15px; border: 1px solid white; }
 </style>
@@ -95,7 +96,7 @@ except:
 st.markdown(f"""
 <div class="radar-container">
     <marquee scrollamount="8">
-        🔥 EN VIVO: {count_ch} camiones y {count_ca} cargas hoy -- ⚠️ Nuevas publicaciones desde Rosario y San Jorge -- 🚛 Creado por Ignacio Diaz y sus legales.
+        🔥 EN VIVO: {count_ch} camiones y {count_ca} cargas hoy -- ⚠️ Nuevas publicaciones desde Rosario y San Jorge -- 🚛 Creado por Ignacio Diaz.
     </marquee>
 </div>
 """, unsafe_allow_html=True)
@@ -133,8 +134,6 @@ with t1:
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     urg = "🔥" in str(r[3])
                     km = obtener_distancia(r[1], r[2])
-                    
-                    # --- MENSAJE NIVEL PRO ---
                     msg_cargas = urllib.parse.quote(
                         f"─── 🚛 *RETORNO MATCH* ───\n"
                         f"📌 *NUEVA SOLICITUD DE CARGA*\n\n"
@@ -147,7 +146,6 @@ with t1:
                         f"━━━━━━━━━━━━━━━━━━\n"
                         f"✅ *¿Sigue disponible? Me interesa el viaje.*"
                     )
-                    
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km} KM </span>' if km else ''}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
@@ -167,15 +165,13 @@ with t2:
             en = st.text_input("Empresa"); ew = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR"):
                 payload = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": f"🔥 {ec}" if u_ch else ec, "entry.1930562861": en, "entry.1064058502": tm, "entry.466540450": ew}
-                requests.post(URL_CARGAS_POST, data=payload)
+                requests.post(URL_CARGAS_POST, payload)
                 st.success("¡Subida!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ch_raw.empty:
             for _, r in df_ch_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     km_h = obtener_distancia(r[1], r[2])
-                    
-                    # --- MENSAJE NIVEL PRO ---
                     msg_camiones = urllib.parse.quote(
                         f"─── 🚛 *RETORNO MATCH* ───\n"
                         f"📌 *UNIDAD DISPONIBLE ENCONTRADA*\n\n"
@@ -187,7 +183,6 @@ with t2:
                         f"━━━━━━━━━━━━━━━━━━\n"
                         f"✅ *¿Estás disponible? Tengo una carga para tu unidad.*"
                     )
-                    
                     st.markdown(f'''<div class="card-white">
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km_h} KM </span>' if km_h else ''}</div>
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}
@@ -197,22 +192,18 @@ with t2:
                         </div>
                     </div>''', unsafe_allow_html=True)
 
-# --- 7. FOOTER ---
+# --- 7. FOOTER & LEGALES ---
 url_oficial = "https://retorno-match-sanjorge.streamlit.app/"
-share_msg = urllib.parse.quote(
-    f"━━━━━━━━━━━━━━━━━━\n"
-    f"🚛 *RETORNO MATCH - LOGÍSTICA EN VIVO*\n"
-    f"━━━━━━━━━━━━━━━━━━\n\n"
-    f"✅ *Conseguí cargas y retornos al instante.*\n"
-    f"📍 *Ubicación:* San Jorge, Santa Fe.\n\n"
-    f"🔗 *INGRESAR AQUÍ:* {url_oficial}\n\n"
-    f"📌 _Plataforma creada por Ignacio Diaz_"
-)
+share_msg = urllib.parse.quote(f"🚛 *RETORNO MATCH - LOGÍSTICA EN VIVO*\n🔗 *INGRESAR:* {url_oficial}\n📌 _Plataforma creada por Ignacio Diaz_")
 
 st.markdown(f"""
 <div class="footer">
     <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
-    <p>Creado por <b>Ignacio Diaz y sus legales</b></p>
+    <p>Desarrollado por <b>Ignacio Diaz</b></p>
+    <div class="legal-box">
+        AVISO LEGAL: El desarrollador no se responsabiliza por los acuerdos, pagos o condiciones pactadas entre las partes. 
+        Esta herramienta es un nexo informativo de uso gratuito. <b>PROHIBIDA LA RÉPLICA TOTAL O PARCIAL</b> de esta interfaz y su código sin autorización expresa de Ignacio Diaz.
+    </div>
     <a href="https://api.whatsapp.com/send?text={share_msg}" target="_blank" class="btn-share">📲 RECOMENDAR APP POR WHATSAPP</a>
 </div>
 """, unsafe_allow_html=True)
