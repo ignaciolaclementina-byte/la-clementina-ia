@@ -43,7 +43,18 @@ st.markdown("""
         border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px;
     }
     .badge-verif { color: #2ecc71; font-weight: 900; font-size: 14px; border: 2px solid #2ecc71; padding: 4px 10px; border-radius: 20px; float: right; }
-    .footer { text-align: center; color: white; opacity: 0.8; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
+    
+    /* Footer Mejorado */
+    .footer { 
+        text-align: center; 
+        color: white; 
+        opacity: 0.9; 
+        padding: 40px; 
+        font-size: 14px; 
+        margin-top: 50px; 
+        border-top: 0.5px solid rgba(255,255,255,0.2);
+        user-select: text !important; /* Permite copiar el texto */
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -84,7 +95,6 @@ with tab_chofer:
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
                 
-                # Mensaje de WhatsApp mejorado para Choferes
                 msg_ch = urllib.parse.quote(f"*RETORNO MATCH* 🚛💨\n\n¡Hola! Me interesa la carga que publicaste:\n📍 *Origen:* {r[1]}\n🏁 *Destino:* {r[2]}\n📦 *Carga:* {r[3]}\n\n¿Sigue disponible?")
                 
                 st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}<a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_ch}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
@@ -114,7 +124,6 @@ with tab_empresa:
                 linti_chofer = r[6]
                 papeles_link = r[7]
                 
-                # Mensaje de WhatsApp mejorado para Empresas
                 msg_em = urllib.parse.quote(f"*RETORNO MATCH* 🏢🤝\n\n¡Hola! Vimos tu camión disponible en la App:\n🚛 *Ruta:* {r[1]} a {r[2]}\n⚙️ *Equipo:* {r[3]}\n\n¿Estás disponible para cargar?")
                 
                 is_verif = "VERIFICADO" in str(r[8]).upper()
@@ -146,7 +155,6 @@ with st.expander("🛠️ PANEL DE ADMINISTRACIÓN"):
         
         with col_adm1:
             st.markdown("#### 🚜 Gestión de Camiones")
-            # Enlace directo a la pestaña CHOFERES
             st.link_button("📂 ABRIR EXCEL: CHOFERES", 
                            f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_CHOFERES}", 
                            use_container_width=True)
@@ -154,7 +162,6 @@ with st.expander("🛠️ PANEL DE ADMINISTRACIÓN"):
 
         with col_adm2:
             st.markdown("#### 📦 Gestión de Cargas")
-            # Enlace directo a la pestaña CARGAS
             st.link_button("🗑️ ABRIR EXCEL: CARGAS", 
                            f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_CARGAS}", 
                            use_container_width=True)
@@ -163,4 +170,14 @@ with st.expander("🛠️ PANEL DE ADMINISTRACIÓN"):
     elif pw != "": 
         st.error("Clave incorrecta")
 
-st.markdown(f'<div class="footer"><p>© 2026 <b>RETORNO MATCH</b> - San Jorge, Santa Fe</p></div>', unsafe_allow_html=True)
+# --- FOOTER CON LEGALES Y CRÉDITOS ---
+st.markdown(f"""
+    <div class="footer">
+        <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
+        <p>Creado por <b>Ignacio Diaz</b></p>
+        <p style="font-size: 11px; color: rgba(255,255,255,0.6);">
+            <b>Aviso Legal:</b> Retorno Match es un tablero de anuncios. No intermedia en pagos ni se responsabiliza por la documentación de terceros. 
+            El uso de esta plataforma implica la aceptación de términos y condiciones.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
