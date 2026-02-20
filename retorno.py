@@ -24,7 +24,11 @@ def obtener_distancia(origen, destino):
         ("SAN JORGE", "ROSARIO"): 185, ("ROSARIO", "SAN JORGE"): 185,
         ("SAN JORGE", "SANTA FE"): 155, ("SANTA FE", "SAN JORGE"): 155,
         ("SAN JORGE", "CORDOBA"): 275, ("CORDOBA", "SAN JORGE"): 275,
-        ("SAN JORGE", "BUENOS AIRES"): 480, ("BUENOS AIRES", "SAN JORGE"): 480
+        ("SAN JORGE", "BUENOS AIRES"): 480, ("BUENOS AIRES", "SAN JORGE"): 480,
+        ("SANTA FE", "BUENOS AIRES"): 450, ("BUENOS AIRES", "SANTA FE"): 450,
+        ("ROSARIO", "BUENOS AIRES"): 300, ("BUENOS AIRES", "ROSARIO"): 300,
+        ("SANTA FE", "CORDOBA"): 350, ("CORDOBA", "SANTA FE"): 350,
+        ("SANTA FE", "ROSARIO"): 170, ("ROSARIO", "SANTA FE"): 170
     }
     for (r_o, r_d), valor in km_data.items():
         if r_o in o and r_d in d: return valor
@@ -32,7 +36,7 @@ def obtener_distancia(origen, destino):
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 3. ESTILOS ORIGINALES BLINDADOS + MEJORA DE VALIDACIÓN ---
+# --- 3. ESTILOS ORIGINALES BLINDADOS ---
 st.markdown("""
 <style>
     .stApp {
@@ -45,15 +49,22 @@ st.markdown("""
         color: white; padding: 10px; border-radius: 10px;
         margin-bottom: 20px; font-weight: bold; border: 1px solid #f1c40f;
     }
+    .stTabs [data-baseweb="tab"] {
+        flex: 1; height: 70px !important; background-color: #2c3e50 !important;
+        border-radius: 12px !important; color: white !important; font-size: 18px !important;
+        font-weight: 900 !important; margin: 5px; border: 1px solid #34495e !important;
+    }
+    .stTabs [aria-selected="true"] { background-color: #3498db !important; }
     .card-white {
         background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
         border-left: 10px solid #3498db; color: #333; position: relative; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-    .badge-valido {
-        background: #27ae60; color: white; padding: 3px 8px; border-radius: 4px; 
-        font-size: 10px; font-weight: bold; margin-bottom: 10px; display: inline-block;
+    .card-urgent {
+        background: #fff5f5 !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
+        border-left: 10px solid #e74c3c; color: #333;
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
+    .badge-dist { background: #f1c40f; color: #2c3e50; padding: 4px 8px; border-radius: 6px; font-size: 14px; font-weight: bold; margin-left: 10px; border: 1px solid #2c3e50; }
     .footer { text-align: center; color: white; padding: 40px; font-size: 12px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
     .legal-box { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 20px; line-height: 1.2; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
@@ -82,7 +93,13 @@ except:
     df_ch_raw, df_ca_raw, count_ch, count_ca = pd.DataFrame(), pd.DataFrame(), 0, 0
 
 # --- 5. RADAR ---
-st.markdown(f"""<div class="radar-container"><marquee scrollamount="8">🔥 EN VIVO: {count_ch} camiones y {count_ca} cargas hoy -- 🚛 Creado por Ignacio Diaz.</marquee></div>""", unsafe_allow_html=True)
+st.markdown(f"""
+<div class="radar-container">
+    <marquee scrollamount="8">
+        🔥 EN VIVO: {count_ch} camiones y {count_ca} cargas hoy -- ⚠️ Nuevas publicaciones desde Rosario y San Jorge -- 🚛 Creado por Ignacio Diaz.
+    </marquee>
+</div>
+""", unsafe_allow_html=True)
 
 # --- 6. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
@@ -97,7 +114,7 @@ with c4:
 
 t1, t2 = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-# --- PESTAÑA CHOFER (Mantenemos todo igual) ---
+# --- PESTAÑA CHOFER ---
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -115,35 +132,45 @@ with t1:
         if not df_ca_raw.empty:
             for _, r in df_ca_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
+                    urg = "🔥" in str(r[3])
                     km = obtener_distancia(r[1], r[2])
                     msg_cargas = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *NUEVA CARGA*\n📍 *ORIGEN:* {r[1]}\n🏁 *DESTINO:* {r[2]}\n📦 *MERCADERÍA:* {r[3]}\n🏢 *EMPRESA:* {r[5]}\n━━━━━━━━━━━━━━━━━━\n✅ *¿Sigue disponible?*")
-                    st.markdown(f'''<div class="card-white">
-                        <div class="route-txt">{r[1]} ➔ {r[2]}</div>
+                    st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
+                        <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km} KM </span>' if km else ''}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_cargas}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
                     </div>''', unsafe_allow_html=True)
 
-# --- PESTAÑA EMPRESA (Aquí incluimos el sello de validación) ---
+# --- PESTAÑA EMPRESA ---
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
         st.markdown("<h4 style='color:white;'>🏢 Publicar Carga</h4>", unsafe_allow_html=True)
-        # Formulario original...
+        with st.form("form_empresa", clear_on_submit=True):
+            eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
+            ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
+            ec = st.text_input("Carga"); u_ch = st.checkbox("🔥 MARCAR URGENTE")
+            tm = st.selectbox("Tipo de Mercadería", TIPOS_CARGA)
+            en = st.text_input("Empresa"); ew = st.text_input("WhatsApp")
+            if st.form_submit_button("SUBIR"):
+                payload = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": f"🔥 {ec}" if u_ch else ec, "entry.1930562861": en, "entry.1064058502": tm, "entry.466540450": ew}
+                requests.post(URL_CARGAS_POST, data=payload)
+                st.success("¡Subida!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ch_raw.empty:
             for _, r in df_ch_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     km_h = obtener_distancia(r[1], r[2])
-                    # Lógica de validación visual: si tiene link de papeles, mostramos sello verde
-                    tiene_doc = "✅ DOCUMENTACIÓN ADJUNTA" if len(str(r[7])) > 5 else "⚠️ PAPELES NO CARGADOS"
-                    color_doc = "#27ae60" if len(str(r[7])) > 5 else "#7f8c8d"
                     
-                    msg_camiones = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *UNIDAD DISPONIBLE*\n📍 *TRAYECTO:* {r[1]} ➔ {r[2]}\n🚚 *EQUIPO:* {r[3]}\n━━━━━━━━━━━━━━━━━━\n✅ *¿Estás disponible?*")
+                    # LOGICA DE DOCUMENTACION (DENTRO DE LA ESTRUCTURA ORIGINAL)
+                    status_papeles = "🟢 PAPEL CARGADO" if len(str(r[7])) > 10 else "⚪ SIN DOCUMENTACIÓN"
+                    
+                    msg_camiones = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *UNIDAD DISPONIBLE*\n📍 *TRAYECTO:* {r[1]} ➔ {r[2]}\n🚚 *EQUIPO:* {r[3]}\n🆔 *CUIT:* {r[5]}\n━━━━━━━━━━━━━━━━━━\n✅ *¿Estás disponible?*")
                     st.markdown(f'''<div class="card-white">
-                        <div class="badge-valido" style="background:{color_doc};">{tiene_doc}</div>
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km_h} KM </span>' if km_h else ''}</div>
-                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}
-                        <div style="display:flex;gap:10px; margin-top:10px;">
+                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}<br>
+                        <small style="color:gray;">{status_papeles}</small>
+                        <div style="display:flex;gap:10px;">
                             <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_camiones}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
                             <a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
                         </div>
@@ -152,9 +179,10 @@ with t2:
 # --- 7. FOOTER & LEGALES ---
 st.markdown(f"""
 <div class="footer">
+    <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
     <p>Desarrollado por <b>Ignacio Diaz</b></p>
     <div class="legal-box">
-        AVISO LEGAL: El desarrollador no se responsabiliza por acuerdos entre privados. 
+        AVISO LEGAL: El desarrollador no se responsabiliza por acuerdos entre las partes. 
         <b>PROHIBIDA LA RÉPLICA TOTAL O PARCIAL</b> de esta interfaz sin autorización de Ignacio Diaz.
     </div>
 </div>
