@@ -15,127 +15,159 @@ URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7c
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 2. ESTILOS ---
+# --- 2. ESTILOS POTENCIADOS ---
 st.markdown("""
     <style>
+    /* Fondo y Contenedor Principal */
     [data-testid="stAppViewContainer"] {
-        background-image: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
-                        url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075&auto=format&fit=crop') !important;
+        background-image: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), 
+                        url('https://images.unsplash.com/photo-1501700489910-fb245e85698b?q=80&w=2070&auto=format&fit=crop') !important;
         background-size: cover !important; background-attachment: fixed !important;
     }
+    
+    /* Estilo de Pestañas */
     .stTabs [data-baseweb="tab"] {
-        flex: 1; height: 70px !important; background-color: #2c3e50 !important;
-        border-radius: 12px !important; color: white !important; font-size: 18px !important;
-        font-weight: 900 !important; margin: 5px; border: 1px solid #34495e !important;
+        flex: 1; height: 60px !important; background-color: #1e272e !important;
+        border-radius: 10px 10px 0 0 !important; color: #ecf0f1 !important; font-size: 16px !important;
+        font-weight: 700 !important; margin: 2px; border: none !important;
     }
-    .stTabs [aria-selected="true"] { background-color: #3498db !important; }
-    .card-white {
-        background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        border-left: 10px solid #3498db; color: #333; box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+    .stTabs [aria-selected="true"] { background-color: #3498db !important; color: white !important; }
+
+    /* Tarjetas (Cards) */
+    .card-match {
+        background: #ffffff !important;
+        border-radius: 12px;
+        padding: 18px;
+        margin-bottom: 15px;
+        border-top: 5px solid #3498db;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        color: #2c3e50;
     }
-    .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
-    .btn-wsp { 
-        background-color: #25D366; color: white !important; padding: 12px; 
-        border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px;
+    .route-title { 
+        font-size: 20px; font-weight: 800; color: #2980b9; 
+        display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;
     }
-    .badge-verif { color: #2ecc71; font-weight: 900; font-size: 14px; border: 2px solid #2ecc71; padding: 4px 10px; border-radius: 20px; float: right; }
-    .footer { text-align: center; color: white; opacity: 0.8; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; }
+    .info-item { display: flex; align-items: center; gap: 5px; color: #555; }
+    
+    /* Botones */
+    .btn-container { display: flex; gap: 8px; margin-top: 15px; }
+    .btn-action {
+        flex: 1; text-align: center; padding: 10px; border-radius: 8px;
+        text-decoration: none; font-weight: 700; font-size: 14px; transition: 0.3s;
+    }
+    .btn-wsp { background-color: #25D366; color: white !important; }
+    .btn-wsp:hover { background-color: #1eb954; transform: translateY(-2px); }
+    .btn-doc { background-color: #3498db; color: white !important; }
+    .btn-doc:hover { background-color: #2980b9; transform: translateY(-2px); }
+    
+    .badge-status { 
+        font-size: 11px; font-weight: 900; padding: 3px 8px; border-radius: 5px; 
+        float: right; text-transform: uppercase;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:white; font-weight:900;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
 # --- BUSCADORES ---
-c_b1, c_b2, c_act = st.columns([2, 2, 1])
-with c_b1: b_origen = st.text_input("🔍 ORIGEN:").strip()
-with c_b2: b_destino = st.text_input("🏁 DESTINO:").strip()
-with c_act:
-    st.write("<br>", unsafe_allow_html=True)
-    if st.button("🔄 ACTUALIZAR", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
+with st.container():
+    c1, c2, c3 = st.columns([2, 2, 1])
+    with c1: b_origen = st.text_input("🔍 Origen de viaje", placeholder="Ej: Rosario").strip()
+    with c2: b_destino = st.text_input("🏁 Destino de viaje", placeholder="Ej: San Jorge").strip()
+    with c3:
+        st.write("<br>", unsafe_allow_html=True)
+        if st.button("🔄 ACTUALIZAR", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
 
-tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
+tab_chofer, tab_empresa = st.tabs(["🚀 BUSCO CARGAS (Soy Chofer)", "🏢 BUSCO CAMIONES (Soy Empresa)"])
 
-# --- PESTAÑA 1: SOY CHOFER (Ve Cargas) ---
+# ==========================================
+# PESTAÑA CHOFER: Ver Cargas de Empresas
+# ==========================================
 with tab_chofer:
-    col_i, col_d = st.columns([1, 2.2])
-    with col_i:
-        st.markdown("### 📢 Publicar mi Camión")
-        with st.form("form_ch", clear_on_submit=True):
-            o, d = st.text_input("📍 Ubicación Actual"), st.text_input("🏁 Destino")
+    col_f, col_l = st.columns([1, 2.2])
+    with col_f:
+        st.markdown("<div style='background:rgba(255,255,255,0.1); padding:20px; border-radius:10px; color:white;'>", unsafe_allow_html=True)
+        st.subheader("📢 Mi Camión")
+        with st.form("f_ch", clear_on_submit=True):
+            o, d = st.text_input("📍 Desde"), st.text_input("🏁 Hasta")
             e = st.selectbox("🚛 Equipo", ["Chasis", "Semi", "Sider", "Acoplado", "Batea", "Térmico"])
-            w = st.text_input("📱 WhatsApp (Sin 0 ni 15)")
+            w = st.text_input("📱 WhatsApp")
             cuit, linti = st.text_input("🆔 CUIT"), st.text_input("💳 LINTI")
-            link_doc = st.text_input("📂 Link Documentación")
-            if st.form_submit_button("PUBLICAR"):
-                # Mapeo según tu Formulario de Choferes
-                data = {"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1574172378": w, "entry.1542650763": cuit, "entry.1837643722": linti, "entry.769375120": link_doc}
+            doc = st.text_input("📂 Link Papeles")
+            if st.form_submit_button("PUBLICAR DISPONIBILIDAD", use_container_width=True):
+                data = {"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1574172378": w, "entry.1542650763": cuit, "entry.1837643722": linti, "entry.769375120": doc}
                 requests.post(URL_CHOFERES_POST, data=data)
-                st.success("✅ ¡Publicado!"); time.sleep(1); st.rerun()
-    with col_d:
-        st.markdown("### 📦 Cargas Disponibles")
+                st.success("¡Publicado!"); time.sleep(1); st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with col_l:
         try:
             df_c = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}").fillna("-")
             for _, r in df_c.iloc[::-1].iterrows():
-                # Col 1: Origen, Col 2: Destino, Col 3: Mercadería, Col 4: WhatsApp, Col 5: Empresa, Col 6: Cuándo
-                if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
-                if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
-                msg_ch = urllib.parse.quote(f"*RETORNO MATCH*\nMe interesa tu carga: {r[1]} a {r[2]}")
-                st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}<a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_ch}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
-        except: st.info("Buscando cargas...")
-
-# --- PESTAÑA 2: SOY EMPRESA (Ve Camiones) ---
-with tab_empresa:
-    col_a, col_b = st.columns([1, 2.2])
-    with col_a:
-        st.markdown("### 🏢 Publicar Carga")
-        with st.form("form_em", clear_on_submit=True):
-            eo, ed, ec, en = st.text_input("📍 Origen"), st.text_input("🏁 Destino"), st.text_input("📦 Carga"), st.text_input("Empresa")
-            ef, ew = st.selectbox("⏳ Cuándo", ["Hoy", "Mañana", "A convenir"]), st.text_input("📱 WhatsApp")
-            if st.form_submit_button("SUBIR CARGA"):
-                requests.post(URL_CARGAS_POST, data={"entry.610070407":eo,"entry.170847116":ed,"entry.576675281":ec,"entry.1930562861":en,"entry.1064058502":ef,"entry.466540450":ew})
-                st.success("✅ Publicada"); time.sleep(1); st.rerun()
-    with col_b:
-        st.markdown("### 🚛 Camiones Disponibles")
-        try:
-            df_h = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}").fillna("-")
-            for _, r in df_h.iloc[::-1].iterrows():
-                # SEGÚN TU EXCEL: Col 1: Origen, Col 2: Destino, Col 3: Equipo, Col 4: WhatsApp, Col 5: CUIT, Col 6: LINTI, Col 7: Papeles, Col 8: Estado
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
                 
-                # CORRECCIÓN DE COLUMNAS (Basado en tu imagen)
-                whatsapp_chofer = r[4]
-                cuit_chofer = r[5]
-                linti_chofer = r[6]
-                papeles_link = r[7]
-                
-                is_verif = "VERIFICADO" in str(r[8]).upper()
-                badge = '<div class="badge-verif">✅ VERIFICADO</div>' if is_verif else '<div class="badge-verif" style="color:#888; border-color:#888;">⏳ PENDIENTE</div>'
-                
+                msg = urllib.parse.quote(f"Hola {r[5]}! Vi tu carga de {r[1]} a {r[2]} en Retorno Match.")
                 st.markdown(f"""
-                <div class="card-white">
-                    {badge}
-                    <div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div>
-                    <div style="font-size:14px;margin-top:5px;">
-                        <b>⚙️ EQUIPO:</b> {r[3]}<br>
-                        <b>🆔 CUIT:</b> {cuit_chofer} | <b>💳 LINTI:</b> {linti_chofer}
+                <div class="card-match">
+                    <div class="route-title">📍 {r[1]} ➔ {r[2]}</div>
+                    <div class="info-grid">
+                        <div class="info-item">📦 <b>Carga:</b> {r[3]}</div>
+                        <div class="info-item">🏢 <b>Empresa:</b> {r[5]}</div>
+                        <div class="info-item">⏳ <b>Disponibilidad:</b> {r[6]}</div>
                     </div>
-                    <div style="display:flex;gap:10px;">
-                        <a href="https://api.whatsapp.com/send?phone=549{whatsapp_chofer}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR</a>
-                        <a href="{papeles_link}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
+                    <div class="btn-container">
+                        <a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg}" target="_blank" class="btn-action btn-wsp">💬 CONTACTAR EMPRESA</a>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-        except: st.info("Actualizando lista...")
+        except: st.info("Cargando oportunidades...")
 
-# --- PANEL DE CONTROL ---
-st.markdown("---")
-with st.expander("🛠️ ADMIN"):
-    pw = st.text_input("Clave", type="password")
-    if pw == ADMIN_PASSWORD:
-        st.dataframe(pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}"))
-    elif pw != "": st.error("Incorrecta")
+# ==========================================
+# PESTAÑA EMPRESA: Ver Camiones de Choferes
+# ==========================================
+with tab_empresa:
+    col_fe, col_le = st.columns([1, 2.2])
+    with col_fe:
+        st.markdown("<div style='background:rgba(255,255,255,0.1); padding:20px; border-radius:10px; color:white;'>", unsafe_allow_html=True)
+        st.subheader("🏢 Nueva Carga")
+        with st.form("f_em", clear_on_submit=True):
+            eo, ed, ec, en = st.text_input("📍 Origen"), st.text_input("🏁 Destino"), st.text_input("📦 Mercadería"), st.text_input("Empresa")
+            ef, ew = st.selectbox("⏳ Cuándo", ["Hoy", "Mañana", "A convenir"]), st.text_input("📱 WhatsApp")
+            if st.form_submit_button("PUBLICAR CARGA", use_container_width=True):
+                requests.post(URL_CARGAS_POST, data={"entry.610070407":eo,"entry.170847116":ed,"entry.576675281":ec,"entry.1930562861":en,"entry.1064058502":ef,"entry.466540450":ew})
+                st.success("Carga subida!"); time.sleep(1); st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown(f'<div class="footer"><p>© 2026 <b>RETORNO MATCH</b> - San Jorge, Santa Fe</p></div>', unsafe_allow_html=True)
+    with col_le:
+        try:
+            df_h = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}").fillna("-")
+            for _, r in df_h.iloc[::-1].iterrows():
+                if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
+                if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
+
+                is_verif = "VERIFICADO" in str(r[8]).upper()
+                st.markdown(f"""
+                <div class="card-match" style="border-top-color: {'#2ecc71' if is_verif else '#f1c40f'};">
+                    <span class="badge-status" style="background:{'#2ecc71' if is_verif else '#f1c40f'}; color:white;">
+                        {'Verificado' if is_verif else 'Pendiente'}
+                    </span>
+                    <div class="route-title">🚛 {r[1]} ➔ {r[2]}</div>
+                    <div class="info-grid">
+                        <div class="info-item">⚙️ <b>Equipo:</b> {r[3]}</div>
+                        <div class="info-item">🆔 <b>CUIT:</b> {r[5]}</div>
+                        <div class="info-item">💳 <b>LINTI:</b> {r[6]}</div>
+                    </div>
+                    <div class="btn-container">
+                        <a href="https://api.whatsapp.com/send?phone=549{r[4]}" target="_blank" class="btn-action btn-wsp">💬 HABLAR CON CHOFER</a>
+                        <a href="{r[7]}" target="_blank" class="btn-action btn-doc">📂 VER PAPELES</a>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        except: st.info("Sincronizando camiones...")
+
+# --- FOOTER ---
+st.markdown("<div style='text-align:center; padding:50px; color:white; opacity:0.6; font-size:12px;'>© 2026 RETORNO MATCH - San Jorge, Santa Fe | Desarrollado por Ignacio Díaz</div>", unsafe_allow_html=True)
