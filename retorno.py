@@ -17,21 +17,9 @@ PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBU
 EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
 TIPOS_CARGA = ["General", "Paletizado", "Granel", "Peligrosa", "Refrigerada"]
 
-# --- 2. GESTIÓN DE ESTADO PARA PUBLICIDAD ---
+# --- 2. GESTIÓN DE ESTADO (ANUNCIOS) ---
 if 'anuncios' not in st.session_state:
     st.session_state.anuncios = "🛞 GOMERÍA EL AUXILIO -- 🔧 TALLER NACHO -- 🛡️ SEGUROS RUTA"
-
-def obtener_distancia(origen, destino):
-    o, d = str(origen).upper(), str(destino).upper()
-    km_data = {
-        ("SAN JORGE", "ROSARIO"): 185, ("ROSARIO", "SAN JORGE"): 185,
-        ("SAN JORGE", "SANTA FE"): 155, ("SANTA FE", "SAN JORGE"): 155,
-        ("SAN JORGE", "CORDOBA"): 275, ("CORDOBA", "SAN JORGE"): 275,
-        ("SAN JORGE", "BUENOS AIRES"): 480, ("BUENOS AIRES", "SAN JORGE"): 480
-    }
-    for (r_o, r_d), valor in km_data.items():
-        if r_o in o and r_d in d: return valor
-    return None
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
@@ -65,7 +53,6 @@ st.markdown("""
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .footer { text-align: center; color: white; padding: 40px; font-size: 12px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
-    .admin-box { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; margin-top: 20px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -92,13 +79,7 @@ except:
     df_ch_raw, df_ca_raw, count_ch, count_ca = pd.DataFrame(), pd.DataFrame(), 0, 0
 
 # --- 5. RADAR DINÁMICO ---
-st.markdown(f"""
-<div class="radar-container">
-    <marquee scrollamount="8">
-        🔥 EN VIVO: {count_ch} camiones y {count_ca} cargas hoy -- {st.session_state.anuncios} -- 🚛 Creado por Ignacio Diaz.
-    </marquee>
-</div>
-""", unsafe_allow_html=True)
+st.markdown(f"""<div class="radar-container"><marquee scrollamount="8">🔥 EN VIVO: {count_ch} camiones y {count_ca} cargas hoy -- {st.session_state.anuncios} -- 🚛 Creado por Ignacio Diaz.</marquee></div>""", unsafe_allow_html=True)
 
 # --- 6. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
@@ -113,7 +94,7 @@ with c4:
 
 t1, t2 = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-# (Contenido de pestañas Chofer y Empresa mantenido igual...)
+# --- CONTENIDO DE PESTAÑAS (IGUAL A LA VERSIÓN ANTERIOR) ---
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -170,12 +151,23 @@ with t2:
                         </div>
                     </div>''', unsafe_allow_html=True)
 
-# --- 7. PANEL DE ADMINISTRACIÓN OCULTO (SOLO IGNACIO) ---
+# --- 7. PANEL DE ADMIN CON TECLADO DE EMOJIS ---
+st.markdown("---")
 with st.expander("⚙️ GESTIÓN DE ANUNCIOS (ADMIN)"):
-    nuevo_anuncio = st.text_area("Escribí los anuncios separados por '--':", st.session_state.anuncios)
-    if st.button("🚀 ACTUALIZAR RADAR AHORA"):
+    st.write("Seleccioná un emoji para copiarlo al portapapeles o úsalos de guía:")
+    
+    # Botonera de emojis rápidos
+    cols = st.columns(10)
+    emojis = ["🚛", "📦", "🛞", "🔧", "⛽", "🛡️", "🔥", "📍", "📞", "⭐"]
+    for i, em in enumerate(emojis):
+        if cols[i].button(em):
+            st.info(f"Copiá este emoji: {em}")
+
+    nuevo_anuncio = st.text_area("Editá tus anuncios aquí (Usá '--' para separar):", st.session_state.anuncios, height=100)
+    
+    if st.button("🚀 GUARDAR Y ACTUALIZAR RADAR"):
         st.session_state.anuncios = nuevo_anuncio
-        st.success("¡Radar actualizado!"); time.sleep(1); st.rerun()
+        st.success("¡Publicidad actualizada!"); time.sleep(1); st.rerun()
 
 # --- 8. FOOTER & LEGALES ---
 st.markdown(f"""
