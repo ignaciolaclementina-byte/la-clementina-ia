@@ -67,6 +67,7 @@ st.markdown("""
     .badge-dist { background: #f1c40f; color: #2c3e50; padding: 4px 8px; border-radius: 6px; font-size: 14px; font-weight: bold; margin-left: 10px; border: 1px solid #2c3e50; }
     .badge-type { background: #f1f2f6; color: #2f3542; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 800; border: 1px solid #ced6e0; margin-top: 8px; display: inline-block; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
+    .btn-share { background-color: #3498db; color: white !important; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 15px; border: 1px solid white; }
     .footer { text-align: center; color: white; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
 </style>
 """, unsafe_allow_html=True)
@@ -92,7 +93,7 @@ def es_hoy(f):
     try: return pd.to_datetime(f).date() == datetime.now().date()
     except: return False
 
-# --- 6. BÚSQUEDA (INTERFAZ ORIGINAL RESTAURADA) ---
+# --- 6. BÚSQUEDA (INTERFAZ ORIGINAL BLINDADA) ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
 with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
 with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
@@ -168,9 +169,11 @@ with t2:
         except: st.info("Buscando camiones...")
 
 # --- FOOTER (BLINDADO - IGNACIO DIAZ) ---
+share_msg = urllib.parse.quote("¡Mirá esta App para conseguir retornos rápido! 🚛 RETORNO MATCH: https://retornomatch.streamlit.app/")
 st.markdown(f"""
 <div class="footer">
     <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
     <p>Creado por <b>Ignacio Diaz y sus legales</b></p>
+    <a href="https://api.whatsapp.com/send?text={share_msg}" target="_blank" class="btn-share">📲 RECOMENDAR APP POR WHATSAPP</a>
 </div>
 """, unsafe_allow_html=True)
