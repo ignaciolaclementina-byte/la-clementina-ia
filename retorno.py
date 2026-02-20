@@ -18,7 +18,7 @@ PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBU
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 2. INTERFAZ QUE DEBO RECORDAR (CSS BLINDADO) ---
+# --- 2. ESTILOS ORIGINALES BLINDADOS ---
 st.markdown("""
 <style>
     .stApp {
@@ -35,11 +35,11 @@ st.markdown("""
     .stTabs [aria-selected="true"] { background-color: #3498db !important; }
     .card-white {
         background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        border-left: 10px solid #3498db; color: #333; position: relative;
+        border-left: 10px solid #3498db; color: #333; position: relative; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     .card-urgent {
         background: #fff5f5 !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        border-left: 10px solid #e74c3c; color: #333; position: relative;
+        border-left: 10px solid #e74c3c; color: #333; position: relative; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .badge-vistos { 
@@ -51,96 +51,111 @@ st.markdown("""
         border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px;
     }
     .footer { text-align: center; color: white; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
+    .legal { font-size: 10px; color: #bdc3c7; margin-top: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- 3. FUNCIONES LÓGICAS ---
+# --- 3. FUNCIONES ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
     return "549" + clean if not clean.startswith("549") else clean
 
 def es_hoy(f):
-    try: return pd.to_datetime(f).date() == datetime.now().date()
-    except: return False
+    try:
+        return pd.to_datetime(f).date() == datetime.now().date()
+    except:
+        return False
 
-# --- 4. FILTROS ---
+# --- 4. BÚSQUEDA ---
 c1, c2, c3 = st.columns([2, 2, 1])
-with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
-with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
+with c1:
+    b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
+with c2:
+    b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
 with c3:
     st.write("<br>", unsafe_allow_html=True)
-    if st.button("🔄 ACTUALIZAR", use_container_width=True): st.rerun()
+    if st.button("🔄 ACTUALIZAR", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
 
 t1, t2 = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-# --- PESTAÑA CHOFER (Busca Cargas) ---
+# --- PESTAÑA CHOFER ---
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
-        st.markdown("<h3 style='color:white;'>📢 Publicar Camión</h3>", unsafe_allow_html=True)
-        with st.form("f_ch", clear_on_submit=True):
-            o = st.selectbox("Origen", PROVINCIAS[1:]); lo = st.text_input("Localidad")
-            d = st.selectbox("Destino", PROVINCIAS[1:]); ld = st.text_input("Localidad")
+        st.markdown("<h4 style='color:white;'>📢 Publicar Camión</h4>", unsafe_allow_html=True)
+        with st.form("form_chofer", clear_on_submit=True):
+            o = st.selectbox("Provincia Origen", PROVINCIAS[1:])
+            lo = st.text_input("Localidad Origen")
+            d = st.selectbox("Provincia Destino", PROVINCIAS[1:])
+            ld = st.text_input("Localidad Destino")
             e = st.selectbox("Equipo", ["Chasis", "Semi", "Sider", "Batea", "Térmico"])
-            w = st.text_input("WhatsApp"); cu = st.text_input("CUIT")
-            doc = st.text_input("Link Documentación")
+            w = st.text_input("WhatsApp")
+            cu = st.text_input("CUIT")
+            doc = st.text_input("Link Papeles")
             if st.form_submit_button("PUBLICAR"):
-                requests.post(URL_CHOFERES_POST, data={"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.769375120": doc, "entry.1574172378": w})
-                st.success("✅ Publicado"); time.sleep(1); st.rerun()
+                data = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.769375120": doc, "entry.1574172378": w}
+                requests.post(URL_CHOFERES_POST, data=data)
+                st.success("Publicado!"); time.sleep(1); st.rerun()
     with col_r1:
         try:
-            df = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
-            for _, r in df.iloc[::-1].iterrows():
-                if es_hoy(r[0]) and (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()):
+            df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
+            for _, r in df_ca.iloc[::-1].iterrows():
+                if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     urg = "🔥" in str(r[3])
                     v = random.randint(15, 60)
-                    msg = urllib.parse.quote(f"Hola! Vi tu carga {r[3]} en Retorno Match. ¿Sigue disponible?")
+                    msg = urllib.parse.quote(f"Hola! Vi tu carga *{r[3]}* en Retorno Match. ¿Sigue disponible?")
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
                         <div class="badge-vistos">👁️ {v} interesados</div>
                         <div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>Carga:</b> {r[3]} | <b>Empresa:</b> {r[5]}<br><b>Sale:</b> {r[6]}
+                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
                     </div>''', unsafe_allow_html=True)
-        except: st.info("Buscando cargas...")
+        except:
+            st.info("Buscando cargas del día...")
 
-# --- PESTAÑA EMPRESA (Busca Camiones) ---
+# --- PESTAÑA EMPRESA ---
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
-        st.markdown("<h3 style='color:white;'>🏢 Publicar Carga</h3>", unsafe_allow_html=True)
-        with st.form("f_em", clear_on_submit=True):
-            eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Localidad")
-            ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Localidad")
-            ec = st.text_input("Carga"); urg_ch = st.checkbox("🔥 MARCAR URGENTE")
+        st.markdown("<h4 style='color:white;'>🏢 Publicar Carga</h4>", unsafe_allow_html=True)
+        with st.form("form_empresa", clear_on_submit=True):
+            eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
+            ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
+            ec = st.text_input("Carga"); u_ch = st.checkbox("🔥 MARCAR URGENTE")
             en = st.text_input("Empresa"); ef = st.text_input("Cuándo"); ew = st.text_input("WhatsApp")
-            if st.form_submit_button("SUBIR CARGA"):
-                requests.post(URL_CARGAS_POST, data={"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": f"🔥 {ec}" if urg_ch else ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew})
-                st.success("✅ Subida"); time.sleep(1); st.rerun()
+            if st.form_submit_button("SUBIR"):
+                payload = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": f"🔥 {ec}" if u_ch else ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
+                requests.post(URL_CARGAS_POST, data=payload)
+                st.success("Subida!"); time.sleep(1); st.rerun()
     with col_r2:
         try:
-            df2 = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
-            for _, r in df2.iloc[::-1].iterrows():
-                if es_hoy(r[0]) and (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()):
-                    v2 = random.randint(5, 30)
-                    msg2 = urllib.parse.quote(f"Hola! Vi tu camion en Retorno Match. ¿Estas disponible?")
+            df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
+            for _, r in df_ch.iloc[::-1].iterrows():
+                if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
+                    v_h = random.randint(5, 30)
+                    msg_h = urllib.parse.quote(f"Hola! Vi tu camión *{r[3]}* en Retorno Match. ¿Estás disponible?")
                     st.markdown(f'''<div class="card-white">
-                        <div class="badge-vistos">👁️ {v2} vistas</div>
+                        <div class="badge-vistos">👁️ {v_h} vistas</div>
                         <div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>Equipo:</b> {r[3]} | <b>CUIT:</b> {r[5]}
+                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}
                         <div style="display:flex;gap:10px;">
-                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg2}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
+                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_h}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
                             <a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
                         </div>
                     </div>''', unsafe_allow_html=True)
-        except: st.info("Buscando camiones...")
+        except:
+            st.info("Buscando camiones del día...")
 
 # --- FOOTER ---
 st.markdown(f"""
 <div class="footer">
     <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
     <p>Creado por <b>Ignacio Diaz y sus legales</b></p>
+    <p class="legal">Aviso: Prohibida la reproducción total o parcial de esta interfaz.</p>
 </div>
 """, unsafe_allow_html=True)
