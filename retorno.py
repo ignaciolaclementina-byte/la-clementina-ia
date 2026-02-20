@@ -23,7 +23,7 @@ PROVINCIAS = [
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 2. INTERFAZ BLINDADA (CSS ORIGINAL) ---
+# --- 2. ESTILOS ORIGINALES (LA BASE QUE RECORDARÉ SIEMPRE) ---
 st.markdown("""
     <style>
     .stApp {
@@ -48,7 +48,7 @@ st.markdown("""
         position: relative;
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
-    .vistos-badge { 
+    .badge-vistos { 
         position: absolute; top: 15px; right: 20px; background: #f1c40f; 
         color: #2c3e50; padding: 2px 8px; border-radius: 5px; font-size: 12px; font-weight: bold;
     }
@@ -57,6 +57,7 @@ st.markdown("""
         border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px;
     }
     .footer { text-align: center; color: white; opacity: 0.9; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
+    .legal { font-size: 10px; color: #bdc3c7; margin-top: 10px; line-height: 1.2; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -92,16 +93,16 @@ with c_act:
 
 tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-# --- PESTAÑA 1: CHOFER (BUSCA CARGAS) ---
+# --- PESTAÑA 1: CHOFER ---
 with tab_chofer:
     col_i, col_d = st.columns([1, 2.2])
     with col_i:
         st.markdown("<h3 style='color:white;'>📢 Publicar Camión</h3>", unsafe_allow_html=True)
         with st.form("form_ch", clear_on_submit=True):
-            o = st.selectbox("📍 Origen", PROVINCIAS[1:])
-            loc_o = st.text_input("Localidad")
-            d = st.selectbox("🏁 Destino", PROVINCIAS[1:])
-            loc_d = st.text_input("Localidad")
+            o = st.selectbox("📍 Provincia Origen", PROVINCIAS[1:])
+            loc_o = st.text_input("Localidad Origen")
+            d = st.selectbox("🏁 Provincia Destino", PROVINCIAS[1:])
+            loc_d = st.text_input("Localidad Destino")
             e = st.selectbox("🚛 Equipo", ["Chasis", "Semi", "Sider", "Acoplado", "Batea", "Térmico"])
             w = st.text_input("📱 WhatsApp"); cuit = st.text_input("🆔 CUIT")
             ld = st.text_input("📂 Link Documentación")
@@ -121,38 +122,36 @@ with tab_chofer:
                 if es_de_hoy(r[0]): 
                     if (b_origen == "CUALQUIERA" or b_origen in str(r[1]).upper()) and (b_destino == "CUALQUIERA" or b_destino in str(r[2]).upper()):
                         num_f = limpiar_wsp(r[4])
-                        es_urg = "🔥" in str(r[3])
-                        v = random.randint(15, 60)
-                        msg = urllib.parse.quote(f"Hola! Soy chofer, vi tu carga en *RETORNO MATCH*:\n📍 Origen: {r[1]}\n🏁 Destino: {r[2]}\n📦 Carga: {r[3]}\n¿Sigue disponible?")
-                        st.markdown(f'''<div class="{"card-urgent" if es_urg else "card-white"}">
-                            <div class="vistos-badge">👁️ {v} interesados</div>
+                        es_urgente = "🔥" in str(r[3])
+                        v = random.randint(12, 55)
+                        msg = urllib.parse.quote(f"Hola! Vi tu carga en *RETORNO MATCH*:\n📍 Origen: {r[1]}\n🏁 Destino: {r[2]}\n📦 Carga: {r[3]}")
+                        st.markdown(f'''<div class="{"card-urgent" if es_urgente else "card-white"}">
+                            <div class="badge-vistos">👁️ {v} interesados</div>
                             <div class="route-txt">📍 {r[1]} ➔ {r[2]}</div>
-                            <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
-                            <b>⏳ SALE:</b> {r[6]}
+                            {"<b style='color:red;'>🔥 URGENTE</b><br>" if es_urgente else ""}
+                            <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}
                             <a href="https://api.whatsapp.com/send?phone={num_f}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
                         </div>''', unsafe_allow_html=True)
                         count_c += 1
-            if count_c == 0: st.info("No hay cargas para esta ruta hoy.")
-        except: st.info("Actualizando datos...")
+            if count_c == 0: st.info("No hay cargas para hoy.")
+        except: st.info("Cargando base de datos...")
 
-# --- PESTAÑA 2: EMPRESA (BUSCA CAMIONES) ---
+# --- PESTAÑA 2: EMPRESA ---
 with tab_empresa:
     col_a, col_b = st.columns([1, 2.2])
     with col_a:
         st.markdown("<h3 style='color:white;'>🏢 Publicar Carga</h3>", unsafe_allow_html=True)
         with st.form("form_em", clear_on_submit=True):
-            eo = st.selectbox("📍 Origen", PROVINCIAS[1:])
-            loc_eo = st.text_input("Localidad")
-            ed = st.selectbox("🏁 Destino", PROVINCIAS[1:])
-            loc_ed = st.text_input("Localidad")
+            eo = st.selectbox("📍 Origen", PROVINCIAS[1:]); loc_eo = st.text_input("Localidad Origen")
+            ed = st.selectbox("🏁 Destino", PROVINCIAS[1:]); loc_ed = st.text_input("Localidad Destino")
             ec = st.text_input("📦 Carga")
-            urg_check = st.checkbox("🔥 MARCAR COMO URGENTE")
+            es_urg_check = st.checkbox("🔥 MARCAR COMO URGENTE")
             en = st.text_input("Empresa"); ef = st.text_input("⏳ Cuándo"); ew = st.text_input("📱 WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
-                c_final = f"🔥 {ec}" if urg_check else ec
-                payload = {"entry.610070407": f"{eo} ({loc_eo})", "entry.170847116": f"{ed} ({loc_ed})", "entry.576675281": c_final, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
+                txt_c = f"🔥 {ec}" if es_urg_check else ec
+                payload = {"entry.610070407": f"{eo} ({loc_eo})", "entry.170847116": f"{ed} ({loc_ed})", "entry.576675281": txt_c, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
                 if enviar_a_google(URL_CARGAS_POST, payload):
-                    st.success("✅ Carga subida"); time.sleep(1); st.rerun()
+                    st.success("✅ Subido"); time.sleep(1); st.rerun()
 
     with col_b:
         try:
@@ -162,10 +161,10 @@ with tab_empresa:
                 if es_de_hoy(r[0]):
                     if (b_origen == "CUALQUIERA" or b_origen in str(r[1]).upper()) and (b_destino == "CUALQUIERA" or b_destino in str(r[2]).upper()):
                         num_h = limpiar_wsp(r[4])
-                        v_h = random.randint(5, 30)
-                        msg_h = urllib.parse.quote(f"Hola! Soy de una empresa, vi tu camión en *RETORNO MATCH*:\n🚛 Equipo: {r[3]}\n📍 Ubicación: {r[1]}\n🏁 Destino: {r[2]}\n¿Estás disponible?")
+                        v_h = random.randint(5, 25)
+                        msg_h = urllib.parse.quote(f"Hola! Vi tu camión en *RETORNO MATCH*:\n🚛 Equipo: {r[3]}\n📍 Ubicación: {r[1]}")
                         st.markdown(f'''<div class="card-white">
-                            <div class="vistos-badge">👁️ {v_h} vistas</div>
+                            <div class="badge-vistos">👁️ {v_h} vistas</div>
                             <div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div>
                             <b>⚙️ EQUIPO:</b> {r[3]}<br><b>🆔 CUIT:</b> {r[5]}
                             <div style="display:flex;gap:10px;">
@@ -174,13 +173,17 @@ with tab_empresa:
                             </div>
                         </div>''', unsafe_allow_html=True)
                         count_h += 1
-            if count_h == 0: st.info("No hay camiones en esta ruta hoy.")
-        except: st.info("Actualizando datos...")
+            if count_h == 0: st.info("No hay camiones hoy.")
+        except: st.info("Cargando base de datos...")
 
-# --- FOOTER ---
+# --- FOOTER BLINDADO ---
 st.markdown(f"""
     <div class="footer">
         <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
         <p>Creado por <b>Ignacio Diaz y sus legales</b></p>
+        <div class="legal">
+            <b>AVISO LEGAL:</b> Queda estrictamente prohibida la reproducción total o parcial de esta estructura e interfaz bajo apercibimiento de ley. 
+            RETORNO MATCH actúa como nexo informativo.
+        </div>
     </div>
     """, unsafe_allow_html=True)
