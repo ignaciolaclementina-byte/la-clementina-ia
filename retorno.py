@@ -13,13 +13,19 @@ GID_CARGAS = "1267917528"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 
+# ==========================================================
+# --- 2. GESTIÓN DE SOCIOS Y PUBLICIDAD (TUS INGRESOS) ---
+# ==========================================================
+# Poné aquí los CUITs de choferes o Nombres de empresas que PAGARON su membresía
+SOCIOS_VERIFICADOS = ["20334445551", "LOGISTICA DIAZ", "TRANSPORTES SAN JORGE", "30708090101"]
+
+if 'anuncios' not in st.session_state:
+    st.session_state.anuncios = "📢 ¡NUEVO! Verificá tu unidad o empresa para aparecer primero -- Consultas aquí -- 🚛 Creado por Ignacio Diaz"
+# ==========================================================
+
 PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBUT", "CORDOBA", "CORRIENTES", "ENTRE RIOS", "FORMOSA", "JUJUY", "LA PAMPA", "LA RIOJA", "MENDOZA", "MISIONES", "NEUQUEN", "RIO NEGRO", "SALTA", "SAN JUAN", "SAN LUIS", "SANTA CRUZ", "SANTA FE", "SANTIAGO DEL ESTERO", "TIERRA DEL FUEGO", "TUCUMAN"]
 EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
 TIPOS_CARGA = ["General", "Paletizado", "Granel", "Peligrosa", "Refrigerada"]
-
-# --- 2. GESTIÓN DE ESTADO (ANUNCIOS) ---
-if 'anuncios' not in st.session_state:
-    st.session_state.anuncios = "🛞 GOMERÍA EL AUXILIO -- 🔧 TALLER NACHO -- 🛡️ SEGUROS RUTA"
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
@@ -49,6 +55,10 @@ st.markdown("""
     .card-urgent {
         background: #fff5f5 !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
         border-left: 10px solid #e74c3c; color: #333;
+    }
+    .card-premium {
+        background: #fffcf0 !important; border: 2px solid #f1c40f !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
+        border-left: 10px solid #f1c40f !important; color: #333;
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .footer { text-align: center; color: white; padding: 40px; font-size: 12px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
@@ -94,7 +104,7 @@ with c4:
 
 t1, t2 = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-# --- CONTENIDO DE PESTAÑAS (IGUAL A LA VERSIÓN ANTERIOR) ---
+# --- PESTAÑA CHOFER (Mira Cargas) ---
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -113,16 +123,20 @@ with t1:
             for _, r in df_ca_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     urg = "🔥" in str(r[3])
+                    es_socio = str(r[5]).upper() in [s.upper() for s in SOCIOS_VERIFICADOS]
+                    verif_tag = " ✅ <span style='color:#3498db; font-size:14px;'>EMPRESA VERIFICADA</span>" if es_socio else ""
                     msg_share = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *CARGA DISPONIBLE*\n📍 *RUTA:* {r[1]} -> {r[2]}\n📦 *CARGA:* {r[3]}\n🔗 *VER EN APP:* {url_app}")
-                    st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
+                    
+                    st.markdown(f'''<div class="{"card-premium" if es_socio else ("card-urgent" if urg else "card-white")}">
                         <div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
+                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}{verif_tag}<br>
                         <div style="display:flex; gap:10px;">
                             <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONSULTAR</a>
                             <a href="https://api.whatsapp.com/send?text={msg_share}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📲 COMPARTIR</a>
                         </div>
                     </div>''', unsafe_allow_html=True)
 
+# --- PESTAÑA EMPRESA (Mira Choferes) ---
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -141,33 +155,29 @@ with t2:
         if not df_ch_raw.empty:
             for _, r in df_ch_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
+                    es_premium = str(r[5]) in SOCIOS_VERIFICADOS
+                    prem_tag = " ⭐ <span style='color:#f1c40f; font-size:14px;'>CHOFER PREMIUM</span>" if es_premium else ""
                     msg_share_ch = urllib.parse.quote(f"─── 🚛 *RETORNO MATCH* ───\n📌 *UNIDAD DISPONIBLE*\n📍 *RUTA:* {r[1]} -> {r[2]}\n🚚 *EQUIPO:* {r[3]}\n🔗 *VER EN APP:* {url_app}")
-                    st.markdown(f'''<div class="card-white">
+                    
+                    st.markdown(f'''<div class="{"card-premium" if es_premium else "card-white"}">
                         <div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}<br>
+                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}{prem_tag}<br>
                         <div style="display:flex;gap:10px;">
                             <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
                             <a href="https://api.whatsapp.com/send?text={msg_share_ch}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📲 COMPARTIR</a>
                         </div>
                     </div>''', unsafe_allow_html=True)
 
-# --- 7. PANEL DE ADMIN CON TECLADO DE EMOJIS ---
+# --- 7. PANEL DE ADMIN ---
 st.markdown("---")
-with st.expander("⚙️ GESTIÓN DE ANUNCIOS (ADMIN)"):
-    st.write("Seleccioná un emoji para copiarlo al portapapeles o úsalos de guía:")
-    
-    # Botonera de emojis rápidos
-    cols = st.columns(10)
-    emojis = ["🚛", "📦", "🛞", "🔧", "⛽", "🛡️", "🔥", "📍", "📞", "⭐"]
+with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
+    cols = st.columns(10); emojis = ["🚛", "📦", "🛞", "🔧", "⛽", "🛡️", "🔥", "📍", "📞", "⭐"]
     for i, em in enumerate(emojis):
-        if cols[i].button(em):
-            st.info(f"Copiá este emoji: {em}")
-
-    nuevo_anuncio = st.text_area("Editá tus anuncios aquí (Usá '--' para separar):", st.session_state.anuncios, height=100)
-    
-    if st.button("🚀 GUARDAR Y ACTUALIZAR RADAR"):
+        if cols[i].button(em): st.info(f"Copiá: {em}")
+    nuevo_anuncio = st.text_area("Radar Publicitario:", st.session_state.anuncios)
+    if st.button("🚀 ACTUALIZAR"):
         st.session_state.anuncios = nuevo_anuncio
-        st.success("¡Publicidad actualizada!"); time.sleep(1); st.rerun()
+        st.rerun()
 
 # --- 8. FOOTER & LEGALES ---
 st.markdown(f"""
