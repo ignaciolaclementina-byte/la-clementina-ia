@@ -17,7 +17,15 @@ PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBU
 EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
 TIPOS_CARGA = ["General", "Paletizado", "Granel", "Peligrosa", "Refrigerada"]
 
-# --- 2. BASE DE DISTANCIAS REALES ---
+# --- 2. GESTIÓN DE PUBLICIDAD (NUEVA VÍA DE INGRESOS) ---
+# Aquí podés agregar o quitar anuncios que hayas cobrado
+ANUNCIOS_PAGOS = [
+    "🛞 GOMERÍA 'EL AUXILIO' - Descuento a camioneros en San Jorge",
+    "🛡️ SEGUROS RUTA - Asegurá tu carga hoy mismo",
+    "🔧 TALLER INTEGRAL - Reparaciones rápidas en Rosario",
+    "🥩 PARRILLA EL CRUCE - Menú especial transportistas"
+]
+
 def obtener_distancia(origen, destino):
     o, d = str(origen).upper(), str(destino).upper()
     km_data = {
@@ -88,8 +96,15 @@ try:
 except:
     df_ch_raw, df_ca_raw, count_ch, count_ca = pd.DataFrame(), pd.DataFrame(), 0, 0
 
-# --- 5. RADAR ---
-st.markdown(f"""<div class="radar-container"><marquee scrollamount="8">🔥 EN VIVO: {count_ch} camiones y {count_ca} cargas hoy -- 🚛 Creado por Ignacio Diaz.</marquee></div>""", unsafe_allow_html=True)
+# --- 5. RADAR DINÁMICO (MONETIZADO) ---
+anuncios_texto = " -- ".join(ANUNCIOS_PAGOS)
+st.markdown(f"""
+<div class="radar-container">
+    <marquee scrollamount="8">
+        🔥 EN VIVO: {count_ch} camiones y {count_ca} cargas hoy -- {anuncios_texto} -- 🚛 Creado por Ignacio Diaz.
+    </marquee>
+</div>
+""", unsafe_allow_html=True)
 
 # --- 6. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
