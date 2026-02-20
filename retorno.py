@@ -13,7 +13,6 @@ GID_CARGAS = "1267917528"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 
-# Lista Maestra de Provincias para Blindar Búsqueda
 PROVINCIAS = [
     "CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBUT", "CORDOBA", 
     "CORRIENTES", "ENTRE RIOS", "FORMOSA", "JUJUY", "LA PAMPA", "LA RIOJA", 
@@ -40,6 +39,10 @@ st.markdown("""
     .card-white {
         background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
         border-left: 10px solid #3498db; color: #333; box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+    }
+    .card-urgent {
+        background: #fff5f5 !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
+        border-left: 10px solid #e74c3c; color: #333; box-shadow: 0 6px 12px rgba(231, 76, 60, 0.4);
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { 
@@ -111,11 +114,14 @@ with tab_chofer:
             count_c = 0
             for _, r in df_c.iloc[::-1].iterrows():
                 if es_de_hoy(r[0]): 
-                    # Filtro inteligente: Si es "CUALQUIERA" muestra todo, sino filtra por provincia
                     if (b_origen == "CUALQUIERA" or b_origen in str(r[1]).upper()) and (b_destino == "CUALQUIERA" or b_destino in str(r[2]).upper()):
                         num_f = limpiar_wsp(r[4])
+                        # Detectamos si es urgente por el contenido (opcional si usás un campo específico)
+                        es_urgente = "🔥" in str(r[3]) 
+                        clase_card = "card-urgent" if es_urgente else "card-white"
+                        
                         msg = urllib.parse.quote(f"Hola! Vi tu carga en *RETORNO MATCH*:\n📍 Origen: {r[1]}\n🏁 Destino: {r[2]}\n📦 Carga: {r[3]}\n¿Sigue disponible?")
-                        st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}<a href="https://api.whatsapp.com/send?phone={num_f}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="{clase_card}"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div>{"<b style='color:red;'>🔥 CARGA URGENTE</b><br>" if es_urgente else ""}<b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}<a href="https://api.whatsapp.com/send?phone={num_f}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
                         count_c += 1
             if count_c == 0: st.info("No hay cargas para esta ruta hoy.")
         except: st.info("Actualizando...")
@@ -130,10 +136,13 @@ with tab_empresa:
             loc_eo = st.text_input("Localidad Origen")
             ed = st.selectbox("🏁 Provincia Destino", PROVINCIAS[1:])
             loc_ed = st.text_input("Localidad Destino")
-            ec = st.text_input("📦 Carga"); en = st.text_input("Empresa")
-            ef = st.text_input("⏳ Cuándo"); ew = st.text_input("📱 WhatsApp")
+            ec = st.text_input("📦 Carga")
+            es_urg = st.checkbox("🔥 MARCAR COMO URGENTE") # Nueva mejora
+            en = st.text_input("Empresa"); ef = st.text_input("⏳ Cuándo"); ew = st.text_input("📱 WhatsApp")
+            
             if st.form_submit_button("SUBIR CARGA"):
-                payload = {"entry.610070407": f"{eo} ({loc_eo})", "entry.170847116": f"{ed} ({loc_ed})", "entry.576675281": ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
+                carga_final = f"🔥 {ec}" if es_urg else ec
+                payload = {"entry.610070407": f"{eo} ({loc_eo})", "entry.170847116": f"{ed} ({loc_ed})", "entry.576675281": carga_final, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
                 if enviar_a_google(URL_CARGAS_POST, payload):
                     st.success("✅ Carga subida"); time.sleep(1); st.rerun()
 
