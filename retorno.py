@@ -3,15 +3,14 @@ import pandas as pd
 import time
 import requests
 import urllib.parse
-from datetime import datetime
 
-# --- 1. CONFIGURACIÓN (REVISADA CON TUS LINKS DIRECTOS) ---
+# --- 1. CONFIGURACIÓN (REVISADA SEGÚN TUS LINKS) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349" 
 GID_CARGAS = "1267917528"    
 ADMIN_PASSWORD = "1323" 
 
-# URLs de respuesta (formResponse)
+# URLs de envío (formResponse)
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 
@@ -25,7 +24,6 @@ st.markdown("""
                         url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075&auto=format&fit=crop') !important;
         background-size: cover !important; background-attachment: fixed !important;
     }
-    [data-testid="stHeader"] { background-color: transparent !important; }
     .stTabs [data-baseweb="tab"] {
         flex: 1; height: 70px !important; background-color: #2c3e50 !important;
         border-radius: 12px !important; color: white !important; font-size: 18px !important;
@@ -65,7 +63,17 @@ with c_act:
 
 tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-# --- PESTAÑA 1: SOY CHOFER (Muestra Cargas) ---
+# --- FUNCIONES DE ENVÍO ---
+def enviar_datos(url, data):
+    try:
+        # Enviamos con un timeout corto para no trabar la app y headers para evitar bloqueos
+        response = requests.post(url, data=data, timeout=10)
+        return response.status_code == 200
+    except Exception as e:
+        st.error(f"⚠️ Error de conexión: {e}")
+        return False
+
+# --- PESTAÑA 1: SOY CHOFER ---
 with tab_chofer:
     col_i, col_d = st.columns([1, 2.2])
     with col_i:
@@ -77,31 +85,23 @@ with tab_chofer:
             linti = st.text_input("💳 LINTI"); ld = st.text_input("📂 Link Documentación")
             if st.form_submit_button("PUBLICAR"):
                 data_ch = {"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1542650763": cuit, "entry.1837643722": linti, "entry.769375120": ld, "entry.1574172378": w}
-                requests.post(URL_CHOFERES_POST, data=data_ch)
-                st.success("✅ ¡Publicado!"); time.sleep(1); st.rerun()
+                if enviar_datos(URL_CHOFERES_POST, data_ch):
+                    st.success("✅ ¡Publicado!"); time.sleep(1.5); st.rerun()
 
     with col_d:
         st.markdown("<h3 style='color:white;'>📦 Cargas Disponibles</h3>", unsafe_allow_html=True)
         try:
             csv_url_c = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}"
             df_c = pd.read_csv(csv_url_c).fillna("-")
-            
-            # SIN FILTRO DE FECHA: Muestra todo lo nuevo al instante
             for _, r in df_c.iloc[::-1].iterrows():
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
                 
-                estado_c = str(r[7]).upper()
-                es_concretada = "CONCRETADA" in estado_c
-                card_style = "card-concretada" if es_concretada else "card-white"
-                badge = '<div class="badge-concretada">✅ CONCRETADA</div>' if es_concretada else ""
-                
-                msg_ch = urllib.parse.quote(f"*RETORNO MATCH*\nMe interesa la carga: {r[1]} a {r[2]}")
-                btn = f'<a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_ch}" target="_blank" class="btn-wsp">💬 CONSULTAR</a>' if not es_concretada else "<b>FINALIZADA</b>"
-                st.markdown(f'<div class="{card_style}">{badge}<div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}{btn}</div>', unsafe_allow_html=True)
+                es_con = "CONCRETADA" in str(r[7]).upper()
+                st.markdown(f'<div class="{"card-concretada" if es_con else "card-white"}">{"<div class=\'badge-concretada\'>✅ CONCRETADA</div>" if es_con else ""}<div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}{f"<a href=\'https://api.whatsapp.com/send?phone=549{r[4]}\' target=\'_blank\' class=\'btn-wsp\'>💬 CONSULTAR</a>" if not es_con else "<b>FINALIZADA</b>"}</div>', unsafe_allow_html=True)
         except: st.info("Actualizando lista...")
 
-# --- PESTAÑA 2: SOY EMPRESA (Muestra Camiones) ---
+# --- PESTAÑA 2: SOY EMPRESA ---
 with tab_empresa:
     col_a, col_b = st.columns([1, 2.2])
     with col_a:
@@ -110,15 +110,9 @@ with tab_empresa:
             eo = st.text_input("📍 Origen"); ed = st.text_input("🏁 Destino"); ec = st.text_input("📦 Carga")
             en = st.text_input("Empresa"); ef = st.selectbox("⏳ Cuándo", ["Hoy", "Mañana", "A convenir"]); ew = st.text_input("📱 WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
-                # IDs corregidos según tu link de pre-llenado
-                payload = {"entry.610070407": eo, "entry.170847116": ed, "entry.576675281": ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
-                headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-                r = requests.post(URL_CARGAS_POST, data=payload, headers=headers)
-                if r.status_code == 200:
-                    st.success("✅ ¡Carga subida con éxito!")
-                    time.sleep(1); st.rerun()
-                else:
-                    st.error(f"Error de Google: {r.status_code}")
+                data_em = {"entry.610070407": eo, "entry.170847116": ed, "entry.576675281": ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
+                if enviar_datos(URL_CARGAS_POST, data_em):
+                    st.success("✅ ¡Carga subida!"); time.sleep(1.5); st.rerun()
 
     with col_b:
         st.markdown("<h3 style='color:white;'>🚛 Camiones Disponibles</h3>", unsafe_allow_html=True)
@@ -129,8 +123,7 @@ with tab_empresa:
                 if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
                 if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
                 
-                est = str(r[8]).upper()
-                is_v = "VERIFICADO" in est or "APROBADO" in est
+                is_v = "VERIFICADO" in str(r[8]).upper()
                 badge = '<div class="badge-verif">✅ VERIFICADO</div>' if is_v else '<div class="badge-verif" style="color:#f1c40f; border-color:#f1c40f;">⏳ PENDIENTE</div>'
                 st.markdown(f'<div class="card-white">{badge}<div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div><b>⚙️ EQUIPO:</b> {r[3]}<br><b>🆔 CUIT:</b> {r[5]} | <b>💳 LINTI:</b> {r[6]}<div style="display:flex;gap:10px;"><a href="https://api.whatsapp.com/send?phone=549{r[4]}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR</a><a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a></div></div>', unsafe_allow_html=True)
         except: st.info("Actualizando camiones...")
