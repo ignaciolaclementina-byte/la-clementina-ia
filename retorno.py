@@ -25,68 +25,59 @@ st.markdown("""
     .stApp {
         background-image: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
         url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important;
-        background-size: cover !important;
-        background-attachment: fixed !important;
+        background-size: cover !important; background-attachment: fixed !important;
     }
-    .stTabs [data-baseweb="tab"] {
-        flex: 1; height: 70px !important; background-color: #2c3e50 !important;
-        border-radius: 12px !important; color: white !important; font-size: 18px !important;
-        font-weight: 900 !important; margin: 5px; border: 1px solid #34495e !important;
-    }
-    .stTabs [aria-selected="true"] { background-color: #3498db !important; }
     .card-white {
         background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        border-left: 10px solid #3498db; color: #333; position: relative; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        border-left: 10px solid #3498db; color: #333; position: relative;
     }
     .card-urgent {
         background: #fff5f5 !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        border-left: 10px solid #e74c3c; color: #333; position: relative; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        border-left: 10px solid #e74c3c; color: #333; position: relative;
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
-    .badge-vistos { 
-        position: absolute; top: 15px; right: 20px; background: #f1c40f; 
-        color: #2c3e50; padding: 2px 8px; border-radius: 5px; font-size: 12px; font-weight: bold;
-    }
-    .badge-dist {
-        background: #ecf0f1; color: #7f8c8d; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 10px;
-    }
-    .btn-wsp { 
-        background-color: #25D366; color: white !important; padding: 12px; 
-        border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px;
-    }
-    .footer { text-align: center; color: white; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
+    .badge-dist { background: #f1c40f; color: #2c3e50; padding: 2px 6px; border-radius: 4px; font-size: 13px; font-weight: bold; margin-left: 10px; }
+    .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
+    .footer { text-align: center; color: white; padding: 40px; font-size: 14px; border-top: 0.5px solid rgba(255,255,255,0.2); }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
+# --- 3. LÓGICA DE KM REALISTA (ZONA SAN JORGE / SANTA FE) ---
+def obtener_km_real(origen, destino):
+    o, d = origen.upper(), destino.upper()
+    # Base de datos de distancias reales desde el corazón de tu zona
+    rutas = {
+        ("SANTA FE", "BUENOS AIRES"): 470,
+        ("SANTA FE", "CORDOBA"): 340,
+        ("SANTA FE", "ROSARIO"): 170,
+        ("CORDOBA", "BUENOS AIRES"): 700,
+        ("ROSARIO", "BUENOS AIRES"): 300,
+        ("SAN JORGE", "ROSARIO"): 180,
+        ("SAN JORGE", "SANTA FE"): 160,
+        ("SAN JORGE", "CORDOBA"): 270,
+    }
+    # Buscar coincidencia en la tabla
+    for (r_o, r_d), km in rutas.items():
+        if r_o in o and r_d in d: return km
+        if r_o in d and r_d in o: return km # Inversa
+    return None
 
-# --- 3. FUNCIONES ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
     return "549" + clean if not clean.startswith("549") else clean
 
 def es_hoy(f):
-    try:
-        return pd.to_datetime(f).date() == datetime.now().date()
-    except:
-        return False
+    try: return pd.to_datetime(f).date() == datetime.now().date()
+    except: return False
 
-def estimar_km(origen, destino):
-    # Lógica simple de estimación por regiones para valor agregado
-    if any(x in origen.upper() for x in ["SANTA FE", "CORDOBA", "BUENOS AIRES"]) and \
-       any(x in destino.upper() for x in ["SANTA FE", "CORDOBA", "BUENOS AIRES"]):
-        return random.randint(300, 600)
-    return random.randint(700, 1200)
+# --- 4. BÚSQUEDA Y TABS (INTERFAZ BLINDADA) ---
+st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- 4. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
-with c1:
-    b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
-with c2:
-    b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
-with c3:
-    b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
+with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
+with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
+with c3: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
 with c4:
     st.write("<br>", unsafe_allow_html=True)
     if st.button("🔄 ACTUALIZAR", use_container_width=True):
@@ -101,8 +92,8 @@ with t1:
     with col_f1:
         st.markdown("<h4 style='color:white;'>📢 Publicar Camión</h4>", unsafe_allow_html=True)
         with st.form("form_chofer", clear_on_submit=True):
-            o = st.selectbox("Provincia Origen", PROVINCIAS[1:]); lo = st.text_input("Localidad Origen")
-            d = st.selectbox("Provincia Destino", PROVINCIAS[1:]); ld = st.text_input("Localidad Destino")
+            o = st.selectbox("Provincia Origen", PROVINCIAS[1:]); lo = st.text_input("Localidad")
+            d = st.selectbox("Provincia Destino", PROVINCIAS[1:]); ld = st.text_input("Localidad")
             e = st.selectbox("Equipo", EQUIPOS[1:]); w = st.text_input("WhatsApp")
             cu = st.text_input("CUIT"); doc = st.text_input("Link Papeles")
             if st.form_submit_button("PUBLICAR"):
@@ -115,17 +106,14 @@ with t1:
             for _, r in df_ca.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     urg = "🔥" in str(r[3])
-                    v = random.randint(15, 60)
-                    km = estimar_km(str(r[1]), str(r[2]))
-                    msg = urllib.parse.quote(f"Hola! Vi tu carga *{r[3]}* en Retorno Match. Me interesa el viaje de {r[1]} a {r[2]}. ¿Sigue disponible?")
+                    km = obtener_km_real(str(r[1]), str(r[2]))
+                    msg = urllib.parse.quote(f"Hola! Vi tu carga *{r[3]}* en Retorno Match. ¿Sigue disponible?")
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
-                        <div class="badge-vistos">👁️ {v} interesados</div>
-                        <div class="route-txt">{r[1]} ➔ {r[2]} <span class="badge-dist">~{km} KM</span></div>
+                        <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist">{km} KM</span>' if km else ''}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
                     </div>''', unsafe_allow_html=True)
-        except:
-            st.info("Buscando cargas del día...")
+        except: st.info("Buscando cargas...")
 
 # --- PESTAÑA EMPRESA ---
 with t2:
@@ -146,25 +134,17 @@ with t2:
             df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
             for _, r in df_ch.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
-                    v_h = random.randint(5, 30)
-                    km_h = estimar_km(str(r[1]), str(r[2]))
-                    msg_h = urllib.parse.quote(f"Hola! Vi tu camión *{r[3]}* de {r[1]} a {r[2]} en Retorno Match. ¿Estás disponible?")
+                    km_h = obtener_km_real(str(r[1]), str(r[2]))
+                    msg_h = urllib.parse.quote(f"Hola! Vi tu camión *{r[3]}* en Retorno Match. ¿Estás disponible?")
                     st.markdown(f'''<div class="card-white">
-                        <div class="badge-vistos">👁️ {v_h} vistas</div>
-                        <div class="route-txt">{r[1]} ➔ {r[2]} <span class="badge-dist">~{km_h} KM</span></div>
+                        <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist">{km_h} KM</span>' if km_h else ''}</div>
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}
                         <div style="display:flex;gap:10px;">
                             <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_h}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
                             <a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
                         </div>
                     </div>''', unsafe_allow_html=True)
-        except:
-            st.info("Buscando camiones del día...")
+        except: st.info("Buscando camiones...")
 
 # --- FOOTER ---
-st.markdown(f"""
-<div class="footer">
-    <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
-    <p>Creado por <b>Ignacio Diaz y sus legales</b></p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown(f"""<div class="footer"><p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p><p>Creado por <b>Ignacio Diaz y sus legales</b></p></div>""", unsafe_allow_html=True)
