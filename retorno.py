@@ -4,7 +4,6 @@ import time
 import requests
 import urllib.parse
 from datetime import datetime
-from streamlit_autorefresh import st_autorefresh  # Requiere: pip install streamlit-autorefresh
 
 # --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - IGNACIO DIAZ) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
@@ -14,9 +13,14 @@ GID_CARGAS = "1267917528"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 
-# --- 2. SISTEMA ANTI-PAUSA (KEEP ALIVE) ---
-# Se actualiza automáticamente cada 15 minutos para que la web no se duerma
-st_autorefresh(interval=900000, key="keepalive")
+# --- 2. SISTEMA ANTI-PAUSA (KEEP ALIVE NATIVO) ---
+# Esto refresca la conexión cada 15 minutos sin instalar librerías extras
+if "last_heartbeat" not in st.session_state:
+    st.session_state.last_heartbeat = time.time()
+
+if time.time() - st.session_state.last_heartbeat > 900:
+    st.session_state.last_heartbeat = time.time()
+    st.rerun()
 
 # --- 3. GESTIÓN DE ESTADO ---
 if 'anuncios' not in st.session_state:
@@ -120,18 +124,9 @@ with t1:
         with st.form("form_carga", clear_on_submit=True):
             eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
             ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
-            ec = st.text_input("Carga")
-            en = st.text_input("Nombre Empresa")
-            ew = st.text_input("WhatsApp")
+            ec = st.text_input("Carga"); en = st.text_input("Nombre Empresa"); ew = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
-                data_carga = {
-                    "entry.610070407": f"{eo} ({elo})",
-                    "entry.170847116": f"{ed} ({eld})",
-                    "entry.576675281": ec,
-                    "entry.1930562861": en,
-                    "entry.1064058502": "Sale hoy",
-                    "entry.466540450": ew
-                }
+                data_carga = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": ec, "entry.1930562861": en, "entry.466540450": ew}
                 requests.post(URL_CARGAS_POST, data=data_carga)
                 st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
     with col_r1:
@@ -154,17 +149,9 @@ with t2:
         with st.form("form_camion", clear_on_submit=True):
             o = st.selectbox("Prov. Origen", PROVINCIAS[1:]); lo = st.text_input("Loc. Origen")
             d = st.selectbox("Prov. Destino", PROVINCIAS[1:]); ld = st.text_input("Loc. Destino")
-            e = st.selectbox("Equipo", EQUIPOS[1:])
-            cu = st.text_input("CUIT/ID")
-            w = st.text_input("WhatsApp")
+            e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID"); w = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR CAMIÓN"):
-                data_camion = {
-                    "entry.1304806144": f"{o} ({lo})",
-                    "entry.1519265625": f"{d} ({ld})",
-                    "entry.597193898": e,
-                    "entry.1542650763": cu,
-                    "entry.1574172378": w
-                }
+                data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
                 requests.post(URL_CHOFERES_POST, data=data_camion)
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
