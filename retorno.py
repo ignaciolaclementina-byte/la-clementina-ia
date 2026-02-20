@@ -5,19 +5,18 @@ import requests
 import urllib.parse
 from datetime import datetime
 
-# --- 1. CONFIGURACIÓN (DATOS EXTRAÍDOS DE TUS LINKS) ---
+# --- 1. CONFIGURACIÓN (BASE FIJA) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349" 
 GID_CARGAS = "1267917528"     
 ADMIN_PASSWORD = "1323" 
 
-# URLs de envío directo (formResponse)
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 2. ESTILOS Y DISEÑO (ESTRUCTURA RECORDADA) ---
+# --- 2. ESTILOS Y DISEÑO (ESTRUCTURA RECORDADA - BLINDADA) ---
 st.markdown("""
     <style>
     .stApp {
@@ -67,15 +66,16 @@ with c_act:
         st.cache_data.clear()
         st.rerun()
 
-# --- FILTRO DE FECHA (Integrado sutilmente) ---
-st.markdown("<div style='text-align:center; color:white;'>Ver cargas del día:</div>", unsafe_allow_html=True)
+# --- FILTRO DE FECHA ---
+st.markdown("<div style='text-align:center; color:white;'>Mostrando cargas del día:</div>", unsafe_allow_html=True)
 c_f1, c_f2, c_f3 = st.columns([2, 1, 2])
 with c_f2:
+    # Si acabas de subir una carga y no aparece, verifica que esta fecha sea la de hoy
     fecha_filtro = st.date_input("", datetime.now(), label_visibility="collapsed")
 
 tab_chofer, tab_empresa = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-# --- PESTAÑA 1: SOY CHOFER ---
+# --- PESTAÑA 1: SOY CHOFER (Ve Cargas / Publica Camión) ---
 with tab_chofer:
     col_i, col_d = st.columns([1, 2.2])
     with col_i:
@@ -83,11 +83,10 @@ with tab_chofer:
         with st.form("form_ch", clear_on_submit=True):
             o = st.text_input("📍 Ubicación Actual"); d = st.text_input("🏁 Destino")
             e = st.selectbox("🚛 Equipo", ["Chasis", "Semi", "Sider", "Acoplado", "Batea", "Térmico"])
-            w = st.text_input("📱 WhatsApp (Sin 0 ni 15)"); cuit = st.text_input("🆔 CUIT")
+            w = st.text_input("📱 WhatsApp"); cuit = st.text_input("🆔 CUIT")
             linti = st.text_input("💳 LINTI"); link_doc = st.text_input("📂 Link Documentación")
             if st.form_submit_button("PUBLICAR"):
-                data_ch = {"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1542650763": cuit, "entry.1837643722": linti, "entry.769375120": link_doc, "entry.1574172378": w}
-                requests.post(URL_CHOFERES_POST, data=data_ch)
+                requests.post(URL_CHOFERES_POST, data={"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1542650763": cuit, "entry.1837643722": linti, "entry.769375120": link_doc, "entry.1574172378": w})
                 st.success("✅ ¡Publicado!"); time.sleep(1); st.rerun()
 
     with col_d:
@@ -95,24 +94,29 @@ with tab_chofer:
         try:
             csv_url_c = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}"
             df_c = pd.read_csv(csv_url_c).fillna("-")
-            df_c['fecha_temp'] = pd.to_datetime(df_c.iloc[:, 0]).dt.date
-            df_v = df_c[df_c['fecha_temp'] == fecha_filtro]
+            
+            # Limpieza de fecha para evitar que no coincidan por horas/minutos
+            df_c['Marca temporal'] = pd.to_datetime(df_c.iloc[:, 0], errors='coerce').dt.date
+            df_hoy = df_c[df_c['Marca temporal'] == fecha_filtro]
 
-            for _, r in df_v.iloc[::-1].iterrows():
-                if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
-                if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
-                
-                # Lógica de Concretada (Columna H)
-                estado_c = str(r[7]).upper()
-                es_concretada = "CONCRETADA" in estado_c or "CERRADA" in estado_c
-                card_clase = "card-concretada" if es_concretada else "card-white"
-                
-                msg_ch = urllib.parse.quote(f"*RETORNO MATCH* 🚛💨\n\n¡Hola! Me interesa la carga:\n📍 {r[1]} a {r[2]}\n📦 {r[3]}")
-                badge = '<div class="badge-concretada">✅ CONCRETADA</div>' if es_concretada else ""
-                boton = f'<a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_ch}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>' if not es_concretada else "<div style='text-align:center; padding:10px;'>CARGA CONCRETADA</div>"
+            if df_hoy.empty:
+                st.warning(f"No hay cargas registradas para el {fecha_filtro.strftime('%d/%m/%Y')}. Probá cambiando la fecha arriba.")
+            else:
+                for _, r in df_hoy.iloc[::-1].iterrows():
+                    if b_origen and b_origen.lower() not in str(r[1]).lower(): continue
+                    if b_destino and b_destino.lower() not in str(r[2]).lower(): continue
+                    
+                    estado_c = str(r[7]).upper()
+                    es_concretada = "CONCRETADA" in estado_c or "CERRADA" in estado_c
+                    card_clase = "card-concretada" if es_concretada else "card-white"
+                    badge = '<div class="badge-concretada">✅ CONCRETADA</div>' if es_concretada else ""
+                    
+                    msg_ch = urllib.parse.quote(f"*RETORNO MATCH* 🚛💨\n\n¡Hola! Me interesa la carga:\n📍 {r[1]} a {r[2]}\n📦 {r[3]}")
+                    boton = f'<a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_ch}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>' if not es_concretada else "<b>CARGA CERRADA</b>"
 
-                st.markdown(f'<div class="{card_clase}">{badge}<div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}{boton}</div>', unsafe_allow_html=True)
-        except: st.info("Buscando cargas...")
+                    st.markdown(f'<div class="{card_clase}">{badge}<div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}{boton}</div>', unsafe_allow_html=True)
+        except Exception as e:
+            st.error("Error al cargar los datos. Verifica el Excel.")
 
 # --- PESTAÑA 2: SOY EMPRESA ---
 with tab_empresa:
@@ -123,8 +127,7 @@ with tab_empresa:
             eo = st.text_input("📍 Origen"); ed = st.text_input("🏁 Destino"); ec = st.text_input("📦 Carga")
             en = st.text_input("Empresa"); ef = st.selectbox("⏳ Cuándo", ["Hoy", "Mañana", "A convenir"]); ew = st.text_input("📱 WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
-                data_em = {"entry.610070407": eo, "entry.170847116": ed, "entry.576675281": ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew}
-                requests.post(URL_CARGAS_POST, data=data_em)
+                requests.post(URL_CARGAS_POST, data={"entry.610070407": eo, "entry.170847116": ed, "entry.576675281": ec, "entry.1930562861": en, "entry.1064058502": ef, "entry.466540450": ew})
                 st.success("✅ Carga Publicada"); time.sleep(1); st.rerun()
 
     with col_b:
@@ -141,7 +144,7 @@ with tab_empresa:
                 badge = '<div class="badge-verif">✅ VERIFICADO</div>' if is_verif else '<div class="badge-verif" style="color:#f1c40f; border-color:#f1c40f;">⏳ PENDIENTE</div>'
                 msg_em = urllib.parse.quote(f"*RETORNO MATCH* 🏢🤝\n\n¡Hola! Vi tu camión {r[3]} de {r[1]} a {r[2]}.")
                 st.markdown(f'<div class="card-white">{badge}<div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div><b>⚙️ EQUIPO:</b> {r[3]}<br><b>🆔 CUIT:</b> {r[5]} | <b>💳 LINTI:</b> {r[6]}<div style="display:flex;gap:10px;"><a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_em}" target="_blank" class="btn-wsp" style="flex:2;">💬 HABLAR</a><a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a></div></div>', unsafe_allow_html=True)
-        except: st.info("Actualizando camiones...")
+        except: st.info("Actualizando lista de camiones...")
 
 # --- PANEL DE CONTROL ---
 st.markdown("---")
