@@ -70,7 +70,7 @@ st.markdown("""
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .badge-dist { background: #f1c40f; color: #2c3e50; padding: 4px 8px; border-radius: 6px; font-size: 14px; font-weight: bold; margin-left: 10px; border: 1px solid #2c3e50; }
-    .badge-type { background: #f8f9fa; color: #2c3e50; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; border: 1px solid #dfe6e9; margin-top: 8px; display: inline-block; }
+    .badge-type { background: #f1f2f6; color: #2f3542; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 800; border: 1px solid #ced6e0; margin-top: 8px; display: inline-block; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
     .btn-status { background-color: #3498db; color: white !important; padding: 8px 15px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; margin: 5px; }
     .footer { text-align: center; color: white; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
@@ -89,7 +89,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 5. BARRA DE ESTADO RÁPIDO ---
-wsp_msg_llegada = urllib.parse.quote("✅ ¡Llegada confirmada! Ya descargué y estoy disponible para un nuevo retorno.")
+wsp_msg_llegada = urllib.parse.quote("✅ ¡Llegada confirmada! Ya descargué y estoy disponible para un nuevo retorno en Retorno Match.")
 st.markdown(f"""
 <div class="status-bar">
     <span>📍 ¿Llegaste a destino? Avisale a todos:</span><br><br>
@@ -141,7 +141,8 @@ with t1:
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     urg = "🔥" in str(r[3])
                     km = obtener_distancia(r[1], r[2])
-                    msg = urllib.parse.quote(f"Hola! Vi tu carga *{r[3]}* en Retorno Match. ¿Sigue disponible?")
+                    # MEJORA: WhatsApp con Tipo de Mercadería incluido
+                    msg = urllib.parse.quote(f"Hola! Vi tu carga de *{r[6]}* ({r[3]}) en Retorno Match. ¿Sigue disponible?")
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km} KM </span>' if km else ''}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
@@ -158,11 +159,10 @@ with t2:
         with st.form("form_empresa", clear_on_submit=True):
             eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
             ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
-            ec = st.text_input("Carga"); u_ch = st.checkbox("🔥 MARCAR URGENTE")
+            ec = st.text_input("Carga (Ej: 30 Ton Maíz)"); u_ch = st.checkbox("🔥 MARCAR URGENTE")
             tm = st.selectbox("Tipo de Mercadería", TIPOS_CARGA)
             en = st.text_input("Empresa"); ef = st.text_input("Cuándo"); ew = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR"):
-                # entry.1064058502 es la columna donde guardamos el Tipo de Mercadería
                 payload = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": f"🔥 {ec}" if u_ch else ec, "entry.1930562861": en, "entry.1064058502": tm, "entry.466540450": ew}
                 requests.post(URL_CARGAS_POST, data=payload)
                 st.success("¡Subida!"); time.sleep(1); st.rerun()
@@ -183,7 +183,7 @@ with t2:
                     </div>''', unsafe_allow_html=True)
         except: st.info("Buscando camiones...")
 
-# --- FOOTER ---
+# --- FOOTER (BLINDADO - IGNACIO DIAZ) ---
 st.markdown(f"""
 <div class="footer">
     <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
