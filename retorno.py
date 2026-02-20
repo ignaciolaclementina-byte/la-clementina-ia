@@ -17,7 +17,7 @@ PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBU
 EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
 TIPOS_CARGA = ["General", "Paletizado", "Granel", "Peligrosa", "Refrigerada"]
 
-# --- 2. BASE DE DISTANCIAS REALES (BLINDADA) ---
+# --- 2. BASE DE DISTANCIAS REALES ---
 def obtener_distancia(origen, destino):
     o, d = str(origen).upper(), str(destino).upper()
     km_data = {
@@ -74,7 +74,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- 4. FUNCIONES AUXILIARES Y LÓGICA DE DATOS ---
+# --- 4. FUNCIONES AUXILIARES ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
@@ -92,7 +92,7 @@ try:
 except:
     df_ch_raw, df_ca_raw, count_ch, count_ca = pd.DataFrame(), pd.DataFrame(), 0, 0
 
-# --- 5. RADAR DE ÚLTIMO MOMENTO ---
+# --- 5. RADAR ---
 st.markdown(f"""
 <div class="radar-container">
     <marquee scrollamount="8">
@@ -101,7 +101,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 6. BÚSQUEDA (ESTRUCTURA ORIGINAL BLINDADA) ---
+# --- 6. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
 with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
 with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
@@ -114,7 +114,7 @@ with c4:
 
 t1, t2 = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-# --- PESTAÑA CHOFER (BUSCA CARGAS) ---
+# --- PESTAÑA CHOFER ---
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -134,7 +134,15 @@ with t1:
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     urg = "🔥" in str(r[3])
                     km = obtener_distancia(r[1], r[2])
-                    msg = urllib.parse.quote(f"Hola! Vi tu carga de *{r[6]}* en Retorno Match. ¿Sigue disponible?")
+                    # MENSAJE MEJORADO PARA LA EMPRESA
+                    msg = urllib.parse.quote(
+                        f"¡Hola! 👋 Vi tu carga publicada en *RETORNO MATCH* 🚛\n\n"
+                        f"📍 *RUTA:* {r[1]} ➔ {r[2]}\n"
+                        f"📦 *CARGA:* {r[3]}\n"
+                        f"🏢 *EMPRESA:* {r[5]}\n"
+                        f"📑 *TIPO:* {r[6]}\n\n"
+                        f"¿Sigue disponible? Me interesa tomar el viaje."
+                    )
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km} KM </span>' if km else ''}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
@@ -142,7 +150,7 @@ with t1:
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
                     </div>''', unsafe_allow_html=True)
 
-# --- PESTAÑA EMPRESA (BUSCA CAMIONES) ---
+# --- PESTAÑA EMPRESA ---
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -162,7 +170,14 @@ with t2:
             for _, r in df_ch_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     km_h = obtener_distancia(r[1], r[2])
-                    msg_h = urllib.parse.quote(f"Hola! Vi tu camión *{r[3]}* en Retorno Match. ¿Estás disponible?")
+                    # MENSAJE MEJORADO PARA EL CHOFER
+                    msg_h = urllib.parse.quote(
+                        f"¡Hola! 👋 Vi tu camión disponible en *RETORNO MATCH* 🚛\n\n"
+                        f"📍 *RUTA:* {r[1]} ➔ {r[2]}\n"
+                        f"🚚 *EQUIPO:* {r[3]}\n"
+                        f"🆔 *CUIT:* {r[5]}\n\n"
+                        f"Tengo una carga que te puede interesar. ¿Estás disponible?"
+                    )
                     st.markdown(f'''<div class="card-white">
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km_h} KM </span>' if km_h else ''}</div>
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}
@@ -172,9 +187,14 @@ with t2:
                         </div>
                     </div>''', unsafe_allow_html=True)
 
-# --- 7. FOOTER (LINK OFICIAL CORREGIDO) ---
+# --- 7. FOOTER ---
 url_oficial = "https://retorno-match-sanjorge.streamlit.app/"
-share_msg = urllib.parse.quote(f"¡Mirá esta App para conseguir retornos rápido! 🚛 RETORNO MATCH: {url_oficial}")
+share_msg = urllib.parse.quote(
+    f"🚀 *¡Te recomiendo esta App!* 🚀\n\n"
+    f"Ideal para conseguir retornos de camiones y cargas en tiempo real.\n\n"
+    f"🚛 *RETORNO MATCH:* {url_oficial}\n\n"
+    f"¡Sumate a la red de transporte más rápida!"
+)
 
 st.markdown(f"""
 <div class="footer">
