@@ -27,7 +27,7 @@ def obtener_distancia(origen, destino):
         ("SAN JORGE", "BUENOS AIRES"): 480, ("BUENOS AIRES", "SAN JORGE"): 480,
         ("SANTA FE", "BUENOS AIRES"): 450, ("BUENOS AIRES", "SANTA FE"): 450,
         ("ROSARIO", "BUENOS AIRES"): 300, ("BUENOS AIRES", "ROSARIO"): 300,
-        ("SANTA FE", "CORDOBA"): 350, ("CORDOBA", "SANTA FE"): 350,
+        ("SANTA FE", "CORDOBA"): 350, ("CORDOBA", "SAN TA FE"): 350,
         ("SANTA FE", "ROSARIO"): 170, ("ROSARIO", "SANTA FE"): 170
     }
     for (r_o, r_d), valor in km_data.items():
@@ -172,8 +172,14 @@ with t2:
                         </div>
                     </div>''', unsafe_allow_html=True)
 
-# --- FOOTER (BLINDADO - IGNACIO DIAZ) ---
-share_msg = urllib.parse.quote("¡Mirá esta App para conseguir retornos rápido! 🚛 RETORNO MATCH: https://retornomatch.streamlit.app/")
+# --- 7. FOOTER (BLINDADO CON LINK DINÁMICO) ---
+# Detectamos el link actual para que la recomendación no falle nunca
+try:
+    current_url = "https://retornomatch.streamlit.app/" # Cambiar si tu URL real es distinta
+    share_msg = urllib.parse.quote(f"¡Mirá esta App para conseguir retornos rápido! 🚛 RETORNO MATCH: {current_url}")
+except:
+    share_msg = "¡Mirá esta App para conseguir retornos rápido! 🚛 RETORNO MATCH"
+
 st.markdown(f"""
 <div class="footer">
     <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
