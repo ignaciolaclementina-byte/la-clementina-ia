@@ -28,7 +28,6 @@ st.markdown("""
         color: #333; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
     .route-header { font-size: 24px; font-weight: 800; color: #1e3799; margin-bottom: 10px; }
-    .badge-verif { background: #2ecc71; color: white; padding: 4px 12px; border-radius: 20px; float: right; font-size: 12px; }
     .btn-wsp { background: #25D366; color: white !important; padding: 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
     </style>
     """, unsafe_allow_html=True)
