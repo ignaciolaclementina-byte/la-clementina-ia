@@ -5,7 +5,7 @@ import requests
 import urllib.parse
 from datetime import datetime
 
-# --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA) ---
+# --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - IGNACIO DIAZ) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349" 
 GID_CARGAS = "1267917528"    
@@ -22,7 +22,7 @@ PROVINCIAS = [
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 2. ESTILOS Y DISEÑO (BLINDADO) ---
+# --- 2. ESTILOS Y DISEÑO ---
 st.markdown("""
     <style>
     .stApp {
@@ -45,18 +45,21 @@ st.markdown("""
         border-left: 10px solid #e74c3c; color: #333; box-shadow: 0 6px 12px rgba(231, 76, 60, 0.4);
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
+    .badge-vistos { 
+        background: #f1c40f; color: #2c3e50; padding: 2px 8px; border-radius: 5px; 
+        font-size: 12px; font-weight: bold; margin-bottom: 10px; display: inline-block;
+    }
     .btn-wsp { 
         background-color: #25D366; color: white !important; padding: 12px; 
         border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px;
     }
     .footer { text-align: center; color: white; opacity: 0.9; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
-    .legal { font-size: 10px; color: #bdc3c7; margin-top: 10px; line-height: 1.2; }
     </style>
     """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- FUNCIONES ---
+# --- 3. FUNCIONES ---
 def enviar_a_google(url, data):
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     try: return requests.post(url, data=data, headers=headers).status_code == 200
@@ -74,7 +77,7 @@ def limpiar_wsp(num):
     if not clean.startswith("549"): clean = "549" + clean
     return clean
 
-# --- BÚSQUEDA ---
+# --- 4. BÚSQUEDA ---
 c_b1, c_b2, c_act = st.columns([2, 2, 1])
 with c_b1: b_origen = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
 with c_b2: b_destino = st.selectbox("🏁 DESTINO:", PROVINCIAS)
@@ -116,12 +119,25 @@ with tab_chofer:
                 if es_de_hoy(r[0]): 
                     if (b_origen == "CUALQUIERA" or b_origen in str(r[1]).upper()) and (b_destino == "CUALQUIERA" or b_destino in str(r[2]).upper()):
                         num_f = limpiar_wsp(r[4])
-                        # Detectamos si es urgente por el contenido (opcional si usás un campo específico)
                         es_urgente = "🔥" in str(r[3]) 
                         clase_card = "card-urgent" if es_urgente else "card-white"
                         
-                        msg = urllib.parse.quote(f"Hola! Vi tu carga en *RETORNO MATCH*:\n📍 Origen: {r[1]}\n🏁 Destino: {r[2]}\n📦 Carga: {r[3]}\n¿Sigue disponible?")
-                        st.markdown(f'<div class="{clase_card}"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div>{"<b style='color:red;'>🔥 CARGA URGENTE</b><br>" if es_urgente else ""}<b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}<a href="https://api.whatsapp.com/send?phone={num_f}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
+                        # Simulación de contador (vistos aleatorios para dar sensación de movimiento)
+                        import random
+                        vistos = random.randint(5, 45)
+                        
+                        msg = urllib.parse.quote(f"Hola! Soy chofer, vi tu carga en *RETORNO MATCH*:\n📍 Origen: {r[1]}\n🏁 Destino: {r[2]}\n📦 Carga: {r[3]}\n¿Sigue disponible?")
+                        
+                        st.markdown(f'''
+                            <div class="{clase_card}">
+                                <div class="badge-vistos">👁️ {vistos} interesados hoy</div>
+                                <div class="route-txt">📍 {r[1]} ➔ {r[2]}</div>
+                                {"<b style='color:red;'>🔥 CARGA URGENTE</b><br>" if es_urgente else ""}
+                                <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
+                                <b>⏳ SALE:</b> {r[6]}
+                                <a href="https://api.whatsapp.com/send?phone={num_f}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
+                            </div>
+                        ''', unsafe_allow_html=True)
                         count_c += 1
             if count_c == 0: st.info("No hay cargas para esta ruta hoy.")
         except: st.info("Actualizando...")
@@ -137,7 +153,7 @@ with tab_empresa:
             ed = st.selectbox("🏁 Provincia Destino", PROVINCIAS[1:])
             loc_ed = st.text_input("Localidad Destino")
             ec = st.text_input("📦 Carga")
-            es_urg = st.checkbox("🔥 MARCAR COMO URGENTE") # Nueva mejora
+            es_urg = st.checkbox("🔥 MARCAR COMO URGENTE")
             en = st.text_input("Empresa"); ef = st.text_input("⏳ Cuándo"); ew = st.text_input("📱 WhatsApp")
             
             if st.form_submit_button("SUBIR CARGA"):
@@ -154,8 +170,20 @@ with tab_empresa:
                 if es_de_hoy(r[0]):
                     if (b_origen == "CUALQUIERA" or b_origen in str(r[1]).upper()) and (b_destino == "CUALQUIERA" or b_destino in str(r[2]).upper()):
                         num_h = limpiar_wsp(r[4])
-                        msg_h = urllib.parse.quote(f"Hola! Vi tu camión en *RETORNO MATCH*:\n🚛 Equipo: {r[3]}\n📍 Ubicación: {r[1]}\n🏁 Destino: {r[2]}\n¿Estás disponible?")
-                        st.markdown(f'<div class="card-white"><div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div><b>⚙️ EQUIPO:</b> {r[3]}<br><b>🆔 CUIT:</b> {r[5]}<div style="display:flex;gap:10px;"><a href="https://api.whatsapp.com/send?phone={num_h}&text={msg_h}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a><a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a></div></div>', unsafe_allow_html=True)
+                        vistos_h = random.randint(3, 20)
+                        msg_h = urllib.parse.quote(f"Hola! Soy de una empresa, vi tu camión en *RETORNO MATCH*:\n🚛 Equipo: {r[3]}\n📍 Ubicación: {r[1]}\n🏁 Destino: {r[2]}\n¿Estás disponible?")
+                        st.markdown(f'''
+                            <div class="card-white">
+                                <div class="badge-vistos">👁️ {vistos_h} empresas mirando</div>
+                                <div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div>
+                                <b>⚙️ EQUIPO:</b> {r[3]}<br>
+                                <b>🆔 CUIT:</b> {r[5]}
+                                <div style="display:flex;gap:10px;">
+                                    <a href="https://api.whatsapp.com/send?phone={num_h}&text={msg_h}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
+                                    <a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
+                                </div>
+                            </div>
+                        ''', unsafe_allow_html=True)
                         count_h += 1
             if count_h == 0: st.info("No hay camiones en esta ruta hoy.")
         except: st.info("Actualizando...")
@@ -165,9 +193,5 @@ st.markdown(f"""
     <div class="footer">
         <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
         <p>Creado por <b>Ignacio Diaz y sus legales</b></p>
-        <div class="legal">
-            <b>AVISO LEGAL:</b> Queda estrictamente prohibida la reproducción total o parcial de esta estructura e interfaz bajo apercibimiento de ley. 
-            RETORNO MATCH actúa como nexo informativo.
-        </div>
     </div>
     """, unsafe_allow_html=True)
