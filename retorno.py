@@ -65,10 +65,9 @@ st.markdown("""
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .badge-dist { background: #f1c40f; color: #2c3e50; padding: 4px 8px; border-radius: 6px; font-size: 14px; font-weight: bold; margin-left: 10px; border: 1px solid #2c3e50; }
-    .badge-type { background: #f1f2f6; color: #2f3542; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 800; border: 1px solid #ced6e0; margin-top: 8px; display: inline-block; }
+    .footer { text-align: center; color: white; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
     .btn-share { background-color: #3498db; color: white !important; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 15px; border: 1px solid white; }
-    .footer { text-align: center; color: white; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -134,20 +133,25 @@ with t1:
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     urg = "🔥" in str(r[3])
                     km = obtener_distancia(r[1], r[2])
-                    # MENSAJE MEJORADO PARA LA EMPRESA
-                    msg = urllib.parse.quote(
-                        f"¡Hola! 👋 Vi tu carga publicada en *RETORNO MATCH* 🚛\n\n"
-                        f"📍 *RUTA:* {r[1]} ➔ {r[2]}\n"
-                        f"📦 *CARGA:* {r[3]}\n"
+                    
+                    # --- MENSAJE NIVEL PRO ---
+                    msg_cargas = urllib.parse.quote(
+                        f"─── 🚛 *RETORNO MATCH* ───\n"
+                        f"📌 *NUEVA SOLICITUD DE CARGA*\n\n"
+                        f"📍 *ORIGEN:* {r[1]}\n"
+                        f"🏁 *DESTINO:* {r[2]}\n"
+                        f"📦 *MERCADERÍA:* {r[3]}\n"
                         f"🏢 *EMPRESA:* {r[5]}\n"
-                        f"📑 *TIPO:* {r[6]}\n\n"
-                        f"¿Sigue disponible? Me interesa tomar el viaje."
+                        f"📑 *TIPO:* {r[6]}\n"
+                        f"{f'🛣️ *DISTANCIA:* {km} KM' if km else ''}\n\n"
+                        f"━━━━━━━━━━━━━━━━━━\n"
+                        f"✅ *¿Sigue disponible? Me interesa el viaje.*"
                     )
+                    
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km} KM </span>' if km else ''}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
-                        <div class="badge-type">📑 TIPO: {r[6]}</div><br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_cargas}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a>
                     </div>''', unsafe_allow_html=True)
 
 # --- PESTAÑA EMPRESA ---
@@ -170,19 +174,25 @@ with t2:
             for _, r in df_ch_raw.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     km_h = obtener_distancia(r[1], r[2])
-                    # MENSAJE MEJORADO PARA EL CHOFER
-                    msg_h = urllib.parse.quote(
-                        f"¡Hola! 👋 Vi tu camión disponible en *RETORNO MATCH* 🚛\n\n"
-                        f"📍 *RUTA:* {r[1]} ➔ {r[2]}\n"
+                    
+                    # --- MENSAJE NIVEL PRO ---
+                    msg_camiones = urllib.parse.quote(
+                        f"─── 🚛 *RETORNO MATCH* ───\n"
+                        f"📌 *UNIDAD DISPONIBLE ENCONTRADA*\n\n"
+                        f"📍 *TRAYECTO:* {r[1]} ➔ {r[2]}\n"
                         f"🚚 *EQUIPO:* {r[3]}\n"
-                        f"🆔 *CUIT:* {r[5]}\n\n"
-                        f"Tengo una carga que te puede interesar. ¿Estás disponible?"
+                        f"🆔 *CUIT:* {r[5]}\n"
+                        f"{f'🛣️ *DISTANCIA:* {km_h} KM' if km_h else ''}\n\n"
+                        f"🔗 *DOCUMENTACIÓN:* {r[7]}\n"
+                        f"━━━━━━━━━━━━━━━━━━\n"
+                        f"✅ *¿Estás disponible? Tengo una carga para tu unidad.*"
                     )
+                    
                     st.markdown(f'''<div class="card-white">
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist"> {km_h} KM </span>' if km_h else ''}</div>
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {r[5]}
                         <div style="display:flex;gap:10px;">
-                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_h}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
+                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_camiones}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR</a>
                             <a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 PAPELES</a>
                         </div>
                     </div>''', unsafe_allow_html=True)
@@ -190,10 +200,13 @@ with t2:
 # --- 7. FOOTER ---
 url_oficial = "https://retorno-match-sanjorge.streamlit.app/"
 share_msg = urllib.parse.quote(
-    f"🚀 *¡Te recomiendo esta App!* 🚀\n\n"
-    f"Ideal para conseguir retornos de camiones y cargas en tiempo real.\n\n"
-    f"🚛 *RETORNO MATCH:* {url_oficial}\n\n"
-    f"¡Sumate a la red de transporte más rápida!"
+    f"━━━━━━━━━━━━━━━━━━\n"
+    f"🚛 *RETORNO MATCH - LOGÍSTICA EN VIVO*\n"
+    f"━━━━━━━━━━━━━━━━━━\n\n"
+    f"✅ *Conseguí cargas y retornos al instante.*\n"
+    f"📍 *Ubicación:* San Jorge, Santa Fe.\n\n"
+    f"🔗 *INGRESAR AQUÍ:* {url_oficial}\n\n"
+    f"📌 _Plataforma creada por Ignacio Diaz_"
 )
 
 st.markdown(f"""
