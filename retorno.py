@@ -116,8 +116,7 @@ with t1:
                 st.success("Publicada!"); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            # LÓGICA DE PRIORIDAD VIP: Ordenamos poniendo los VIP arriba
-            df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 5].apply(es_vip) # r[5] es CUIT
+            df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 5].apply(es_vip)
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(es_hoy)].sort_values(by='es_vip', ascending=False)
             
             for _, r in df_final_ch.iterrows():
@@ -149,8 +148,7 @@ with t2:
                 st.success("Publicado!"); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
-            # LÓGICA DE PRIORIDAD VIP: Ordenamos poniendo los VIP arriba
-            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip) # r[5] es Nombre Empresa
+            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(es_hoy)].sort_values(by='es_vip', ascending=False)
 
             for _, r in df_final_ca.iterrows():
