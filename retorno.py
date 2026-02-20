@@ -25,41 +25,44 @@ st.markdown("""
     .stApp {
         background-image: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
         url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important;
-        background-size: cover !important; background-attachment: fixed !important;
+        background-size: cover !important;
+        background-attachment: fixed !important;
     }
+    .stTabs [data-baseweb="tab"] {
+        flex: 1; height: 70px !important; background-color: #2c3e50 !important;
+        border-radius: 12px !important; color: white !important; font-size: 18px !important;
+        font-weight: 900 !important; margin: 5px; border: 1px solid #34495e !important;
+    }
+    .stTabs [aria-selected="true"] { background-color: #3498db !important; }
     .card-white {
         background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        border-left: 10px solid #3498db; color: #333; position: relative;
+        border-left: 10px solid #3498db; color: #333; position: relative; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     .card-urgent {
         background: #fff5f5 !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        border-left: 10px solid #e74c3c; color: #333; position: relative;
+        border-left: 10px solid #e74c3c; color: #333; position: relative; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .badge-dist { background: #f1c40f; color: #2c3e50; padding: 2px 6px; border-radius: 4px; font-size: 13px; font-weight: bold; margin-left: 10px; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
-    .footer { text-align: center; color: white; padding: 40px; font-size: 14px; border-top: 0.5px solid rgba(255,255,255,0.2); }
+    .footer { text-align: center; color: white; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. LÓGICA DE KM REALISTA (ZONA SAN JORGE / SANTA FE) ---
+st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
+
+# --- 3. FUNCIONES ---
 def obtener_km_real(origen, destino):
-    o, d = origen.upper(), destino.upper()
-    # Base de datos de distancias reales desde el corazón de tu zona
+    o, d = str(origen).upper(), str(destino).upper()
     rutas = {
-        ("SANTA FE", "BUENOS AIRES"): 470,
-        ("SANTA FE", "CORDOBA"): 340,
-        ("SANTA FE", "ROSARIO"): 170,
-        ("CORDOBA", "BUENOS AIRES"): 700,
-        ("ROSARIO", "BUENOS AIRES"): 300,
-        ("SAN JORGE", "ROSARIO"): 180,
-        ("SAN JORGE", "SANTA FE"): 160,
-        ("SAN JORGE", "CORDOBA"): 270,
+        ("SANTA FE", "BUENOS AIRES"): 470, ("SANTA FE", "CORDOBA"): 340,
+        ("SANTA FE", "ROSARIO"): 170, ("CORDOBA", "BUENOS AIRES"): 700,
+        ("ROSARIO", "BUENOS AIRES"): 300, ("SAN JORGE", "ROSARIO"): 180,
+        ("SAN JORGE", "SANTA FE"): 160, ("SAN JORGE", "CORDOBA"): 270,
     }
-    # Buscar coincidencia en la tabla
     for (r_o, r_d), km in rutas.items():
         if r_o in o and r_d in d: return km
-        if r_o in d and r_d in o: return km # Inversa
+        if r_o in d and r_d in o: return km
     return None
 
 def limpiar_wsp(num):
@@ -68,12 +71,12 @@ def limpiar_wsp(num):
     return "549" + clean if not clean.startswith("549") else clean
 
 def es_hoy(f):
-    try: return pd.to_datetime(f).date() == datetime.now().date()
-    except: return False
+    try:
+        return pd.to_datetime(f).date() == datetime.now().date()
+    except:
+        return False
 
-# --- 4. BÚSQUEDA Y TABS (INTERFAZ BLINDADA) ---
-st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
-
+# --- 4. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
 with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
 with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
@@ -92,8 +95,8 @@ with t1:
     with col_f1:
         st.markdown("<h4 style='color:white;'>📢 Publicar Camión</h4>", unsafe_allow_html=True)
         with st.form("form_chofer", clear_on_submit=True):
-            o = st.selectbox("Provincia Origen", PROVINCIAS[1:]); lo = st.text_input("Localidad")
-            d = st.selectbox("Provincia Destino", PROVINCIAS[1:]); ld = st.text_input("Localidad")
+            o = st.selectbox("Provincia Origen", PROVINCIAS[1:]); lo = st.text_input("Localidad Origen")
+            d = st.selectbox("Provincia Destino", PROVINCIAS[1:]); ld = st.text_input("Localidad Destino")
             e = st.selectbox("Equipo", EQUIPOS[1:]); w = st.text_input("WhatsApp")
             cu = st.text_input("CUIT"); doc = st.text_input("Link Papeles")
             if st.form_submit_button("PUBLICAR"):
@@ -106,7 +109,7 @@ with t1:
             for _, r in df_ca.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     urg = "🔥" in str(r[3])
-                    km = obtener_km_real(str(r[1]), str(r[2]))
+                    km = obtener_km_real(r[1], r[2])
                     msg = urllib.parse.quote(f"Hola! Vi tu carga *{r[3]}* en Retorno Match. ¿Sigue disponible?")
                     st.markdown(f'''<div class="{"card-urgent" if urg else "card-white"}">
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist">{km} KM</span>' if km else ''}</div>
@@ -134,7 +137,7 @@ with t2:
             df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
             for _, r in df_ch.iloc[::-1].iterrows():
                 if es_hoy(r[0]) and (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
-                    km_h = obtener_km_real(str(r[1]), str(r[2]))
+                    km_h = obtener_km_real(r[1], r[2])
                     msg_h = urllib.parse.quote(f"Hola! Vi tu camión *{r[3]}* en Retorno Match. ¿Estás disponible?")
                     st.markdown(f'''<div class="card-white">
                         <div class="route-txt">{r[1]} ➔ {r[2]} {f'<span class="badge-dist">{km_h} KM</span>' if km_h else ''}</div>
@@ -147,4 +150,9 @@ with t2:
         except: st.info("Buscando camiones...")
 
 # --- FOOTER ---
-st.markdown(f"""<div class="footer"><p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p><p>Creado por <b>Ignacio Diaz y sus legales</b></p></div>""", unsafe_allow_html=True)
+st.markdown(f"""
+<div class="footer">
+    <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
+    <p>Creado por <b>Ignacio Diaz y sus legales</b></p>
+</div>
+""", unsafe_allow_html=True)
