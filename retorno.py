@@ -13,19 +13,23 @@ GID_CARGAS = "1267917528"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 
+# ==========================================================
+# --- 2. GESTIÓN DE PUBLICIDAD (AQUÍ ESCRIBÍS TUS ANUNCIOS) ---
+# ==========================================================
+# Agregá o editá las frases entre comillas. Separá cada una con una coma.
+ANUNCIOS_PAGOS = [
+    "🛞 GOMERÍA 'EL AUXILIO' - Descuento a camioneros en San Jorge",
+    "🛡️ SEGUROS RUTA - Asegurá tu carga con nosotros",
+    "🔧 TALLER 'NACHO' - Reparaciones en el acto - San Jorge",
+    "☕ PARADA 10 - Café gratis con tu carga de combustible"
+]
+# ==========================================================
+
 PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBUT", "CORDOBA", "CORRIENTES", "ENTRE RIOS", "FORMOSA", "JUJUY", "LA PAMPA", "LA RIOJA", "MENDOZA", "MISIONES", "NEUQUEN", "RIO NEGRO", "SALTA", "SAN JUAN", "SAN LUIS", "SANTA CRUZ", "SANTA FE", "SANTIAGO DEL ESTERO", "TIERRA DEL FUEGO", "TUCUMAN"]
 EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
 TIPOS_CARGA = ["General", "Paletizado", "Granel", "Peligrosa", "Refrigerada"]
 
-# --- 2. GESTIÓN DE PUBLICIDAD (NUEVA VÍA DE INGRESOS) ---
-# Aquí podés agregar o quitar anuncios que hayas cobrado
-ANUNCIOS_PAGOS = [
-    "🛞 GOMERÍA 'EL AUXILIO' - Descuento a camioneros en San Jorge",
-    "🛡️ SEGUROS RUTA - Asegurá tu carga hoy mismo",
-    "🔧 TALLER INTEGRAL - Reparaciones rápidas en Rosario",
-    "🥩 PARRILLA EL CRUCE - Menú especial transportistas"
-]
-
+# --- 3. BASE DE DISTANCIAS REALES ---
 def obtener_distancia(origen, destino):
     o, d = str(origen).upper(), str(destino).upper()
     km_data = {
@@ -40,7 +44,7 @@ def obtener_distancia(origen, destino):
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 3. ESTILOS ORIGINALES BLINDADOS ---
+# --- 4. ESTILOS ORIGINALES BLINDADOS ---
 st.markdown("""
 <style>
     .stApp {
@@ -76,7 +80,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- 4. FUNCIONES AUXILIARES ---
+# --- 5. FUNCIONES AUXILIARES ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
@@ -96,7 +100,8 @@ try:
 except:
     df_ch_raw, df_ca_raw, count_ch, count_ca = pd.DataFrame(), pd.DataFrame(), 0, 0
 
-# --- 5. RADAR DINÁMICO (MONETIZADO) ---
+# --- 6. RADAR DINÁMICO (MONETIZADO) ---
+# Unimos tus anuncios pagos con el conteo en vivo
 anuncios_texto = " -- ".join(ANUNCIOS_PAGOS)
 st.markdown(f"""
 <div class="radar-container">
@@ -106,7 +111,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 6. BÚSQUEDA ---
+# --- 7. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
 with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
 with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
@@ -177,7 +182,7 @@ with t2:
                         </div>
                     </div>''', unsafe_allow_html=True)
 
-# --- 7. FOOTER & LEGALES ---
+# --- 8. FOOTER & LEGALES ---
 st.markdown(f"""
 <div class="footer">
     <p>Desarrollado por <b>Ignacio Diaz</b></p>
