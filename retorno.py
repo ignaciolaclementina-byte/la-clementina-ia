@@ -13,23 +13,14 @@ GID_CARGAS = "1267917528"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 
-# ==========================================================
-# --- 2. GESTIÓN DE PUBLICIDAD (AQUÍ ESCRIBÍS TUS ANUNCIOS) ---
-# ==========================================================
-# Agregá o editá las frases entre comillas. Separá cada una con una coma.
-ANUNCIOS_PAGOS = [
-    "🛞 GOMERÍA 'EL AUXILIO' - Descuento a camioneros en San Jorge",
-    "🛡️ SEGUROS RUTA - Asegurá tu carga con nosotros",
-    "🔧 TALLER 'NACHO' - Reparaciones en el acto - San Jorge",
-    "☕ PARADA 10 - Café gratis con tu carga de combustible"
-]
-# ==========================================================
-
 PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBUT", "CORDOBA", "CORRIENTES", "ENTRE RIOS", "FORMOSA", "JUJUY", "LA PAMPA", "LA RIOJA", "MENDOZA", "MISIONES", "NEUQUEN", "RIO NEGRO", "SALTA", "SAN JUAN", "SAN LUIS", "SANTA CRUZ", "SANTA FE", "SANTIAGO DEL ESTERO", "TIERRA DEL FUEGO", "TUCUMAN"]
 EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
 TIPOS_CARGA = ["General", "Paletizado", "Granel", "Peligrosa", "Refrigerada"]
 
-# --- 3. BASE DE DISTANCIAS REALES ---
+# --- 2. GESTIÓN DE ESTADO PARA PUBLICIDAD ---
+if 'anuncios' not in st.session_state:
+    st.session_state.anuncios = "🛞 GOMERÍA EL AUXILIO -- 🔧 TALLER NACHO -- 🛡️ SEGUROS RUTA"
+
 def obtener_distancia(origen, destino):
     o, d = str(origen).upper(), str(destino).upper()
     km_data = {
@@ -44,7 +35,7 @@ def obtener_distancia(origen, destino):
 
 st.set_page_config(page_title="RETORNO MATCH", page_icon="🚛", layout="wide")
 
-# --- 4. ESTILOS ORIGINALES BLINDADOS ---
+# --- 3. ESTILOS ORIGINALES BLINDADOS ---
 st.markdown("""
 <style>
     .stApp {
@@ -73,14 +64,14 @@ st.markdown("""
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .footer { text-align: center; color: white; padding: 40px; font-size: 12px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
-    .legal-box { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 20px; line-height: 1.2; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
+    .admin-box { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; margin-top: 20px; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH</h1>", unsafe_allow_html=True)
 
-# --- 5. FUNCIONES AUXILIARES ---
+# --- 4. FUNCIONES AUXILIARES ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
@@ -100,18 +91,16 @@ try:
 except:
     df_ch_raw, df_ca_raw, count_ch, count_ca = pd.DataFrame(), pd.DataFrame(), 0, 0
 
-# --- 6. RADAR DINÁMICO (MONETIZADO) ---
-# Unimos tus anuncios pagos con el conteo en vivo
-anuncios_texto = " -- ".join(ANUNCIOS_PAGOS)
+# --- 5. RADAR DINÁMICO ---
 st.markdown(f"""
 <div class="radar-container">
     <marquee scrollamount="8">
-        🔥 EN VIVO: {count_ch} camiones y {count_ca} cargas hoy -- {anuncios_texto} -- 🚛 Creado por Ignacio Diaz.
+        🔥 EN VIVO: {count_ch} camiones y {count_ca} cargas hoy -- {st.session_state.anuncios} -- 🚛 Creado por Ignacio Diaz.
     </marquee>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 7. BÚSQUEDA ---
+# --- 6. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
 with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
 with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
@@ -124,7 +113,7 @@ with c4:
 
 t1, t2 = st.tabs(["🚀 SOY CHOFER", "🏢 SOY EMPRESA"])
 
-# --- PESTAÑA CHOFER ---
+# (Contenido de pestañas Chofer y Empresa mantenido igual...)
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -153,7 +142,6 @@ with t1:
                         </div>
                     </div>''', unsafe_allow_html=True)
 
-# --- PESTAÑA EMPRESA ---
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -182,11 +170,18 @@ with t2:
                         </div>
                     </div>''', unsafe_allow_html=True)
 
+# --- 7. PANEL DE ADMINISTRACIÓN OCULTO (SOLO IGNACIO) ---
+with st.expander("⚙️ GESTIÓN DE ANUNCIOS (ADMIN)"):
+    nuevo_anuncio = st.text_area("Escribí los anuncios separados por '--':", st.session_state.anuncios)
+    if st.button("🚀 ACTUALIZAR RADAR AHORA"):
+        st.session_state.anuncios = nuevo_anuncio
+        st.success("¡Radar actualizado!"); time.sleep(1); st.rerun()
+
 # --- 8. FOOTER & LEGALES ---
 st.markdown(f"""
 <div class="footer">
     <p>Desarrollado por <b>Ignacio Diaz</b></p>
-    <div class="legal-box">
+    <div style="font-size: 10px; color: rgba(255,255,255,0.5);">
         AVISO LEGAL: PROHIBIDA LA RÉPLICA TOTAL O PARCIAL. Creado por Ignacio Diaz y sus legales.
     </div>
 </div>
