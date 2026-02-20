@@ -3,6 +3,7 @@ import pandas as pd
 import time
 import requests
 import urllib.parse
+from datetime import datetime
 
 # --- 1. CONFIGURACIÓN (VERSION FINAL BLINDADA) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
@@ -39,7 +40,7 @@ st.markdown("""
         border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px;
     }
     .footer { text-align: center; color: white; opacity: 0.9; padding: 40px; font-size: 14px; margin-top: 50px; border-top: 0.5px solid rgba(255,255,255,0.2); }
-    .legal { font-size: 10px; color: #bdc3c7; margin-top: 10px; }
+    .legal { font-size: 10px; color: #bdc3c7; margin-top: 10px; line-height: 1.2; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -51,6 +52,12 @@ def enviar_a_google(url, data):
     try:
         res = requests.post(url, data=data, headers=headers)
         return res.status_code == 200
+    except: return False
+
+def es_de_hoy(fecha_str):
+    try:
+        fecha_dt = pd.to_datetime(fecha_str).date()
+        return fecha_dt == datetime.now().date()
     except: return False
 
 # --- BÚSQUEDA ---
@@ -83,11 +90,15 @@ with tab_chofer:
     with col_d:
         try:
             df_c = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={int(time.time())}").fillna("-")
+            count_c = 0
             for _, r in df_c.iloc[::-1].iterrows():
-                if b_origen.lower() in str(r[1]).lower() and b_destino.lower() in str(r[2]).lower():
-                    # MENSAJE DE WHATSAPP MEJORADO
-                    msg = urllib.parse.quote(f"Hola! Vi tu carga en *RETORNO MATCH*:\n📍 Origen: {r[1]}\n🏁 Destino: {r[2]}\n📦 Carga: {r[3]}\n¿Sigue disponible?")
-                    st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}<a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
+                # FILTRO DE FECHA (SOLO HOY) Y BÚSQUEDA
+                if es_de_hoy(r[0]): 
+                    if b_origen.lower() in str(r[1]).lower() and b_destino.lower() in str(r[2]).lower():
+                        msg = urllib.parse.quote(f"Hola! Vi tu carga en *RETORNO MATCH*:\n📍 Origen: {r[1]}\n🏁 Destino: {r[2]}\n📦 Carga: {r[3]}\n¿Sigue disponible?")
+                        st.markdown(f'<div class="card-white"><div class="route-txt">📍 {r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><b>⏳ SALE:</b> {r[6]}<a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
+                        count_c += 1
+            if count_c == 0: st.info("No hay cargas nuevas para hoy.")
         except: st.info("Actualizando...")
 
 # --- PESTAÑA 2: EMPRESA (Busca Camiones) ---
@@ -106,22 +117,26 @@ with tab_empresa:
     with col_b:
         try:
             df_h = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={int(time.time())}").fillna("-")
+            count_h = 0
             for _, r in df_h.iloc[::-1].iterrows():
-                if b_origen.lower() in str(r[1]).lower() and b_destino.lower() in str(r[2]).lower():
-                    # MENSAJE DE WHATSAPP MEJORADO
-                    msg_h = urllib.parse.quote(f"Hola! Vi tu camión en *RETORNO MATCH*:\n🚛 Equipo: {r[3]}\n📍 Ubicación: {r[1]}\n🏁 Destino: {r[2]}\n¿Estás disponible?")
-                    st.markdown(f'<div class="card-white"><div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div><b>⚙️ EQUIPO:</b> {r[3]}<br><b>🆔 CUIT:</b> {r[5]}<div style="display:flex;gap:10px;"><a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_h}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR CHOFER</a><a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 DOCUMENTACIÓN</a></div></div>', unsafe_allow_html=True)
+                # FILTRO DE FECHA (SOLO HOY) Y BÚSQUEDA
+                if es_de_hoy(r[0]):
+                    if b_origen.lower() in str(r[1]).lower() and b_destino.lower() in str(r[2]).lower():
+                        msg_h = urllib.parse.quote(f"Hola! Vi tu camión en *RETORNO MATCH*:\n🚛 Equipo: {r[3]}\n📍 Ubicación: {r[1]}\n🏁 Destino: {r[2]}\n¿Estás disponible?")
+                        st.markdown(f'<div class="card-white"><div class="route-txt">🚛 {r[1]} ➔ {r[2]}</div><b>⚙️ EQUIPO:</b> {r[3]}<br><b>🆔 CUIT:</b> {r[5]}<div style="display:flex;gap:10px;"><a href="https://api.whatsapp.com/send?phone=549{r[4]}&text={msg_h}" target="_blank" class="btn-wsp" style="flex:2;">💬 CONTACTAR CHOFER</a><a href="{r[7]}" target="_blank" class="btn-wsp" style="background:#3498db; flex:1;">📂 DOCUMENTACIÓN</a></div></div>', unsafe_allow_html=True)
+                        count_h += 1
+            if count_h == 0: st.info("No hay camiones publicados hoy.")
         except: st.info("Actualizando...")
 
 # --- FOOTER CON LEGALES ---
 st.markdown(f"""
     <div class="footer">
         <p><b>© 2026 RETORNO MATCH - San Jorge, Santa Fe</b></p>
-        <p>Desarrollado por <b>Ignacio Diaz</b></p>
+        <p>Desarrollado por <b>Ignacio Diaz y sus legales</b></p>
         <div class="legal">
-            Queda prohibida la reproducción total o parcial de esta interfaz. 
-            El uso de los datos publicados es responsabilidad exclusiva de las partes. 
-            RETORNO MATCH no se responsabiliza por la veracidad de la documentación cargada.
+            <b>AVISO LEGAL:</b> Queda estrictamente prohibida la reproducción total o parcial de esta estructura e interfaz bajo apercibimiento de ley. 
+            RETORNO MATCH actúa como nexo informativo. La veracidad de los datos, CUIT, LINTI y estado de documentación es responsabilidad exclusiva de quien la pública. 
+            El uso de este sistema implica la aceptación de términos y condiciones de privacidad.
         </div>
     </div>
     """, unsafe_allow_html=True)
