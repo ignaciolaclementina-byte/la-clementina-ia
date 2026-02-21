@@ -13,7 +13,7 @@ GID_CARGAS = "1267917528"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 
-# --- 2. SISTEMA ANTI-PAUSA ---
+# --- 2. SISTEMA ANTI-PAUSA (KEEP ALIVE NATIVO) ---
 if "last_heartbeat" not in st.session_state:
     st.session_state.last_heartbeat = time.time()
 
@@ -46,13 +46,13 @@ st.markdown("""
         color: white; padding: 10px; border-radius: 10px;
         margin-bottom: 20px; font-weight: bold; border: 1px solid #f1c40f;
     }
-    .card-vip {
-        background: #fff9e6 !important; border: 3px solid #f1c40f !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        color: #333; box-shadow: 0px 4px 20px rgba(241, 196, 15, 0.5);
-    }
     .card-white {
         background: white !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
         border-left: 10px solid #3498db; color: #333;
+    }
+    .card-vip {
+        background: #fff9e6 !important; border: 3px solid #f1c40f !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
+        color: #333; box-shadow: 0px 4px 20px rgba(241, 196, 15, 0.5);
     }
     .vip-label {
         background: #f1c40f; color: black; padding: 4px 12px; border-radius: 20px; 
@@ -60,6 +60,8 @@ st.markdown("""
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
+    .stTabs [data-baseweb="tab"] { flex: 1; height: 70px !important; background-color: #2c3e50 !important; color: white !important; font-size: 18px !important; font-weight: 900 !important; }
+    .stTabs [aria-selected="true"] { background-color: #3498db !important; }
     .legal-footer { 
         text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; 
         font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px;
@@ -71,6 +73,7 @@ st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP<
 
 # --- 5. FUNCIONES ---
 def limpiar_dato_numerico(dato):
+    """Limpia CUITs y WhatsApps de .0 y ceros a la izquierda innecesarios"""
     s = str(dato).strip()
     if s.endswith(".0"): s = s[:-2]
     clean = "".join(filter(str.isdigit, s))
@@ -93,7 +96,7 @@ def es_vip(dato):
     lista_vip = [s.strip().upper() for s in st.session_state.socios_activos.split(",") if s.strip()]
     return str(dato).strip().upper() in lista_vip
 
-# --- 6. FILTROS ---
+# --- 6. BÚSQUEDA (CON FILTRO DE FECHA) ---
 c1, c2, c3, c4, c5 = st.columns([1.5, 1.5, 1.5, 1.5, 1])
 with c1: b_fecha = st.date_input("📅 FECHA:", datetime.now().date())
 with c2: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
@@ -113,7 +116,7 @@ except:
     df_ch_raw, df_ca_raw = pd.DataFrame(), pd.DataFrame()
     cant_camiones = 0
 
-# --- 7. RADAR ---
+# --- 7. RADAR AUTOMATIZADO ---
 st.markdown(f"""
 <div class="radar-container">
     <marquee scrollamount="8">
@@ -124,7 +127,7 @@ st.markdown(f"""
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
-# PESTAÑA: SOY EMPRESA (VER CAMIONES)
+# PESTAÑA: SOY EMPRESA
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -148,6 +151,7 @@ with t1:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
                     
+                    # --- SOLUCIÓN CUIT Y WSP ---
                     v4 = limpiar_dato_numerico(r[4])
                     v5 = limpiar_dato_numerico(r[5])
                     cuit_final = v5 if len(v5) == 11 else v4
@@ -159,7 +163,7 @@ with t1:
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit_final}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_final)}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a></div>''', unsafe_allow_html=True)
 
-# PESTAÑA: SOY CHOFER (VER CARGAS)
+# PESTAÑA: SOY CHOFER
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -167,7 +171,7 @@ with t2:
         with st.form("form_camion", clear_on_submit=True):
             o = st.selectbox("Prov. Origen", PROVINCIAS[1:]); lo = st.text_input("Loc. Origen")
             d = st.selectbox("Prov. Destino", PROVINCIAS[1:]); ld = st.text_input("Loc. Destino")
-            e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIL/CUIT", placeholder="Ej: 20334445551")
+            e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID", placeholder="Ej: 20334445551")
             w = st.text_input("WhatsApp (Sin 0 ni 15)", placeholder="Ej: 1122334455")
             if st.form_submit_button("SUBIR CAMIÓN"):
                 data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
@@ -176,7 +180,7 @@ with t2:
     with col_r2:
         if not df_ca_raw.empty:
             # INTERCAMBIAMOS ÍNDICES 4 y 5 PARA QUE EL NOMBRE DIGA MARFRIG
-            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
+            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip) 
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             
             for _, r in df_final_ca.iterrows():
@@ -184,7 +188,7 @@ with t2:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
                     
-                    # --- INTERCAMBIO DE COLUMNAS CORRECTO ---
+                    # --- INTERCAMBIO DE COLUMNAS CORRECTO PARA EMPRESA ---
                     empresa_visual = str(r[5]).replace(".0", "").strip() # Tomamos la 5 como el nombre
                     wsp_de_carga = str(r[4]) # Tomamos la 4 como el whatsapp
                     
@@ -194,7 +198,34 @@ with t2:
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_visual}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_de_carga)}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>''', unsafe_allow_html=True)
 
-# --- 8. PIE DE PÁGINA LEGAL ---
+# --- 8. PANEL DE CONTROL (CON GESTIÓN RÁPIDA VIP) ---
+st.markdown("---")
+with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
+    st.session_state.anuncios = st.text_area("Radar publicitario:", st.session_state.anuncios)
+    
+    st.markdown("### ⭐ GESTIÓN RÁPIDA DE SOCIOS VIP")
+    lista_vips = [s.strip() for s in st.session_state.socios_activos.split(",") if s.strip()]
+    
+    for socio in lista_vips:
+        col_v1, col_v2 = st.columns([4, 1])
+        with col_v1: st.code(socio)
+        with col_v2:
+            if st.button("🗑️ Borrar", key=f"del_{socio}"):
+                lista_vips.remove(socio)
+                st.session_state.socios_activos = ", ".join(lista_vips)
+                st.rerun()
+    
+    nuevo_vip = st.text_input("Agregar nuevo VIP (CUIT o Nombre):")
+    if st.button("➕ AGREGAR"):
+        if nuevo_vip and nuevo_vip not in lista_vips:
+            lista_vips.append(nuevo_vip)
+            st.session_state.socios_activos = ", ".join(lista_vips)
+            st.rerun()
+
+    if st.button("🚀 GUARDAR Y ACTUALIZAR"): 
+        st.cache_data.clear(); st.rerun()
+
+# --- 9. PIE DE PÁGINA LEGAL (BLINDADO - IGNACIO DIAZ) ---
 st.markdown(f"""
 <div class="legal-footer">
     <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz y sus legales</p>
