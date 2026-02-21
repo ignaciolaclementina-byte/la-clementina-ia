@@ -93,8 +93,12 @@ def es_fecha_seleccionada(f, fecha_target):
         return False
 
 def es_vip(dato):
+    # --- AQUÍ ESTÁ LA SOLUCIÓN ---
     lista_vip = [s.strip().upper() for s in st.session_state.socios_activos.split(",") if s.strip()]
-    return str(dato).strip().upper() in lista_vip
+    dato_str = str(dato).strip().upper()
+    if dato_str.endswith(".0"): 
+        dato_str = dato_str[:-2]
+    return dato_str in lista_vip
 
 # --- 6. BÚSQUEDA (CON FILTRO DE FECHA) ---
 c1, c2, c3, c4, c5 = st.columns([1.5, 1.5, 1.5, 1.5, 1])
