@@ -120,7 +120,7 @@ st.markdown(f"""
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
-# PESTAÑA: SOY EMPRESA (MUESTRA CHOFERES)
+# PESTAÑA: SOY EMPRESA
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -136,18 +136,19 @@ with t1:
                 st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 5].apply(es_vip) # VIP por CUIT/ID
+            df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 7].apply(es_vip)
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ch.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
-                    # r[4] es WhatsApp, r[5] es ID/CUIT
+                    # Limpieza de ID para evitar el .0
+                    id_limpio = str(r[4]).replace(".0", "")
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>ID:</b> {r[5]}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">💬 CONTACTAR</a></div>''', unsafe_allow_html=True)
+                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>ID:</b> {id_limpio}<br>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[7])}" target="_blank" class="btn-wsp">💬 CONTACTAR</a></div>''', unsafe_allow_html=True)
 
-# PESTAÑA: SOY CHOFER (MUESTRA CARGAS)
+# PESTAÑA: SOY CHOFER
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -158,7 +159,7 @@ with t2:
             e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID", placeholder="Ej: 20334445551")
             w = st.text_input("WhatsApp (Sin 0 ni 15)", placeholder="Ej: 1122334455")
             if st.form_submit_button("SUBIR CAMIÓN"):
-                data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({lo})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
+                data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({eld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
                 requests.post(URL_CHOFERES_POST, data=data_camion)
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
@@ -169,12 +170,13 @@ with t2:
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
-                    # r[4] es WhatsApp, r[5] es Empresa
+                    # Limpieza de ID/Empresa para evitar el .0
+                    empresa_limpia = str(r[5]).replace(".0", "")
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
+                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_limpia}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>''', unsafe_allow_html=True)
 
-# --- 8. PANEL DE CONTROL (ADMIN) ---
+# --- 8. PANEL DE CONTROL (CON GESTIÓN RÁPIDA VIP) ---
 st.markdown("---")
 with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
     st.session_state.anuncios = st.text_area("Radar publicitario:", st.session_state.anuncios)
