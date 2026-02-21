@@ -70,8 +70,15 @@ st.markdown("""
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
 
 # --- 5. FUNCIONES ---
+def limpiar_dato_numerico(dato):
+    """Limpia CUITs y WhatsApps de .0 y ceros a la izquierda innecesarios"""
+    s = str(dato).strip()
+    if s.endswith(".0"): s = s[:-2]
+    clean = "".join(filter(str.isdigit, s))
+    return clean
+
 def limpiar_wsp(num):
-    clean = "".join(filter(str.isdigit, str(num)))
+    clean = limpiar_dato_numerico(num)
     if clean.startswith("0"): clean = clean[1:]
     if clean.startswith("15"): clean = clean.replace("15", "", 1)
     return "549" + clean if not clean.startswith("549") else clean
@@ -85,7 +92,7 @@ def es_fecha_seleccionada(f, fecha_target):
 
 def es_vip(dato):
     lista_vip = [s.strip().upper() for s in st.session_state.socios_activos.split(",") if s.strip()]
-    return str(dato).strip().upper() in lista_vip
+    return limpiar_dato_numerico(dato).upper() in lista_vip
 
 # --- 6. FILTROS ---
 c1, c2, c3, c4, c5 = st.columns([1.5, 1.5, 1.5, 1.5, 1])
@@ -134,7 +141,6 @@ with t1:
                 st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            # Lógica inteligente para detectar VIP por CUIT sin importar la columna
             df_ch_raw['es_vip'] = df_ch_raw.apply(lambda r: es_vip(r[4]) or es_vip(r[5]), axis=1)
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             
@@ -143,18 +149,13 @@ with t1:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
                     
-                    # --- LÓGICA DE DETECCIÓN INTELIGENTE ---
-                    # El CUIT siempre tiene 11 números, el WhatsApp suele tener 10.
-                    # Comparamos r[4] y r[5] para ver cuál es el CUIT real.
-                    val1 = "".join(filter(str.isdigit, str(r[4])))
-                    val2 = "".join(filter(str.isdigit, str(r[5])))
+                    # --- LÓGICA ANTI-CEROS EXTRA ---
+                    v4 = limpiar_dato_numerico(r[4])
+                    v5 = limpiar_dato_numerico(r[5])
                     
-                    if len(val1) >= 11: # val1 es el CUIT
-                        cuit_final = val1
-                        wsp_final = val2
-                    else: # val2 es el CUIT o el más largo
-                        cuit_final = val2
-                        wsp_final = val1
+                    # El CUIT tiene 11 dígitos
+                    cuit_final = v5 if len(v5) == 11 else v4
+                    wsp_final = v4 if cuit_final == v5 else v5
                     
                     msg = urllib.parse.quote(f"Hola! Te contacto desde *RETORNO MATCH VIP* 🚛. Vi tu camión *{r[3]}* disponible para la ruta *{r[1]} -> {r[2]}*. ¿Sigue disponible?")
                     
@@ -186,27 +187,16 @@ with t2:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
                     
-                    # --- LÓGICA DE DETECCIÓN PARA EMPRESAS ---
-                    # Si un valor tiene más de 9 dígitos, es probable que sea el WhatsApp, 
-                    # pero si el otro campo es texto (Nombre de Empresa), usamos el texto.
-                    val4 = str(r[4])
-                    val5 = str(r[5])
-                    
-                    # Detectamos cuál es el número de teléfono
-                    num4 = "".join(filter(str.isdigit, val4))
-                    num5 = "".join(filter(str.isdigit, val5))
-                    
-                    if len(num5) >= 9: # Asumimos que la col 5 es el WhatsApp
-                        empresa_nombre = val4
-                        wsp_carga = val5
-                    else: # Si no, es la col 4
-                        empresa_nombre = val5
-                        wsp_carga = val4
+                    # --- FIX EMPRESA ---
+                    # r[4] suele ser nombre, r[5] suele ser número.
+                    # Si r[4] tiene .0 lo limpiamos también por las dudas.
+                    empresa_visual = str(r[4]).replace(".0", "").strip()
+                    wsp_carga = limpiar_dato_numerico(r[5])
                     
                     msg_carga = urllib.parse.quote(f"Hola! Vi tu carga de *{r[1]}* a *{r[2]}* en *RETORNO MATCH VIP*. ¿Sigue disponible?")
                     
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_nombre}<br>
+                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_visual}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_carga)}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>''', unsafe_allow_html=True)
 
 # --- 8. PIE DE PÁGINA LEGAL ---
