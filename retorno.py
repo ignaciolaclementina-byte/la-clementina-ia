@@ -10,19 +10,11 @@ SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
 
+# URLs de envío (formResponse) basadas en tus enlaces
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 
-# --- 2. SISTEMA ANTI-PAUSA (KEEP ALIVE NATIVO) ---
-# Esto refresca la conexión cada 15 minutos sin instalar librerías extras
-if "last_heartbeat" not in st.session_state:
-    st.session_state.last_heartbeat = time.time()
-
-if time.time() - st.session_state.last_heartbeat > 900:
-    st.session_state.last_heartbeat = time.time()
-    st.rerun()
-
-# --- 3. GESTIÓN DE ESTADO ---
+# --- 2. GESTIÓN DE ESTADO ---
 if 'anuncios' not in st.session_state:
     st.session_state.anuncios = "📢 ¡SISTEMA VIP ACTIVADO! -- Consultas aquí --"
 
@@ -34,7 +26,7 @@ EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acopla
 
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
-# --- 4. ESTILOS VIP (BLINDADOS) ---
+# --- 3. ESTILOS VIP (BLINDADOS) ---
 st.markdown("""
 <style>
     .stApp {
@@ -72,7 +64,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
 
-# --- 5. FUNCIONES ---
+# --- 4. FUNCIONES ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
@@ -95,7 +87,7 @@ except:
     df_ch_raw, df_ca_raw = pd.DataFrame(), pd.DataFrame()
     cant_camiones = 0
 
-# --- 6. RADAR AUTOMATIZADO ---
+# --- 5. RADAR AUTOMATIZADO ---
 st.markdown(f"""
 <div class="radar-container">
     <marquee scrollamount="8">
@@ -104,7 +96,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 7. BÚSQUEDA ---
+# --- 6. BÚSQUEDA ---
 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
 with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
 with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
@@ -116,7 +108,7 @@ with c4:
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
-# PESTAÑA: SOY EMPRESA
+# PESTAÑA: SOY EMPRESA (Busca Camiones / Publica Carga)
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -124,14 +116,23 @@ with t1:
         with st.form("form_carga", clear_on_submit=True):
             eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
             ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
-            ec = st.text_input("Carga"); en = st.text_input("Nombre Empresa"); ew = st.text_input("WhatsApp")
+            ec = st.text_input("Carga")
+            en = st.text_input("Nombre Empresa")
+            ew = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
-                data_carga = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": ec, "entry.1930562861": en, "entry.466540450": ew}
+                data_carga = {
+                    "entry.610070407": f"{eo} ({elo})",
+                    "entry.170847116": f"{ed} ({eld})",
+                    "entry.576675281": ec,
+                    "entry.1930562861": en,
+                    "entry.1064058502": "Sale hoy",
+                    "entry.466540450": ew
+                }
                 requests.post(URL_CARGAS_POST, data=data_carga)
                 st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 7].apply(es_vip)
+            df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 7].apply(es_vip) # CUIT/ID en col 7 según tu form
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(es_hoy)].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ch.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
@@ -141,7 +142,7 @@ with t1:
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>ID:</b> {r[4]}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[7])}" target="_blank" class="btn-wsp">💬 CONTACTAR</a></div>''', unsafe_allow_html=True)
 
-# PESTAÑA: SOY CHOFER
+# PESTAÑA: SOY CHOFER (Busca Cargas / Publica Camión)
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -149,9 +150,17 @@ with t2:
         with st.form("form_camion", clear_on_submit=True):
             o = st.selectbox("Prov. Origen", PROVINCIAS[1:]); lo = st.text_input("Loc. Origen")
             d = st.selectbox("Prov. Destino", PROVINCIAS[1:]); ld = st.text_input("Loc. Destino")
-            e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID"); w = st.text_input("WhatsApp")
+            e = st.selectbox("Equipo", EQUIPOS[1:])
+            cu = st.text_input("CUIT/ID")
+            w = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR CAMIÓN"):
-                data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
+                data_camion = {
+                    "entry.1304806144": f"{o} ({lo})",
+                    "entry.1519265625": f"{d} ({ld})",
+                    "entry.597193898": e,
+                    "entry.1542650763": cu,
+                    "entry.1574172378": w
+                }
                 requests.post(URL_CHOFERES_POST, data=data_camion)
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
@@ -166,14 +175,14 @@ with t2:
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[4]}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[6])}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>''', unsafe_allow_html=True)
 
-# --- 8. PANEL DE CONTROL ---
+# --- 7. PANEL DE CONTROL ---
 st.markdown("---")
 with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
     st.session_state.anuncios = st.text_area("Radar publicitario:", st.session_state.anuncios)
     st.session_state.socios_activos = st.text_area("Lista VIP (separada por comas):", st.session_state.socios_activos)
     if st.button("🚀 ACTUALIZAR SISTEMA"): st.rerun()
 
-# --- 9. PIE DE PÁGINA LEGAL BLINDADO ---
+# --- 8. PIE DE PÁGINA LEGAL BLINDADO ---
 st.markdown(f"""
 <div class="legal-footer">
     <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
