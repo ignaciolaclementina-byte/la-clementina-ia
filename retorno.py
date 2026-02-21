@@ -93,7 +93,6 @@ def es_fecha_seleccionada(f, fecha_target):
         return False
 
 def es_vip(dato):
-    # --- AQUÍ ESTÁ LA SOLUCIÓN ---
     lista_vip = [s.strip().upper() for s in st.session_state.socios_activos.split(",") if s.strip()]
     dato_str = str(dato).strip().upper()
     if dato_str.endswith(".0"): 
@@ -124,7 +123,7 @@ except:
 st.markdown(f"""
 <div class="radar-container">
     <marquee scrollamount="8">
-        🚛 FECHA: {b_fecha.strftime('%d/%m/%Y')} -- ACTIVOS: {cant_camiones} CAMIONES -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz y sus legales.
+        🚛 FECHA: {b_fecha.strftime('%d/%m/%Y')} -- ACTIVOS: {cant_camiones} CAMIONES -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz.
     </marquee>
 </div>
 """, unsafe_allow_html=True)
@@ -155,7 +154,6 @@ with t1:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
                     
-                    # --- SOLUCIÓN CUIT Y WSP ---
                     v4 = limpiar_dato_numerico(r[4])
                     v5 = limpiar_dato_numerico(r[5])
                     cuit_final = v5 if len(v5) == 11 else v4
@@ -183,7 +181,6 @@ with t2:
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
-            # INTERCAMBIAMOS ÍNDICES 4 y 5 PARA QUE EL NOMBRE DIGA MARFRIG
             df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip) 
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             
@@ -192,9 +189,8 @@ with t2:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
                     
-                    # --- INTERCAMBIO DE COLUMNAS CORRECTO PARA EMPRESA ---
-                    empresa_visual = str(r[5]).replace(".0", "").strip() # Tomamos la 5 como el nombre
-                    wsp_de_carga = str(r[4]) # Tomamos la 4 como el whatsapp
+                    empresa_visual = str(r[5]).replace(".0", "").strip()
+                    wsp_de_carga = str(r[4])
                     
                     msg_carga = urllib.parse.quote(f"Hola! Vi tu carga de *{r[1]}* a *{r[2]}* en *RETORNO MATCH VIP*. ¿Sigue disponible?")
                     
@@ -232,7 +228,7 @@ with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
 # --- 9. PIE DE PÁGINA LEGAL (BLINDADO - IGNACIO DIAZ) ---
 st.markdown(f"""
 <div class="legal-footer">
-    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz y sus legales</p>
+    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
     <p style="font-style: italic;">No me responsabilizo por los acuerdos, cargas o transacciones realizadas entre las partes. La plataforma actúa únicamente como nexo informativo.</p>
     <p><b>Queda terminantemente prohibida la réplica, copia o distribución total o parcial de este sistema sin autorización expresa.</b></p>
     <p>© 2026 RETORNO MATCH VIP - Todos los derechos reservados.</p>
