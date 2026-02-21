@@ -175,7 +175,8 @@ with t2:
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
-            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 4].apply(es_vip)
+            # INTERCAMBIAMOS ÍNDICES 4 y 5 PARA QUE EL NOMBRE DIGA MARFRIG
+            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             
             for _, r in df_final_ca.iterrows():
@@ -183,11 +184,9 @@ with t2:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
                     
-                    # --- CORRECCIÓN FIJA PARA EMPRESA ---
-                    # r[4] es el Nombre (Marfrig, etc)
-                    # r[5] es el WhatsApp
-                    empresa_visual = str(r[4]).replace(".0", "").strip()
-                    wsp_de_carga = str(r[5])
+                    # --- INTERCAMBIO DE COLUMNAS CORRECTO ---
+                    empresa_visual = str(r[5]).replace(".0", "").strip() # Tomamos la 5 como el nombre
+                    wsp_de_carga = str(r[4]) # Tomamos la 4 como el whatsapp
                     
                     msg_carga = urllib.parse.quote(f"Hola! Vi tu carga de *{r[1]}* a *{r[2]}* en *RETORNO MATCH VIP*. ¿Sigue disponible?")
                     
