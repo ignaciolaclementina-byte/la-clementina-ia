@@ -14,7 +14,6 @@ URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7c
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 
 # --- 2. SISTEMA ANTI-PAUSA (KEEP ALIVE NATIVO) ---
-# Esto refresca la conexión cada 15 minutos sin instalar librerías extras
 if "last_heartbeat" not in st.session_state:
     st.session_state.last_heartbeat = time.time()
 
@@ -76,43 +75,50 @@ st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP<
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
+    if clean.startswith("15"): clean = clean.replace("15", "", 1)
     return "549" + clean if not clean.startswith("549") else clean
 
-def es_hoy(f):
-    try: return pd.to_datetime(f).date() == datetime.now().date()
-    except: return False
+def es_fecha_seleccionada(f, fecha_target):
+    try:
+        # Intenta parsear la fecha de la planilla (formato típico DD/MM/YYYY)
+        fecha_planilla = pd.to_datetime(f, dayfirst=True).date()
+        return fecha_planilla == fecha_target
+    except:
+        return False
 
 def es_vip(dato):
     lista_vip = [s.strip().upper() for s in st.session_state.socios_activos.split(",") if s.strip()]
     return str(dato).strip().upper() in lista_vip
 
+# --- 6. BÚSQUEDA (CON FILTRO DE FECHA) ---
+c1, c2, c3, c4, c5 = st.columns([1.5, 1.5, 1.5, 1.5, 1])
+with c1: b_fecha = st.date_input("📅 FECHA:", datetime.now().date())
+with c2: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
+with c3: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
+with c4: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
+with c5:
+    st.write("<br>", unsafe_allow_html=True)
+    if st.button("🔄 ACTUALIZAR", use_container_width=True):
+        st.cache_data.clear(); st.rerun()
+
 # Carga de datos
 try:
     df_ch_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
     df_ca_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
-    cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(es_hoy)])
+    # Contador basado en la fecha seleccionada
+    cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))])
 except:
     df_ch_raw, df_ca_raw = pd.DataFrame(), pd.DataFrame()
     cant_camiones = 0
 
-# --- 6. RADAR AUTOMATIZADO ---
+# --- 7. RADAR AUTOMATIZADO (CON FIRMA AMPLIADA) ---
 st.markdown(f"""
 <div class="radar-container">
     <marquee scrollamount="8">
-        🚛 EN VIVO: {cant_camiones} CAMIONES DISPONIBLES AHORA -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz.
+        🚛 FECHA: {b_fecha.strftime('%d/%m/%Y')} -- ACTIVOS: {cant_camiones} CAMIONES -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz y sus legales.
     </marquee>
 </div>
 """, unsafe_allow_html=True)
-
-# --- 7. BÚSQUEDA ---
-c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
-with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
-with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
-with c3: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
-with c4:
-    st.write("<br>", unsafe_allow_html=True)
-    if st.button("🔄 ACTUALIZAR", use_container_width=True):
-        st.cache_data.clear(); st.rerun()
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
@@ -124,7 +130,12 @@ with t1:
         with st.form("form_carga", clear_on_submit=True):
             eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
             ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
-            ec = st.text_input("Carga"); en = st.text_input("Nombre Empresa"); ew = st.text_input("WhatsApp")
+            ec = st.text_input("Carga"); en = st.text_input("Nombre Empresa")
+            ew = st.text_input("WhatsApp (Sin 0 ni 15)", placeholder="Ej: 1122334455")
+            # Validación visual WhatsApp
+            if len("".join(filter(str.isdigit, ew))) >= 10: 
+                st.markdown("<p style='color:#25D366; font-size:12px;'>✅ WhatsApp con formato correcto</p>", unsafe_allow_html=True)
+            
             if st.form_submit_button("SUBIR CARGA"):
                 data_carga = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": ec, "entry.1930562861": en, "entry.466540450": ew}
                 requests.post(URL_CARGAS_POST, data=data_carga)
@@ -132,7 +143,7 @@ with t1:
     with col_r1:
         if not df_ch_raw.empty:
             df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 7].apply(es_vip)
-            df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(es_hoy)].sort_values(by='es_vip', ascending=False)
+            df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ch.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     clase = "card-vip" if r['es_vip'] else "card-white"
@@ -149,7 +160,17 @@ with t2:
         with st.form("form_camion", clear_on_submit=True):
             o = st.selectbox("Prov. Origen", PROVINCIAS[1:]); lo = st.text_input("Loc. Origen")
             d = st.selectbox("Prov. Destino", PROVINCIAS[1:]); ld = st.text_input("Loc. Destino")
-            e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID"); w = st.text_input("WhatsApp")
+            e = st.selectbox("Equipo", EQUIPOS[1:])
+            cu = st.text_input("CUIT/ID (Sin puntos ni guiones)", placeholder="Ej: 20334445551")
+            # Validación visual CUIT
+            if len("".join(filter(str.isdigit, cu))) == 11:
+                st.markdown("<p style='color:#25D366; font-size:12px;'>✅ CUIT con formato correcto</p>", unsafe_allow_html=True)
+            
+            w = st.text_input("WhatsApp (Sin 0 ni 15)", placeholder="Ej: 1122334455")
+            # Validación visual WhatsApp
+            if len("".join(filter(str.isdigit, w))) >= 10:
+                st.markdown("<p style='color:#25D366; font-size:12px;'>✅ WhatsApp con formato correcto</p>", unsafe_allow_html=True)
+                
             if st.form_submit_button("SUBIR CAMIÓN"):
                 data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
                 requests.post(URL_CHOFERES_POST, data=data_camion)
@@ -157,7 +178,7 @@ with t2:
     with col_r2:
         if not df_ca_raw.empty:
             df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 4].apply(es_vip)
-            df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(es_hoy)].sort_values(by='es_vip', ascending=False)
+            df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ca.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     clase = "card-vip" if r['es_vip'] else "card-white"
@@ -166,17 +187,28 @@ with t2:
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[4]}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[6])}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>''', unsafe_allow_html=True)
 
-# --- 8. PANEL DE CONTROL ---
+# --- 8. PANEL DE CONTROL (CON ACCESO A ELIMINAR) ---
 st.markdown("---")
 with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
     st.session_state.anuncios = st.text_area("Radar publicitario:", st.session_state.anuncios)
-    st.session_state.socios_activos = st.text_area("Lista VIP (separada por comas):", st.session_state.socios_activos)
-    if st.button("🚀 ACTUALIZAR SISTEMA"): st.rerun()
+    st.session_state.socios_activos = st.text_area("Lista VIP (CUITs o nombres separados por comas):", st.session_state.socios_activos)
+    
+    st.markdown("### 🛠️ GESTIÓN DE DATOS")
+    st.info("Para eliminar usuarios, corregir datos o gestionar socios VIP, utiliza los siguientes enlaces directos:")
+    adm_col1, adm_col2 = st.columns(2)
+    with adm_col1:
+        st.link_button("📂 ELIMINAR/EDITAR CHOFERES", f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_CHOFERES}")
+    with adm_col2:
+        st.link_button("📂 ELIMINAR/EDITAR CARGAS", f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_CARGAS}")
+    
+    if st.button("🚀 GUARDAR Y ACTUALIZAR SISTEMA"): 
+        st.cache_data.clear()
+        st.rerun()
 
 # --- 9. PIE DE PÁGINA LEGAL BLINDADO ---
 st.markdown(f"""
 <div class="legal-footer">
-    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
+    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz y sus legales</p>
     <p><b>AVISO LEGAL Y TÉRMINOS DE USO</b></p>
     <p style="max-width: 800px; margin: 0 auto; line-height: 1.6;">
         Queda terminantemente <b>prohibida la réplica, copia o distribución total o parcial</b> de esta interfaz, 
