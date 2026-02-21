@@ -157,22 +157,22 @@ with t2:
             e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID", placeholder="Ej: 20334445551")
             w = st.text_input("WhatsApp (Sin 0 ni 15)", placeholder="Ej: 1122334455")
             if st.form_submit_button("SUBIR CAMIÓN"):
-                data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
+                data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({eld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
                 requests.post(URL_CHOFERES_POST, data=data_camion)
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
-            # --- CORRECCIÓN FINAL DE ÍNDICES PARA EMPRESA Y WHATSAPP ---
-            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 4].apply(es_vip) 
+            # --- AJUSTE DE ÍNDICES: r[5] es Empresa, r[4] es WhatsApp ---
+            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip) 
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ca.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
-                    # r[4] -> Nombre Empresa, r[5] -> WhatsApp (Índices ajustados)
+                    # Empresa en r[5] y WhatsApp en r[4]
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[4]}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[5])}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>''', unsafe_allow_html=True)
+                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>''', unsafe_allow_html=True)
 
 # --- 8. PANEL DE CONTROL (CON GESTIÓN RÁPIDA VIP) ---
 st.markdown("---")
