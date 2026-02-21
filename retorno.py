@@ -71,7 +71,6 @@ st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP<
 
 # --- 5. FUNCIONES ---
 def limpiar_dato_numerico(dato):
-    """Limpia CUITs y WhatsApps de .0 y ceros a la izquierda innecesarios"""
     s = str(dato).strip()
     if s.endswith(".0"): s = s[:-2]
     clean = "".join(filter(str.isdigit, s))
@@ -92,7 +91,7 @@ def es_fecha_seleccionada(f, fecha_target):
 
 def es_vip(dato):
     lista_vip = [s.strip().upper() for s in st.session_state.socios_activos.split(",") if s.strip()]
-    return limpiar_dato_numerico(dato).upper() in lista_vip
+    return str(dato).strip().upper() in lista_vip
 
 # --- 6. FILTROS ---
 c1, c2, c3, c4, c5 = st.columns([1.5, 1.5, 1.5, 1.5, 1])
@@ -149,11 +148,8 @@ with t1:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
                     
-                    # --- LÓGICA ANTI-CEROS EXTRA ---
                     v4 = limpiar_dato_numerico(r[4])
                     v5 = limpiar_dato_numerico(r[5])
-                    
-                    # El CUIT tiene 11 dígitos
                     cuit_final = v5 if len(v5) == 11 else v4
                     wsp_final = v4 if cuit_final == v5 else v5
                     
@@ -179,7 +175,7 @@ with t2:
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
-            df_ca_raw['es_vip'] = df_ca_raw.apply(lambda r: es_vip(r[4]) or es_vip(r[5]), axis=1)
+            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 4].apply(es_vip)
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             
             for _, r in df_final_ca.iterrows():
@@ -187,17 +183,17 @@ with t2:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
                     
-                    # --- FIX EMPRESA ---
-                    # r[4] suele ser nombre, r[5] suele ser número.
-                    # Si r[4] tiene .0 lo limpiamos también por las dudas.
+                    # --- CORRECCIÓN FIJA PARA EMPRESA ---
+                    # r[4] es el Nombre (Marfrig, etc)
+                    # r[5] es el WhatsApp
                     empresa_visual = str(r[4]).replace(".0", "").strip()
-                    wsp_carga = limpiar_dato_numerico(r[5])
+                    wsp_de_carga = str(r[5])
                     
                     msg_carga = urllib.parse.quote(f"Hola! Vi tu carga de *{r[1]}* a *{r[2]}* en *RETORNO MATCH VIP*. ¿Sigue disponible?")
                     
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_visual}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_carga)}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>''', unsafe_allow_html=True)
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_de_carga)}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>''', unsafe_allow_html=True)
 
 # --- 8. PIE DE PÁGINA LEGAL ---
 st.markdown(f"""
