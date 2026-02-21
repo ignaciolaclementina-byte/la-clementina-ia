@@ -14,7 +14,6 @@ URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7c
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 
 # --- 2. SISTEMA ANTI-PAUSA (KEEP ALIVE NATIVO) ---
-# Esto refresca la conexión cada 15 minutos sin instalar librerías extras
 if "last_heartbeat" not in st.session_state:
     st.session_state.last_heartbeat = time.time()
 
@@ -72,34 +71,41 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
 
-# --- 5. FUNCIONES ---
+# --- 5. FUNCIONES DE FILTRADO (ESTRICTO POR DÍA) ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
     return "549" + clean if not clean.startswith("549") else clean
 
 def es_hoy(f):
-    try: return pd.to_datetime(f).date() == datetime.now().date()
-    except: return False
+    try:
+        fecha_registro = pd.to_datetime(f, dayfirst=True).date()
+        fecha_actual = datetime.now().date()
+        return fecha_registro == fecha_actual
+    except:
+        return False
 
 def es_vip(dato):
     lista_vip = [s.strip().upper() for s in st.session_state.socios_activos.split(",") if s.strip()]
     return str(dato).strip().upper() in lista_vip
 
-# Carga de datos
+# Carga y conteo de datos
 try:
     df_ch_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
     df_ca_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
+    
+    # Filtro estricto para conteo en Radar
     cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(es_hoy)])
+    cant_cargas = len(df_ca_raw[df_ca_raw.iloc[:, 0].apply(es_hoy)])
 except:
     df_ch_raw, df_ca_raw = pd.DataFrame(), pd.DataFrame()
-    cant_camiones = 0
+    cant_camiones, cant_cargas = 0, 0
 
 # --- 6. RADAR AUTOMATIZADO ---
 st.markdown(f"""
 <div class="radar-container">
     <marquee scrollamount="8">
-        🚛 EN VIVO: {cant_camiones} CAMIONES DISPONIBLES AHORA -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz.
+        🚛 EN VIVO: {cant_camiones} CAMIONES Y {cant_cargas} CARGAS DISPONIBLES HOY -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz.
     </marquee>
 </div>
 """, unsafe_allow_html=True)
@@ -132,7 +138,9 @@ with t1:
     with col_r1:
         if not df_ch_raw.empty:
             df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 7].apply(es_vip)
+            # Solo muestra lo de HOY
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(es_hoy)].sort_values(by='es_vip', ascending=False)
+            if df_final_ch.empty: st.info("No hay camiones publicados hoy.")
             for _, r in df_final_ch.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     clase = "card-vip" if r['es_vip'] else "card-white"
@@ -157,7 +165,9 @@ with t2:
     with col_r2:
         if not df_ca_raw.empty:
             df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 4].apply(es_vip)
+            # Solo muestra lo de HOY
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(es_hoy)].sort_values(by='es_vip', ascending=False)
+            if df_final_ca.empty: st.info("No hay cargas publicadas hoy.")
             for _, r in df_final_ca.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     clase = "card-vip" if r['es_vip'] else "card-white"
