@@ -134,10 +134,10 @@ with t1:
                 st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            # Forzamos la identificación de la columna CUIL. 
-            # Si el número de WhatsApp aparece en el CUIL, es que el CUIT está en r[4] o r[5].
-            # Probamos r[4] como CUIL y r[5] como WhatsApp (Ajustar si es necesario)
-            df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 4].apply(es_vip)
+            # CORRECCIÓN DE COLUMNAS PARA CHOFERES:
+            # r[4] estaba mostrando el teléfono, por lo tanto el CUIT debe estar en r[5] o r[3].
+            # Ajustamos los índices basándonos en tu reporte:
+            df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 5].apply(es_vip) # VIP ahora chequea la columna correcta
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             
             for _, r in df_final_ch.iterrows():
@@ -145,19 +145,17 @@ with t1:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
                     
-                    # --- CAMBIO ESTRATÉGICO DE ÍNDICES ---
-                    # r[4] suele ser el CUIL y r[5] el WhatsApp.
-                    # Si antes se veía el WhatsApp en el CUIL, invertimos la lógica:
-                    # En muchos Sheets, la columna 4 es CUIL y la 5 es WhatsApp. 
-                    # Si r[4] te muestra el teléfono, probá r[3] o verificá los encabezados del Excel.
-                    cuil_id = str(r[4]).replace(".0", "") 
-                    wsp_puro = str(r[5])
+                    # --- FIX DE ÍNDICES CRUZADOS ---
+                    # Según tu reporte, r[4] tenía el teléfono (340...) y r[5] el CUIT (203...)
+                    # Invertimos para que el visual sea correcto:
+                    cuit_mostrar = str(r[5]).replace(".0", "") 
+                    wsp_para_boton = str(r[4])
                     
                     msg = urllib.parse.quote(f"Hola! Te contacto desde *RETORNO MATCH VIP* 🚛. Vi tu camión *{r[3]}* disponible para la ruta *{r[1]} -> {r[2]}*. ¿Sigue disponible?")
                     
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIL/CUIT:</b> {cuil_id}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_puro)}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a></div>''', unsafe_allow_html=True)
+                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit_mostrar}<br>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_para_boton)}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a></div>''', unsafe_allow_html=True)
 
 # PESTAÑA: SOY CHOFER (VER CARGAS)
 with t2:
@@ -175,6 +173,7 @@ with t2:
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
+            # Ajuste preventivo en Cargas por si las columnas también están invertidas
             df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 4].apply(es_vip) 
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ca.iterrows():
