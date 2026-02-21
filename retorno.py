@@ -136,7 +136,6 @@ with t1:
                 st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            # VIP se verifica contra la columna del CUIT (Índice 4)
             df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 4].apply(es_vip)
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ch.iterrows():
@@ -144,14 +143,13 @@ with t1:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
                     
-                    # --- CORRECCIÓN DE ÍNDICES: ID=CUIL (4) | WSP=(7 o 5 según tu Google Sheet) ---
-                    # Basado en tu reporte, invertimos r[7] por r[4]
+                    # --- CONFIGURACIÓN DE MOSTRADO: EQUIPO Y CUIL ---
                     cuil_id = str(r[4]).replace(".0", "")
                     wsp_puro = str(r[7])
                     msg = urllib.parse.quote(f"Hola, te contacto desde RETORNO MATCH VIP por tu camión {r[3]} de {r[1]} hacia {r[2]}.")
                     
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>ID:</b> {cuil_id}<br>
+                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIL:</b> {cuil_id}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_puro)}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR</a></div>''', unsafe_allow_html=True)
 
 # PESTAÑA: SOY CHOFER (VER CARGAS)
@@ -170,7 +168,6 @@ with t2:
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
-            # Empresa VIP contra columna 4 (Empresa)
             df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 4].apply(es_vip) 
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ca.iterrows():
@@ -178,7 +175,6 @@ with t2:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
                     
-                    # --- CORRECCIÓN DE ÍNDICES EN CARGAS ---
                     empresa_nombre = str(r[4]).replace(".0", "")
                     wsp_carga = str(r[5])
                     msg_carga = urllib.parse.quote(f"Hola, vi tu carga de {r[1]} a {r[2]} en RETORNO MATCH VIP. ¿Sigue disponible?")
