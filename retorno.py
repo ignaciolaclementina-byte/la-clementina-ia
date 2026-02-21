@@ -71,17 +71,16 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
 
-# --- 5. FUNCIONES DE FILTRADO (ESTRICTO POR DÍA) ---
+# --- 5. FUNCIONES DE FILTRADO ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num)))
     if clean.startswith("0"): clean = clean[1:]
     return "549" + clean if not clean.startswith("549") else clean
 
-def es_hoy(f):
+def es_fecha_seleccionada(f, fecha_target):
     try:
         fecha_registro = pd.to_datetime(f, dayfirst=True).date()
-        fecha_actual = datetime.now().date()
-        return fecha_registro == fecha_actual
+        return fecha_registro == fecha_target
     except:
         return False
 
@@ -89,36 +88,39 @@ def es_vip(dato):
     lista_vip = [s.strip().upper() for s in st.session_state.socios_activos.split(",") if s.strip()]
     return str(dato).strip().upper() in lista_vip
 
-# Carga y conteo de datos
+# --- 6. BÚSQUEDA Y FILTROS ---
+# Ponemos los filtros arriba para que afecten a toda la app
+c_f1, c_f2, c_f3, c_f4, c_f5 = st.columns([1.5, 1.5, 1.5, 1.5, 1])
+
+with c_f1: b_fecha = st.date_input("📅 FECHA:", datetime.now().date())
+with c_f2: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
+with c_f3: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
+with c_f4: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
+with c_f5:
+    st.write("<br>", unsafe_allow_html=True)
+    if st.button("🔄 REFRESCAR", use_container_width=True):
+        st.cache_data.clear(); st.rerun()
+
+# Carga de datos filtrada por fecha para el radar
 try:
     df_ch_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
     df_ca_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
     
-    # Filtro estricto para conteo en Radar
-    cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(es_hoy)])
-    cant_cargas = len(df_ca_raw[df_ca_raw.iloc[:, 0].apply(es_hoy)])
+    cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))])
+    cant_cargas = len(df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))])
 except:
     df_ch_raw, df_ca_raw = pd.DataFrame(), pd.DataFrame()
     cant_camiones, cant_cargas = 0, 0
 
-# --- 6. RADAR AUTOMATIZADO ---
+# --- 7. RADAR AUTOMATIZADO ---
+fecha_str = b_fecha.strftime('%d/%m/%Y')
 st.markdown(f"""
 <div class="radar-container">
     <marquee scrollamount="8">
-        🚛 EN VIVO: {cant_camiones} CAMIONES Y {cant_cargas} CARGAS DISPONIBLES HOY -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz.
+        🚛 FECHA SELECCIONADA: {fecha_str} -- DISPONIBLES: {cant_camiones} CAMIONES Y {cant_cargas} CARGAS -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz.
     </marquee>
 </div>
 """, unsafe_allow_html=True)
-
-# --- 7. BÚSQUEDA ---
-c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
-with c1: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
-with c2: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
-with c3: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
-with c4:
-    st.write("<br>", unsafe_allow_html=True)
-    if st.button("🔄 ACTUALIZAR", use_container_width=True):
-        st.cache_data.clear(); st.rerun()
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
@@ -138,9 +140,9 @@ with t1:
     with col_r1:
         if not df_ch_raw.empty:
             df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 7].apply(es_vip)
-            # Solo muestra lo de HOY
-            df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(es_hoy)].sort_values(by='es_vip', ascending=False)
-            if df_final_ch.empty: st.info("No hay camiones publicados hoy.")
+            df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
+            
+            if df_final_ch.empty: st.info(f"No hay camiones publicados para el día {fecha_str}.")
             for _, r in df_final_ch.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     clase = "card-vip" if r['es_vip'] else "card-white"
@@ -165,9 +167,9 @@ with t2:
     with col_r2:
         if not df_ca_raw.empty:
             df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 4].apply(es_vip)
-            # Solo muestra lo de HOY
-            df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(es_hoy)].sort_values(by='es_vip', ascending=False)
-            if df_final_ca.empty: st.info("No hay cargas publicadas hoy.")
+            df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
+            
+            if df_final_ca.empty: st.info(f"No hay cargas publicadas para el día {fecha_str}.")
             for _, r in df_final_ca.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     clase = "card-vip" if r['es_vip'] else "card-white"
@@ -186,7 +188,7 @@ with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
 # --- 9. PIE DE PÁGINA LEGAL BLINDADO ---
 st.markdown(f"""
 <div class="legal-footer">
-    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
+    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz y sus legales</p>
     <p><b>AVISO LEGAL Y TÉRMINOS DE USO</b></p>
     <p style="max-width: 800px; margin: 0 auto; line-height: 1.6;">
         Queda terminantemente <b>prohibida la réplica, copia o distribución total o parcial</b> de esta interfaz, 
