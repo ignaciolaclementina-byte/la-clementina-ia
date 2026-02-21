@@ -134,9 +134,6 @@ with t1:
                 st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            # CORRECCIÓN FINAL DE COLUMNAS PARA CHOFERES:
-            # Si r[4] muestra el WhatsApp (3406649346) y r[5] el CUIT (20367111128):
-            # Cambiamos VIP para que valide contra r[5] (el CUIT real)
             df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 5].apply(es_vip) 
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             
@@ -145,9 +142,8 @@ with t1:
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
                     
-                    # --- FORZADO DE DATOS CORRECTOS ---
-                    cuit_real = str(r[5]).replace(".0", "") # Tomamos la col 5 para el CUIT
-                    wsp_real = str(r[4])                    # Tomamos la col 4 para el WHATSAPP
+                    cuit_real = str(r[5]).replace(".0", "") 
+                    wsp_real = str(r[4])                    
                     
                     msg = urllib.parse.quote(f"Hola! Te contacto desde *RETORNO MATCH VIP* 🚛. Vi tu camión *{r[3]}* disponible para la ruta *{r[1]} -> {r[2]}*. ¿Sigue disponible?")
                     
@@ -171,20 +167,26 @@ with t2:
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
+            # --- CORRECCIÓN EN PESTAÑA EMPRESA ---
+            # Si r[5] es el WhatsApp, r[4] debe ser el Nombre/CUIT de la Empresa.
+            # Invertimos los índices de lectura para esta pestaña también:
             df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 4].apply(es_vip) 
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
+            
             for _, r in df_final_ca.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
                     
-                    empresa_nombre = str(r[4]).replace(".0", "")
-                    wsp_carga = str(r[5])
+                    # --- FIX AQUÍ: Aseguramos que Empresa no muestre el cel ---
+                    empresa_visual = str(r[4]).replace(".0", "")
+                    wsp_de_carga = str(r[5]) # El cel se queda solo para el link oculto
+                    
                     msg_carga = urllib.parse.quote(f"Hola! Vi tu carga de *{r[1]}* a *{r[2]}* en *RETORNO MATCH VIP*. ¿Sigue disponible?")
                     
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_nombre}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_carga)}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>''', unsafe_allow_html=True)
+                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_visual}<br>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_de_carga)}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>''', unsafe_allow_html=True)
 
 # --- 8. PIE DE PÁGINA LEGAL ---
 st.markdown(f"""
