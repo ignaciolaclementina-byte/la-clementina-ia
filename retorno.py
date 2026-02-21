@@ -5,7 +5,7 @@ import requests
 import urllib.parse
 from datetime import datetime
 
-# --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - IGNACIO DIAZ) ---
+# --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - CREADO POR IGNACIO DIAZ Y SUS LEGALES) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
@@ -33,7 +33,7 @@ EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acopla
 
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
-# --- 4. ESTILOS VIP (BLINDADOS) ---
+# --- 4. ESTILOS VIP (DISEÑO BLINDADO) ---
 st.markdown("""
 <style>
     .stApp {
@@ -98,7 +98,7 @@ def es_vip(dato):
         dato_str = dato_str[:-2]
     return dato_str in lista_vip
 
-# --- 6. BÚSQUEDA (CON FILTRO DE FECHA) ---
+# --- 6. BÚSQUEDA ---
 c1, c2, c3, c4, c5 = st.columns([1.5, 1.5, 1.5, 1.5, 1])
 with c1: b_fecha = st.date_input("📅 FECHA:", datetime.now().date())
 with c2: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
@@ -109,7 +109,7 @@ with c5:
     if st.button("🔄 ACTUALIZAR", use_container_width=True):
         st.cache_data.clear(); st.rerun()
 
-# Carga de datos
+# Carga de datos con manejo de errores
 try:
     df_ch_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
     df_ca_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
@@ -129,7 +129,7 @@ st.markdown(f"""
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
-# PESTAÑA: SOY EMPRESA
+# --- PESTAÑA: SOY EMPRESA ---
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -152,26 +152,17 @@ with t1:
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
-                    
-                    v4 = limpiar_dato_numerico(r[4])
-                    v5 = limpiar_dato_numerico(r[5])
+                    v4, v5 = limpiar_dato_numerico(r[4]), limpiar_dato_numerico(r[5])
                     cuit_final = v5 if len(v5) == 11 else v4
                     wsp_final = v4 if cuit_final == v5 else v5
                     
-                    # --- MENSAJE PRO PARA CHOFER ---
-                    msg = urllib.parse.quote(
-                        f"¡Hola! Te contacto a través de *RETORNO MATCH VIP* 🚛.\n\n"
-                        f"He visto tu camión *{r[3]}* disponible para la ruta:\n"
-                        f"📍 *ORIGEN:* {r[1]}\n"
-                        f"🏁 *DESTINO:* {r[2]}\n\n"
-                        f"¿Sigue disponible para cargar? ¡Espero tu respuesta!"
-                    )
+                    msg = urllib.parse.quote(f"¡Hola! Te contacto a través de *RETORNO MATCH VIP* 🚛.\n\nHe visto tu camión *{r[3]}* disponible para la ruta:\n📍 *ORIGEN:* {r[1]}\n🏁 *DESTINO:* {r[2]}\n\n¿Sigue disponible para cargar? ¡Espero tu respuesta!")
                     
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit_final}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_final)}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a></div>''', unsafe_allow_html=True)
 
-# PESTAÑA: SOY CHOFER
+# --- PESTAÑA: SOY CHOFER ---
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -194,22 +185,12 @@ with t2:
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
-                    
                     empresa_visual = str(r[5]).replace(".0", "").strip()
-                    wsp_de_carga = str(r[4])
-                    
-                    # --- MENSAJE PRO PARA EMPRESA ---
-                    msg_carga = urllib.parse.quote(
-                        f"¡Hola! Te hablo por la carga publicada en *RETORNO MATCH VIP* 🚛.\n\n"
-                        f"📦 *DETALLE:* {r[3]}\n"
-                        f"📍 *RUTA:* {r[1]} ➔ {r[2]}\n"
-                        f"🏢 *EMPRESA:* {empresa_visual}\n\n"
-                        f"¿Sigue disponible? Me interesa consultar más detalles. ¡Gracias!"
-                    )
+                    msg_carga = urllib.parse.quote(f"¡Hola! Te hablo por la carga publicada en *RETORNO MATCH VIP* 🚛.\n\n📦 *DETALLE:* {r[3]}\n📍 *RUTA:* {r[1]} ➔ {r[2]}\n🏢 *EMPRESA:* {empresa_visual}\n\n¿Sigue disponible? Me interesa consultar más detalles. ¡Gracias!")
                     
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_visual}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_de_carga)}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>''', unsafe_allow_html=True)
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>''', unsafe_allow_html=True)
 
 # --- 8. PANEL DE CONTROL ---
 st.markdown("---")
@@ -229,15 +210,14 @@ with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
         if nuevo_vip and nuevo_vip not in lista_vips:
             lista_vips.append(nuevo_vip)
             st.session_state.socios_activos = ", ".join(lista_vips); st.rerun()
-    if st.button("🚀 GUARDAR Y ACTUALIZAR"): 
-        st.cache_data.clear(); st.rerun()
+    if st.button("🚀 GUARDAR Y ACTUALIZAR"): st.cache_data.clear(); st.rerun()
 
-# --- 9. PIE DE PÁGINA LEGAL ---
+# --- 9. PIE DE PÁGINA LEGAL (BLINDADO) ---
 st.markdown(f"""
 <div class="legal-footer">
-    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
-    <p style="font-style: italic;">No me responsabilizo por los acuerdos, cargas o transacciones realizadas entre las partes. La plataforma actúa únicamente como nexo informativo.</p>
-    <p><b>Queda terminantemente prohibida la réplica, copia o distribución total o parcial de este sistema sin autorización expresa.</b></p>
+    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz y sus legales</p>
+    <p style="font-style: italic;">No nos responsabilizamos por los acuerdos, cargas o transacciones realizadas entre las partes. La plataforma actúa únicamente como nexo informativo.</p>
+    <p><b>Queda terminantemente prohibida la réplica, copia o distribución total o parcial de este sistema sin autorización expresa de Ignacio Diaz.</b></p>
     <p>© 2026 RETORNO MATCH VIP - Todos los derechos reservados.</p>
 </div>
 """, unsafe_allow_html=True)
