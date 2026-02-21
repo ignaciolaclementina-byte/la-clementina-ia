@@ -136,18 +136,23 @@ with t1:
                 st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            # VIP se verifica contra la columna 7 (ID/CUIT)
-            df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 7].apply(es_vip)
+            # VIP se verifica contra la columna del CUIT (Índice 4)
+            df_ch_raw['es_vip'] = df_ch_raw.iloc[:, 4].apply(es_vip)
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ch.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
-                    # CORRECCIÓN DE ÍNDICES: ID es r[7] y WhatsApp es r[4]
-                    id_limpio = str(r[7]).replace(".0", "")
+                    
+                    # --- CORRECCIÓN DE ÍNDICES: ID=CUIL (4) | WSP=(7 o 5 según tu Google Sheet) ---
+                    # Basado en tu reporte, invertimos r[7] por r[4]
+                    cuil_id = str(r[4]).replace(".0", "")
+                    wsp_puro = str(r[7])
+                    msg = urllib.parse.quote(f"Hola, te contacto desde RETORNO MATCH VIP por tu camión {r[3]} de {r[1]} hacia {r[2]}.")
+                    
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>ID:</b> {id_limpio}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">💬 CONTACTAR</a></div>''', unsafe_allow_html=True)
+                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>ID:</b> {cuil_id}<br>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_puro)}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR</a></div>''', unsafe_allow_html=True)
 
 # PESTAÑA: SOY CHOFER (VER CARGAS)
 with t2:
@@ -157,26 +162,32 @@ with t2:
         with st.form("form_camion", clear_on_submit=True):
             o = st.selectbox("Prov. Origen", PROVINCIAS[1:]); lo = st.text_input("Loc. Origen")
             d = st.selectbox("Prov. Destino", PROVINCIAS[1:]); ld = st.text_input("Loc. Destino")
-            e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID", placeholder="Ej: 20334445551")
+            e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIL/CUIT", placeholder="Ej: 20334445551")
             w = st.text_input("WhatsApp (Sin 0 ni 15)", placeholder="Ej: 1122334455")
             if st.form_submit_button("SUBIR CAMIÓN"):
-                data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({lo})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
+                data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
                 requests.post(URL_CHOFERES_POST, data=data_camion)
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
-            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip) 
+            # Empresa VIP contra columna 4 (Empresa)
+            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 4].apply(es_vip) 
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ca.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
-                    empresa_limpia = str(r[5]).replace(".0", "")
+                    
+                    # --- CORRECCIÓN DE ÍNDICES EN CARGAS ---
+                    empresa_nombre = str(r[4]).replace(".0", "")
+                    wsp_carga = str(r[5])
+                    msg_carga = urllib.parse.quote(f"Hola, vi tu carga de {r[1]} a {r[2]} en RETORNO MATCH VIP. ¿Sigue disponible?")
+                    
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_limpia}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>''', unsafe_allow_html=True)
+                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_nombre}<br>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_carga)}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>''', unsafe_allow_html=True)
 
-# --- 8. PANEL DE CONTROL ---
+# --- 8. PANEL DE CONTROL (ADMIN) ---
 st.markdown("---")
 with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
     st.session_state.anuncios = st.text_area("Radar publicitario:", st.session_state.anuncios)
