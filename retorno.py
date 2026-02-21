@@ -13,8 +13,8 @@ GID_CARGAS = "1267917528"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 
-# --- LLAVE DE ACCESO ADMIN ---
-ADMIN_PIN = "1234"  # Cambia este PIN por el que tú prefieras
+# --- LLAVE DE ACCESO ADMIN (ACTUALIZADA) ---
+ADMIN_PIN = "1323" 
 
 # --- 2. SISTEMA ANTI-PAUSA (KEEP ALIVE NATIVO) ---
 if "last_heartbeat" not in st.session_state:
