@@ -73,7 +73,6 @@ st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP<
 
 # --- 5. FUNCIONES ---
 def limpiar_dato_numerico(dato):
-    """Limpia CUITs y WhatsApps de .0 y ceros a la izquierda innecesarios"""
     s = str(dato).strip()
     if s.endswith(".0"): s = s[:-2]
     clean = "".join(filter(str.isdigit, s))
@@ -159,7 +158,14 @@ with t1:
                     cuit_final = v5 if len(v5) == 11 else v4
                     wsp_final = v4 if cuit_final == v5 else v5
                     
-                    msg = urllib.parse.quote(f"Hola! Te contacto desde *RETORNO MATCH VIP* 🚛. Vi tu camión *{r[3]}* disponible para la ruta *{r[1]} -> {r[2]}*. ¿Sigue disponible?")
+                    # --- MENSAJE PRO PARA CHOFER ---
+                    msg = urllib.parse.quote(
+                        f"¡Hola! Te contacto a través de *RETORNO MATCH VIP* 🚛.\n\n"
+                        f"He visto tu camión *{r[3]}* disponible para la ruta:\n"
+                        f"📍 *ORIGEN:* {r[1]}\n"
+                        f"🏁 *DESTINO:* {r[2]}\n\n"
+                        f"¿Sigue disponible para cargar? ¡Espero tu respuesta!"
+                    )
                     
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit_final}<br>
@@ -192,40 +198,41 @@ with t2:
                     empresa_visual = str(r[5]).replace(".0", "").strip()
                     wsp_de_carga = str(r[4])
                     
-                    msg_carga = urllib.parse.quote(f"Hola! Vi tu carga de *{r[1]}* a *{r[2]}* en *RETORNO MATCH VIP*. ¿Sigue disponible?")
+                    # --- MENSAJE PRO PARA EMPRESA ---
+                    msg_carga = urllib.parse.quote(
+                        f"¡Hola! Te hablo por la carga publicada en *RETORNO MATCH VIP* 🚛.\n\n"
+                        f"📦 *DETALLE:* {r[3]}\n"
+                        f"📍 *RUTA:* {r[1]} ➔ {r[2]}\n"
+                        f"🏢 *EMPRESA:* {empresa_visual}\n\n"
+                        f"¿Sigue disponible? Me interesa consultar más detalles. ¡Gracias!"
+                    )
                     
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_visual}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_de_carga)}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>''', unsafe_allow_html=True)
 
-# --- 8. PANEL DE CONTROL (CON GESTIÓN RÁPIDA VIP) ---
+# --- 8. PANEL DE CONTROL ---
 st.markdown("---")
 with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
     st.session_state.anuncios = st.text_area("Radar publicitario:", st.session_state.anuncios)
-    
     st.markdown("### ⭐ GESTIÓN RÁPIDA DE SOCIOS VIP")
     lista_vips = [s.strip() for s in st.session_state.socios_activos.split(",") if s.strip()]
-    
     for socio in lista_vips:
         col_v1, col_v2 = st.columns([4, 1])
         with col_v1: st.code(socio)
         with col_v2:
             if st.button("🗑️ Borrar", key=f"del_{socio}"):
                 lista_vips.remove(socio)
-                st.session_state.socios_activos = ", ".join(lista_vips)
-                st.rerun()
-    
+                st.session_state.socios_activos = ", ".join(lista_vips); st.rerun()
     nuevo_vip = st.text_input("Agregar nuevo VIP (CUIT o Nombre):")
     if st.button("➕ AGREGAR"):
         if nuevo_vip and nuevo_vip not in lista_vips:
             lista_vips.append(nuevo_vip)
-            st.session_state.socios_activos = ", ".join(lista_vips)
-            st.rerun()
-
+            st.session_state.socios_activos = ", ".join(lista_vips); st.rerun()
     if st.button("🚀 GUARDAR Y ACTUALIZAR"): 
         st.cache_data.clear(); st.rerun()
 
-# --- 9. PIE DE PÁGINA LEGAL (BLINDADO - IGNACIO DIAZ) ---
+# --- 9. PIE DE PÁGINA LEGAL ---
 st.markdown(f"""
 <div class="legal-footer">
     <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
