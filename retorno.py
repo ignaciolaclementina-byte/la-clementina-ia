@@ -162,16 +162,17 @@ with t2:
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
-            # CORRECCIÓN DE COLUMNAS: r[4] Empresa, r[6] WhatsApp
-            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 4].apply(es_vip)
+            # --- CORRECCIÓN FINAL DE ÍNDICES PARA EMPRESA Y WHATSAPP ---
+            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 4].apply(es_vip) 
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ca.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
+                    # r[4] -> Nombre Empresa, r[5] -> WhatsApp (Índices ajustados)
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[4]}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[6])}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>''', unsafe_allow_html=True)
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[5])}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>''', unsafe_allow_html=True)
 
 # --- 8. PANEL DE CONTROL (CON GESTIÓN RÁPIDA VIP) ---
 st.markdown("---")
