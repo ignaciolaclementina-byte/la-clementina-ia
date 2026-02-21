@@ -162,14 +162,12 @@ with t2:
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
-            # --- AJUSTE DE ÍNDICES: r[5] es Empresa, r[4] es WhatsApp ---
             df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip) 
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ca.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
-                    # Empresa en r[5] y WhatsApp en r[4]
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>''', unsafe_allow_html=True)
@@ -201,10 +199,12 @@ with st.expander("⚙️ PANEL DE CONTROL (ADMIN)"):
     if st.button("🚀 GUARDAR Y ACTUALIZAR"): 
         st.cache_data.clear(); st.rerun()
 
-# --- 9. PIE DE PÁGINA LEGAL ---
+# --- 9. PIE DE PÁGINA LEGAL (BLINDADO - IGNACIO DIAZ) ---
 st.markdown(f"""
 <div class="legal-footer">
-    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz y sus legales</p>
-    <p><b>© 2026 RETORNO MATCH VIP - Todos los derechos reservados.</b></p>
+    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
+    <p style="font-style: italic;">No me responsabilizo por los acuerdos, cargas o transacciones realizadas entre las partes. La plataforma actúa únicamente como nexo informativo.</p>
+    <p><b>Queda terminantemente prohibida la réplica, copia o distribución total o parcial de este sistema sin autorización expresa.</b></p>
+    <p>© 2026 RETORNO MATCH VIP - Todos los derechos reservados.</p>
 </div>
 """, unsafe_allow_html=True)
