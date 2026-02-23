@@ -13,7 +13,7 @@ GID_CARGAS = "1267917528"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 
-# --- LLAVE DE ACCESO ADMIN (ACTUALIZADA) ---
+# --- LLAVE DE ACCESO ADMIN ---
 ADMIN_PIN = "1323" 
 
 # --- 2. SISTEMA ANTI-PAUSA (KEEP ALIVE NATIVO) ---
@@ -36,7 +36,7 @@ EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acopla
 
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
-# --- 4. ESTILOS VIP (DISEÑO BLINDADO) ---
+# --- 4. ESTILOS VIP (DISEÑO BLINDADO Y RESPONSIVO) ---
 st.markdown("""
 <style>
     .stApp {
@@ -54,19 +54,20 @@ st.markdown("""
         border-left: 10px solid #3498db; color: #333;
     }
     .card-vip {
-        background: #fff9e6 !important; border: 3px solid #f1c40f !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        color: #333; box-shadow: 0px 4px 20px rgba(241, 196, 15, 0.5);
+        background: #fff9e6 !important; border: 4px solid #f1c40f !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
+        color: #333; box-shadow: 0px 4px 25px rgba(241, 196, 15, 0.6);
     }
     .vip-label {
-        background: #f1c40f; color: black; padding: 4px 12px; border-radius: 20px; 
+        background: #f1c40f; color: black; padding: 6px 14px; border-radius: 20px; 
         font-weight: 900; font-size: 14px; display: inline-block; margin-bottom: 10px;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
     }
-    .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
+    .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; line-height: 1.2; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
-    .stTabs [data-baseweb="tab"] { flex: 1; height: 70px !important; background-color: #2c3e50 !important; color: white !important; font-size: 18px !important; font-weight: 900 !important; }
+    .stTabs [data-baseweb="tab"] { flex: 1; height: 60px !important; background-color: #2c3e50 !important; color: white !important; font-size: 16px !important; font-weight: 900 !important; }
     .stTabs [aria-selected="true"] { background-color: #3498db !important; }
     .legal-footer { 
-        text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; 
+        text-align: center; color: rgba(255,255,255,0.7); padding: 40px 20px; 
         font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px;
     }
 </style>
@@ -83,6 +84,7 @@ def limpiar_dato_numerico(dato):
 
 def limpiar_wsp(num):
     clean = limpiar_dato_numerico(num)
+    if not clean: return "5491111111111"
     if clean.startswith("0"): clean = clean[1:]
     if clean.startswith("15"): clean = clean.replace("15", "", 1)
     return "549" + clean if not clean.startswith("549") else clean
@@ -97,8 +99,7 @@ def es_fecha_seleccionada(f, fecha_target):
 def es_vip(dato):
     lista_vip = [s.strip().upper() for s in st.session_state.socios_activos.split(",") if s.strip()]
     dato_str = str(dato).strip().upper()
-    if dato_str.endswith(".0"): 
-        dato_str = dato_str[:-2]
+    if dato_str.endswith(".0"): dato_str = dato_str[:-2]
     return dato_str in lista_vip
 
 # --- 6. BÚSQUEDA ---
@@ -131,21 +132,11 @@ st.markdown(f"""
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
-# --- TAB: SOY EMPRESA ---
+# --- TAB: SOY EMPRESA (OPTIMIZADO MÓVIL) ---
 with t1:
-    col_f1, col_r1 = st.columns([1, 2.2])
-    with col_f1:
-        st.markdown("<h4 style='color:white;'>🏢 Publicar Carga</h4>", unsafe_allow_html=True)
-        with st.form("form_carga", clear_on_submit=True):
-            eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
-            ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
-            ec = st.text_input("Carga"); en = st.text_input("Nombre Empresa")
-            ew = st.text_input("WhatsApp (Sin 0 ni 15)", placeholder="Ej: 1122334455")
-            if st.form_submit_button("SUBIR CARGA"):
-                data_carga = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": ec, "entry.1930562861": en, "entry.466540450": ew}
-                requests.post(URL_CARGAS_POST, data=data_carga)
-                st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
+    col_r1, col_f1 = st.columns([2.2, 1]) # Resultados a la izquierda/arriba
     with col_r1:
+        st.markdown("<h4 style='color:white;'>📋 Camiones Disponibles</h4>", unsafe_allow_html=True)
         if not df_ch_raw.empty:
             df_ch_raw['es_vip'] = df_ch_raw.apply(lambda r: es_vip(r[4]) or es_vip(r[5]), axis=1)
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
@@ -160,22 +151,23 @@ with t1:
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit_final}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_final)}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a></div>''', unsafe_allow_html=True)
+    with col_f1:
+        st.markdown("<h4 style='color:white;'>🏢 Publicar Carga</h4>", unsafe_allow_html=True)
+        with st.form("form_carga", clear_on_submit=True):
+            eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
+            ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
+            ec = st.text_input("Carga"); en = st.text_input("Nombre Empresa")
+            ew = st.text_input("WhatsApp (Sin 0 ni 15)", placeholder="Ej: 1122334455")
+            if st.form_submit_button("SUBIR CARGA"):
+                data_carga = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": ec, "entry.1930562861": en, "entry.466540450": ew}
+                requests.post(URL_CARGAS_POST, data=data_carga)
+                st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
 
-# --- TAB: SOY CHOFER ---
+# --- TAB: SOY CHOFER (OPTIMIZADO MÓVIL) ---
 with t2:
-    col_f2, col_r2 = st.columns([1, 2.2])
-    with col_f2:
-        st.markdown("<h4 style='color:white;'>📢 Publicar Camión</h4>", unsafe_allow_html=True)
-        with st.form("form_camion", clear_on_submit=True):
-            o = st.selectbox("Prov. Origen", PROVINCIAS[1:]); lo = st.text_input("Loc. Origen")
-            d = st.selectbox("Prov. Destino", PROVINCIAS[1:]); ld = st.text_input("Loc. Destino")
-            e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID", placeholder="Ej: 20334445551")
-            w = st.text_input("WhatsApp (Sin 0 ni 15)", placeholder="Ej: 1122334455")
-            if st.form_submit_button("SUBIR CAMIÓN"):
-                data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
-                requests.post(URL_CHOFERES_POST, data=data_camion)
-                st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
+    col_r2, col_f2 = st.columns([2.2, 1]) # Resultados a la izquierda/arriba
     with col_r2:
+        st.markdown("<h4 style='color:white;'>📢 Cargas Disponibles</h4>", unsafe_allow_html=True)
         if not df_ca_raw.empty:
             df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip) 
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
@@ -188,12 +180,22 @@ with t2:
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_visual}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>''', unsafe_allow_html=True)
+    with col_f2:
+        st.markdown("<h4 style='color:white;'>🚛 Publicar Camión</h4>", unsafe_allow_html=True)
+        with st.form("form_camion", clear_on_submit=True):
+            o = st.selectbox("Prov. Origen", PROVINCIAS[1:]); lo = st.text_input("Loc. Origen")
+            d = st.selectbox("Prov. Destino", PROVINCIAS[1:]); ld = st.text_input("Loc. Destino")
+            e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID", placeholder="Ej: 20334445551")
+            w = st.text_input("WhatsApp (Sin 0 ni 15)", placeholder="Ej: 1122334455")
+            if st.form_submit_button("SUBIR CAMIÓN"):
+                data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
+                requests.post(URL_CHOFERES_POST, data=data_camion)
+                st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
 
 # --- 8. PANEL DE CONTROL (BLINDADO CON PIN) ---
 st.markdown("---")
 with st.expander("⚙️ PANEL DE CONTROL (SÓLO IGNACIO DIAZ)"):
     input_pin = st.text_input("Introduce el PIN de Administrador:", type="password")
-    
     if input_pin == ADMIN_PIN:
         st.success("Acceso Concedido, Ignacio.")
         st.session_state.anuncios = st.text_area("Radar publicitario:", st.session_state.anuncios)
