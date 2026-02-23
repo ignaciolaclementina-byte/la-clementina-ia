@@ -23,7 +23,7 @@ if time.time() - st.session_state.last_heartbeat > 900:
     st.session_state.last_heartbeat = time.time()
     st.rerun()
 
-# --- 3. GESTIÓN DE ESTADO ---
+# --- 3. GESTIÓN DE ESTADO (FLEMING POR DEFECTO PARA TODOS) ---
 if 'socios_activos' not in st.session_state:
     st.session_state.socios_activos = "FLEMING, 20334445551, TRANSPORTES SAN JORGE, LOGISTICA DIAZ"
 
@@ -85,7 +85,7 @@ with c5:
 
 st.markdown(f'<div class="radar-container"><marquee scrollamount="8">🚛 FECHA: {b_fecha.strftime("%d/%m/%Y")} -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz y sus legales.</marquee></div>', unsafe_allow_html=True)
 
-t1, t2 = st.tabs(["🚀 VER CAMIONES", "🏢 VER CARGAS"])
+t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
 # --- TAB 1: EMPRESA BUSCA CAMION ---
 with t1:
@@ -104,15 +104,15 @@ with t1:
         if not df_ch.empty:
             for _, r in df_ch.iterrows():
                 try:
-                    f_plan = pd.to_datetime(r[0], dayfirst=True).date()
-                    if f_plan == b_fecha:
+                    if pd.to_datetime(r[0], dayfirst=True).date() == b_fecha:
                         if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])):
                             es_v = es_vip(r[4]) or (es_vip(r[5]) if len(r)>5 else False)
                             clase = "card-vip" if es_v else "card-white"
                             label = '<div class="vip-label">⭐ CHOFER VIP</div>' if es_v else ""
-                            w = limpiar_wsp(r[4])
+                            cuit_val = str(r[4]).replace(".0", "") if len(r)>4 else "-"
+                            w = limpiar_wsp(r[5]) if len(r)>5 else limpiar_wsp(r[4])
                             msg = urllib.parse.quote(f"Hola! Vi tu camion {r[3]} en Retorno Match VIP.")
-                            st.markdown(f'<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]}<br><a href="https://api.whatsapp.com/send?phone={w}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR</a></div>', unsafe_allow_html=True)
+                            st.markdown(f'<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>ID/CUIT:</b> {cuit_val}<br><a href="https://api.whatsapp.com/send?phone={w}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a></div>', unsafe_allow_html=True)
                 except: continue
 
 # --- TAB 2: CHOFER BUSCA CARGA ---
@@ -132,18 +132,17 @@ with t2:
         if not df_ca.empty:
             for _, r in df_ca.iterrows():
                 try:
-                    f_plan = pd.to_datetime(r[0], dayfirst=True).date()
-                    if f_plan == b_fecha:
+                    if pd.to_datetime(r[0], dayfirst=True).date() == b_fecha:
                         if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()):
                             es_v = es_vip(r[5]) if len(r)>5 else False
                             clase = "card-vip" if es_v else "card-white"
                             label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if es_v else ""
-                            emp = str(r[5]) if len(r)>5 else "-"
+                            emp = str(r[5]).replace(".0", "") if len(r)>5 else "-"
                             msg = urllib.parse.quote(f"Hola! Me interesa la carga {r[3]} en Retorno Match VIP.")
-                            st.markdown(f'<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢: {emp}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR</a></div>', unsafe_allow_html=True)
+                            st.markdown(f'<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {emp}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
                 except: continue
 
-# --- 8. PANEL DE CONTROL (CON BOTONES DE BORRADO) ---
+# --- 8. PANEL DE CONTROL (BOTONES DE BORRADO) ---
 st.markdown("---")
 with st.expander("⚙️ PANEL DE CONTROL (SÓLO IGNACIO DIAZ)"):
     if st.text_input("PIN Admin:", type="password") == ADMIN_PIN:
@@ -161,5 +160,5 @@ with st.expander("⚙️ PANEL DE CONTROL (SÓLO IGNACIO DIAZ)"):
             if nuevo_v and nuevo_v not in lista_vips:
                 lista_vips.append(nuevo_v); st.session_state.socios_activos = ", ".join(lista_vips); st.rerun()
 
-# --- 9. PIE DE PÁGINA ---
-st.markdown(f'<div class="legal-footer"><p>Creado por Ignacio Diaz</p><p>© 2026 RETORNO MATCH VIP</p></div>', unsafe_allow_html=True)
+# --- 9. PIE DE PÁGINA LEGAL ---
+st.markdown(f'<div class="legal-footer"><p style="font-size:18px; font-weight:bold;">Creado por Ignacio Diaz y sus legales</p><p>© 2026 RETORNO MATCH VIP</p></div>', unsafe_allow_html=True)
