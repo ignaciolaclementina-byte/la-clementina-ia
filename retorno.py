@@ -24,12 +24,14 @@ if time.time() - st.session_state.last_heartbeat > 900:
     st.rerun()
 
 # --- 3. CARGA DE DATOS ---
-@st.cache_data(ttl=15)
+@st.cache_data(ttl=10) # Reducido a 10 segundos para mayor frescura
 def cargar_datos_seguros():
     try:
-        df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
-        df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
-        df_v = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VIP}", header=None)
+        # Forzamos la descarga fresca agregando un timestamp a la URL
+        t = int(time.time())
+        df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}").fillna("-")
+        df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
+        df_v = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VIP}&header=None&t={t}", header=None)
         vips_lista = [str(x).strip().upper().replace(".0", "") for x in df_v[0].dropna().tolist()]
         return df_ch, df_ca, vips_lista
     except:
@@ -69,12 +71,15 @@ def limpiar_dato_numerico(dato):
 
 def limpiar_wsp(num):
     clean = limpiar_dato_numerico(num)
+    if not clean: return "5491111111111"
     if clean.startswith("0"): clean = clean[1:]
     if clean.startswith("15"): clean = clean.replace("15", "", 1)
     return "549" + clean if not clean.startswith("549") else clean
 
 def es_fecha(f, target):
-    try: return pd.to_datetime(f, dayfirst=True).date() == target
+    try:
+        # Comparamos solo la parte de la fecha (Y-m-d) ignorando horas
+        return pd.to_datetime(f, dayfirst=True).date() == target
     except: return False
 
 def es_vip(dato):
@@ -89,13 +94,15 @@ with c3: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
 with c4: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
 with c5:
     st.write("<br>", unsafe_allow_html=True)
-    if st.button("🔄 ACTUALIZAR", use_container_width=True): st.cache_data.clear(); st.rerun()
+    if st.button("🔄 ACTUALIZAR", use_container_width=True): 
+        st.cache_data.clear()
+        st.rerun()
 
 st.markdown(f'<div class="radar-container"><marquee scrollamount="8">🚛 FECHA: {b_fecha.strftime("%d/%m/%Y")} -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz.</marquee></div>', unsafe_allow_html=True)
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
-# --- TAB 1: CAMIONES (CORRECCIÓN CUIT) ---
+# --- TAB 1: CAMIONES ---
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -106,26 +113,19 @@ with t1:
             ec = st.text_input("Carga"); en = st.text_input("Nombre Empresa"); ew = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
                 requests.post(URL_CARGAS_POST, data={"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": ec, "entry.1930562861": en, "entry.466540450": ew})
-                st.success("¡Publicado!"); st.rerun()
+                st.cache_data.clear() # Limpiamos para que aparezca al recargar
+                st.success("¡Publicado!"); time.sleep(1); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
             df_ch_raw['vip'] = df_ch_raw.apply(lambda r: es_vip(r[4]) or es_vip(r[5]), axis=1)
             df_f = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
+            if df_f.empty:
+                st.info("No hay camiones para esta fecha.")
             for _, r in df_f.iterrows():
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])):
-                    
-                    # LOGICA DE DETECCIÓN INTELIGENTE
                     val_a = limpiar_dato_numerico(r[4])
                     val_b = limpiar_dato_numerico(r[5])
-                    
-                    # El CUIT siempre tiene 11 dígitos. El WhatsApp suele ser 10 u otro.
-                    if len(val_a) == 11:
-                        cuit_final = val_a
-                        wsp_final = val_b
-                    else:
-                        cuit_final = val_b
-                        wsp_final = val_a
-
+                    cuit_final, wsp_final = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
                     st.markdown(f'''
                     <div class="{"card-vip" if r["vip"] else "card-white"}">
                         {"<div class='vip-label'>⭐ CHOFER VIP</div>" if r["vip"] else ""}
@@ -144,11 +144,14 @@ with t2:
             e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID"); w = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR CAMIÓN"):
                 requests.post(URL_CHOFERES_POST, data={"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w})
-                st.success("¡Publicado!"); st.rerun()
+                st.cache_data.clear() # Limpiamos para que aparezca al recargar
+                st.success("¡Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
             df_ca_raw['vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
             df_f2 = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
+            if df_f2.empty:
+                st.info("No hay cargas para esta fecha.")
             for _, r in df_f2.iterrows():
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()):
                     st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\"vip-label\">⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text=Hola!" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
