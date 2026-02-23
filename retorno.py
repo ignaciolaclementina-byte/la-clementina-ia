@@ -16,7 +16,7 @@ URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDz
 
 ADMIN_PIN = "1323" 
 
-# --- 2. SISTEMA ANTI-PAUSA ---
+# --- 2. SISTEMA ANTI-PAUSA (MANTENER APP VIVA) ---
 if "last_heartbeat" not in st.session_state:
     st.session_state.last_heartbeat = time.time()
 if time.time() - st.session_state.last_heartbeat > 900:
@@ -38,7 +38,7 @@ def cargar_datos_seguros():
 
 df_ch_raw, df_ca_raw, LISTA_VIPS_GLOBAL = cargar_datos_seguros()
 
-# --- LÓGICA DE CONTEO ---
+# --- LÓGICA DE TIEMPO Y CONTEO ---
 hoy = datetime.now().date()
 def es_fecha(f, target):
     try: return pd.to_datetime(f, dayfirst=True).date() == target
@@ -55,7 +55,7 @@ EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acopla
 
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
-# --- 4. ESTILOS VIP (BLINDADOS) ---
+# --- 4. ESTILOS VIP PERSONALIZADOS ---
 st.markdown("""
 <style>
     .stApp { background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important; background-size: cover !important; background-attachment: fixed !important; }
@@ -72,7 +72,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 5. FUNCIONES ---
+# --- 5. FUNCIONES AUXILIARES ---
 def limpiar_dato_numerico(dato):
     s = str(dato).strip()
     if s.endswith(".0"): s = s[:-2]
@@ -101,15 +101,13 @@ with c5:
     if st.button("🔄 ACTUALIZAR", use_container_width=True): 
         st.cache_data.clear(); st.rerun()
 
-radar_txt = f"🔥 COSECHA 2026: {cant_camiones} Camiones y {cant_cargas} Cargas -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz."
+radar_txt = f"🌾 COSECHA ACTIVA: {cant_camiones} Camiones y {cant_cargas} Cargas -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz."
 st.markdown(f'<div class="radar-container"><marquee scrollamount="8">{radar_txt}</marquee></div>', unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs(["🚀 CAMIONES DISPONIBLES", "🏢 CARGAS DISPONIBLES", "🌾 ARRIME COSECHA"])
 
-# --- TAB 1 & 2 (SE MANTIENE IGUAL) ---
-# [Código omitido por brevedad, se mantiene exactamente igual a tu base funcional]
+# --- TAB 1: CAMIONES (EMPRESA BUSCA CHOFER) ---
 with tab1:
-    # Lógica de Camiones (Idéntica a tu código funcional)
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
         st.markdown("<h4 style='color:white;'>🏢 Publicar mi Carga</h4>", unsafe_allow_html=True)
@@ -117,7 +115,7 @@ with tab1:
             eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
             ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
             ec = st.text_input("Mercadería"); en = st.text_input("Nombre Empresa"); ew = st.text_input("WhatsApp de Contacto")
-            if st.form_submit_button("SUBIR CARGA"):
+            if st.form_submit_button("SUBIR CARGA AL SISTEMA"):
                 requests.post(URL_CARGAS_POST, data={"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": ec, "entry.1930562861": en, "entry.466540450": ew})
                 st.cache_data.clear(); st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
     with col_r1:
@@ -128,12 +126,12 @@ with tab1:
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])):
                     val_a, val_b = limpiar_dato_numerico(r[4]), limpiar_dato_numerico(r[5])
                     cuit, wsp = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
-                    texto_wsp = f"─── *RETORNO MATCH VIP* ───\n✅ *SOLICITUD DE TRANSPORTE*\n\nMe contacto por su unidad {r[3]} de {r[1]} a {r[2]}.\n\n¿Sigue disponible? Saludos."
+                    texto_wsp = f"─── *RETORNO MATCH VIP* ───\n✅ *SOLICITUD DE TRANSPORTE*\n\nEstimado, me interesa su unidad {r[3]} en {r[1]} para realizar un viaje. ¿Está disponible? Saludos."
                     link_wsp = f"https://api.whatsapp.com/send?phone={limpiar_wsp(wsp)}&text={urllib.parse.quote(texto_wsp)}"
                     st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ CHOFER VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit}<br><a href="{link_wsp}" target="_blank" class="btn-wsp">✉️ ENVIAR PROPUESTA FORMAL</a></div>', unsafe_allow_html=True)
 
+# --- TAB 2: CARGAS (CHOFER BUSCA CARGA) ---
 with tab2:
-    # Lógica de Cargas (Idéntica a tu código funcional)
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
         st.markdown("<h4 style='color:white;'>📢 Publicar mi Camión</h4>", unsafe_allow_html=True)
@@ -141,65 +139,63 @@ with tab2:
             o_prov = st.selectbox("Prov. Origen", PROVINCIAS[1:]); o_loc = st.text_input("Loc. Origen")
             d_prov = st.selectbox("Prov. Destino", PROVINCIAS[1:]); d_loc = st.text_input("Loc. Destino")
             e_tipo = st.selectbox("Equipo", EQUIPOS[1:]); cu_id = st.text_input("CUIT/ID"); wsp_num = st.text_input("WhatsApp")
-            if st.form_submit_button("SUBIR CAMIÓN"):
+            if st.form_submit_button("SUBIR CAMIÓN AL SISTEMA"):
                 requests.post(URL_CHOFERES_POST, data={"entry.1304806144": f"{o_prov} ({o_loc})", "entry.1519265625": f"{d_prov} ({d_loc})", "entry.597193898": e_tipo, "entry.1542650763": cu_id, "entry.1574172378": wsp_num})
                 st.cache_data.clear(); st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
             df_ca_raw['vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
-            df_f2 = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
+            # Excluimos arrimes de la pestaña general para no duplicar
+            df_ca_filtered = df_ca_raw[~df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
+            df_f2 = df_ca_filtered[df_ca_filtered.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
             for _, r in df_f2.iterrows():
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()):
-                    texto_wsp_ca = f"─── *RETORNO MATCH VIP* ───\n📦 *INTERÉS EN CARGA*\n\nHola, pregunto por la carga {r[3]} de {r[1]} a {r[2]}.\n\n¿Sigue disponible? Gracias."
+                    texto_wsp_ca = f"─── *RETORNO MATCH VIP* ───\n📦 *INTERÉS EN CARGA*\n\nHola, consulto por la carga {r[3]} de {r[1]} a {r[2]} vista en el sistema. ¿Sigue disponible? Gracias."
                     link_wsp_ca = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={urllib.parse.quote(texto_wsp_ca)}"
                     st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR DISPONIBILIDAD</a></div>', unsafe_allow_html=True)
 
-# --- NUEVA TAB 3: ARRIME COSECHA ---
+# --- TAB 3: ARRIME COSECHA (LOGICA BLINDADA) ---
 with tab3:
-    st.markdown("<h3 style='color:#f1c40f; text-align:center;'>🌾 SECCIÓN ESPECIAL: ARRIME DE COSECHA (ZONAL)</h3>", unsafe_allow_html=True)
-    st.info("Utilice esta sección para publicar o buscar viajes cortos desde lote a planta/acopio en la zona.")
-    
-    col_arr1, col_arr2 = st.columns([1, 2.2])
-    
-    with col_arr1:
-        st.markdown("<h4 style='color:white;'>🚜 Publicar Operativo</h4>", unsafe_allow_html=True)
-        with st.form("f_arrime"):
-            zona = st.text_input("Zona/Localidad (Ej: San Jorge - Santa Fe)")
-            tipo_grano = st.text_input("Tipo de Grano (Soja/Maíz/Trigo)")
-            tarifa = st.text_input("Tarifa/Condiciones (Opcional)")
-            wsp_arrime = st.text_input("WhatsApp para Choferes")
+    st.markdown("<h3 style='color:#f1c40f; text-align:center;'>🌾 SECCIÓN ESPECIAL: ARRIME DE COSECHA</h3>", unsafe_allow_html=True)
+    st.info("Publicaciones exclusivas para viajes zonales (Lote a Acopio).")
+    col_a1, col_a2 = st.columns([1, 2.2])
+    with col_a1:
+        st.markdown("<h4 style='color:white;'>🚜 Nuevo Operativo</h4>", unsafe_allow_html=True)
+        with st.form("f_arr", clear_on_submit=True):
+            z_loc = st.text_input("Zona/Cercanía (Ej: San Jorge)"); g_tipo = st.text_input("Grano (Soja/Maiz)")
+            tar = st.text_input("Tarifa/Condiciones"); wsp_a = st.text_input("WhatsApp")
             if st.form_submit_button("PUBLICAR ARRIME"):
-                # Reutilizamos el post de cargas para no romper la base
-                requests.post(URL_CARGAS_POST, data={"entry.610070407": "ARRIME ZONA", "entry.170847116": zona, "entry.576675281": f"ARRIME: {tipo_grano} - {tarifa}", "entry.1930562861": "OPERATIVO COSECHA", "entry.466540450": wsp_arrime})
-                st.success("¡Operativo de Arrime Publicado!"); time.sleep(1); st.rerun()
-
-    with col_arr2:
-        st.markdown("<h4 style='color:white;'>🚛 Cargas de Arrime Hoy</h4>", unsafe_allow_html=True)
+                requests.post(URL_CARGAS_POST, data={"entry.610070407": "ARRIME ZONA", "entry.170847116": z_loc, "entry.576675281": f"ARRIME: {g_tipo} - {tar}", "entry.1930562861": "COSECHA", "entry.466540450": wsp_a})
+                st.cache_data.clear(); st.success("¡Arrime Publicado!"); time.sleep(1); st.rerun()
+    with col_a2:
         if not df_ca_raw.empty:
-            # Filtramos solo las que dicen "ARRIME"
-            df_arr = df_ca_raw[df_ca_raw.iloc[:, 3].str.contains("ARRIME", case=False, na=False)]
-            if df_arr.empty:
-                st.warning("No hay operativos de arrime publicados para hoy. ¡Sé el primero!")
-            for _, r in df_arr.iterrows():
-                texto_arr = f"─── *RETORNO MATCH VIP - ARRIME* ───\n🌾 *COSECHA ZONAL*\n\nHola, vi el operativo de arrime en {r[2]}.\n\nTengo camión disponible para arrimar {r[3]}. ¿Podemos coordinar?"
-                link_arr = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={urllib.parse.quote(texto_arr)}"
-                st.markdown(f'''
-                <div class="card-cosecha">
-                    <div style="font-weight:bold; font-size:1.2em;">📍 ZONA: {r[2]}</div>
-                    <div><b>🌾 DETALLE:</b> {r[3]}</div>
-                    <a href="{link_arr}" target="_blank" class="btn-wsp">🚜 CONTACTAR PARA ARRIME</a>
-                </div>''', unsafe_allow_html=True)
+            # Filtro Maestro: Busca "ARRIME" en toda la fila
+            df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
+            if df_arrime.empty:
+                st.warning("No hay operativos de arrime para hoy.")
+            else:
+                for _, r in df_arrime.iterrows():
+                    msg_arr = f"─── *RETORNO MATCH VIP - ARRIME* ───\n🌾 *COSECHA*\n\nHola, me interesa el arrime en {r[2]}. Tengo camión disponible. ¿Cómo procedemos?"
+                    link_arr = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={urllib.parse.quote(msg_arr)}"
+                    st.markdown(f'''
+                    <div class="card-cosecha">
+                        <div class="route-txt" style="color:#1b5e20;">📍 {r[2]}</div>
+                        <b>🌾 DETALLE:</b> {r[3]}<br>
+                        <a href="{link_arr}" target="_blank" class="btn-wsp">🚜 CONTACTAR POR ARRIME</a>
+                    </div>''', unsafe_allow_html=True)
 
-# --- PIE DE PÁGINA (BLINDADO) ---
+# --- PIE DE PÁGINA (BLINDADO - CREADO POR IGNACIO DIAZ) ---
 st.markdown(f"""
 <div class="legal-footer">
     <p style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 5px;">Creado por Ignacio Diaz</p>
     <p style="color: #f1c40f; font-weight: bold;">© 2026 RETORNO MATCH VIP</p>
     <p style="font-style: italic;">No nos responsabilizamos por acuerdos entre partes.</p>
-    <p><b>Prohibida la copia total o parcial de esta interfaz sin autorización expresa de Ignacio Diaz.</b></p>
+    <p><b>Prohibida la copia total o parcial de esta interfaz sin autorización de Ignacio Diaz.</b></p>
 </div>
 """, unsafe_allow_html=True)
 
+# --- PANEL ADMIN ---
 with st.expander("⚙️ ADMIN"):
     if st.text_input("PIN:", type="password") == ADMIN_PIN:
         st.session_state.anuncios = st.text_area("Texto Radar:", st.session_state.anuncios)
+        st.markdown(f'<a href="https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_VIP}" target="_blank">➕ GESTIONAR LISTA VIP</a>', unsafe_allow_html=True)
