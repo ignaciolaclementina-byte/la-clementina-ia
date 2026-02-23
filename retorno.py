@@ -24,10 +24,10 @@ if time.time() - st.session_state.last_heartbeat > 900:
     st.session_state.last_heartbeat = time.time()
     st.rerun()
 
-# --- 3. GESTIÓN DE ESTADO (IMPORTANTE: AGREGÁ TUS CUITs AQUÍ) ---
-# Ignacio: Para que todos vean a los VIP en el celular, poné los CUITs en esta lista:
+# --- 3. GESTIÓN DE ESTADO PERMANENTE ---
+# Ignacio: Agregá aquí los nombres o CUITs que quieras que TODOS vean como VIP siempre.
 if 'socios_activos' not in st.session_state:
-    st.session_state.socios_activos = "20334445551, TRANSPORTES SAN JORGE, LOGISTICA DIAZ"
+    st.session_state.socios_activos = "FLEMING, 20334445551, TRANSPORTES SAN JORGE, LOGISTICA DIAZ"
 
 if 'anuncios' not in st.session_state:
     st.session_state.anuncios = "📢 ¡SISTEMA VIP ACTIVADO! -- Consultas aquí --"
@@ -56,11 +56,12 @@ st.markdown("""
     }
     .card-vip {
         background: #fff9e6 !important; border: 4px solid #f1c40f !important; border-radius: 15px; padding: 20px; margin-bottom: 15px;
-        color: #333; box-shadow: 0px 4px 25px rgba(241, 196, 15, 0.7);
+        color: #333; box-shadow: 0px 4px 25px rgba(241, 196, 15, 0.8);
     }
     .vip-label {
         background: #f1c40f; color: black; padding: 6px 14px; border-radius: 20px; 
         font-weight: 900; font-size: 15px; display: inline-block; margin-bottom: 10px;
+        border: 1px solid black;
     }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
@@ -97,10 +98,15 @@ def es_fecha_seleccionada(f, fecha_target):
         return False
 
 def es_vip(dato):
+    # Detección inteligente: Si el dato está en la lista VIP o la lista VIP contiene el dato
     lista_vip = [s.strip().upper() for s in st.session_state.socios_activos.split(",") if s.strip()]
     dato_str = str(dato).strip().upper()
     if dato_str.endswith(".0"): dato_str = dato_str[:-2]
-    return dato_str in lista_vip
+    
+    for vip in lista_vip:
+        if vip in dato_str or dato_str in vip:
+            return True
+    return False
 
 # --- 6. BÚSQUEDA ---
 c1, c2, c3, c4, c5 = st.columns([1.5, 1.5, 1.5, 1.5, 1])
@@ -132,7 +138,7 @@ st.markdown(f"""
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
-# --- TAB 1: EMPRESAS BUSCANDO ---
+# --- TAB 1: EMPRESAS BUSCANDO (Móvil First) ---
 with t1:
     col_res1, col_form1 = st.columns([2.2, 1])
     with col_res1:
@@ -151,24 +157,14 @@ with t1:
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit_final}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_final)}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a></div>''', unsafe_allow_html=True)
-    with col_form1:
-        st.markdown("<h4 style='color:white;'>🏢 Publicar Carga</h4>", unsafe_allow_html=True)
-        with st.form("form_carga", clear_on_submit=True):
-            eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
-            ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
-            ec = st.text_input("Carga"); en = st.text_input("Nombre Empresa")
-            ew = st.text_input("WhatsApp (Sin 0 ni 15)")
-            if st.form_submit_button("SUBIR CARGA"):
-                data_carga = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": ec, "entry.1930562861": en, "entry.466540450": ew}
-                requests.post(URL_CARGAS_POST, data=data_carga)
-                st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
 
-# --- TAB 2: CHOFERES BUSCANDO ---
+# --- TAB 2: CHOFERES BUSCANDO (Móvil First) ---
 with t2:
     col_res2, col_form2 = st.columns([2.2, 1])
     with col_res2:
         st.markdown("<h4 style='color:white;'>📢 Cargas para hoy</h4>", unsafe_allow_html=True)
         if not df_ca_raw.empty:
+            # Aquí aplicamos el filtro VIP a la columna de empresa (índice 5)
             df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ca.iterrows():
@@ -180,27 +176,17 @@ with t2:
                     st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_visual}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>''', unsafe_allow_html=True)
-    with col_form2:
-        st.markdown("<h4 style='color:white;'>🚛 Publicar Camión</h4>", unsafe_allow_html=True)
-        with st.form("form_camion", clear_on_submit=True):
-            o = st.selectbox("Prov. Origen", PROVINCIAS[1:]); lo = st.text_input("Loc. Origen")
-            d = st.selectbox("Prov. Destino", PROVINCIAS[1:]); ld = st.text_input("Loc. Destino")
-            e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID")
-            w = st.text_input("WhatsApp (Sin 0 ni 15)")
-            if st.form_submit_button("SUBIR CAMIÓN"):
-                data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
-                requests.post(URL_CHOFERES_POST, data=data_camion)
-                st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
 
-# --- 8. PANEL DE CONTROL ---
+# --- 8. PANEL DE CONTROL (BLINDADO) ---
 st.markdown("---")
 with st.expander("⚙️ PANEL DE CONTROL (SÓLO IGNACIO DIAZ)"):
     input_pin = st.text_input("PIN Admin:", type="password")
     if input_pin == ADMIN_PIN:
-        st.success("Acceso Concedido.")
+        st.success("Acceso Concedido, Ignacio.")
         st.session_state.anuncios = st.text_area("Radar publicitario:", st.session_state.anuncios)
-        nuevo_vip = st.text_input("Agregar CUIT VIP permanente (separados por coma):")
-        if st.button("ACTUALIZAR LISTA"):
+        st.info("Nota: Los VIP agregados aquí solo duran esta sesión. Para hacerlos permanentes, dejalos escritos arriba en el código.")
+        nuevo_vip = st.text_input("Agregar CUIT/Nombre VIP temporal:")
+        if st.button("ACTUALIZAR"):
             st.session_state.socios_activos += f", {nuevo_vip}"
             st.rerun()
     elif input_pin != "":
