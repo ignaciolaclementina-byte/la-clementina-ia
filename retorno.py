@@ -23,7 +23,7 @@ if time.time() - st.session_state.last_heartbeat > 900:
     st.session_state.last_heartbeat = time.time()
     st.rerun()
 
-# --- 3. GESTIÓN DE ESTADO (FLEMING POR DEFECTO PARA TODOS) ---
+# --- 3. GESTIÓN DE ESTADO ---
 if 'socios_activos' not in st.session_state:
     st.session_state.socios_activos = "FLEMING, 20334445551, TRANSPORTES SAN JORGE, LOGISTICA DIAZ"
 
@@ -106,12 +106,13 @@ with t1:
                 try:
                     if pd.to_datetime(r[0], dayfirst=True).date() == b_fecha:
                         if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])):
-                            es_v = es_vip(r[4]) or (es_vip(r[5]) if len(r)>5 else False)
+                            # En Camiones: WhatsApp es r[4] y CUIT es r[5]
+                            es_v = es_vip(r[5]) if len(r)>5 else False
                             clase = "card-vip" if es_v else "card-white"
                             label = '<div class="vip-label">⭐ CHOFER VIP</div>' if es_v else ""
-                            cuit_val = str(r[4]).replace(".0", "") if len(r)>4 else "-"
-                            w = limpiar_wsp(r[5]) if len(r)>5 else limpiar_wsp(r[4])
-                            msg = urllib.parse.quote(f"Hola! Vi tu camion {r[3]} en Retorno Match VIP.")
+                            cuit_val = str(r[5]).replace(".0", "") if len(r)>5 else "-"
+                            w = limpiar_wsp(r[4]) if len(r)>4 else "5491111111111"
+                            msg = urllib.parse.quote(f"¡Hola! Te contacto a través de *RETORNO MATCH VIP* 🚛.\n\nHe visto tu camión *{r[3]}* disponible para la ruta:\n📍 *ORIGEN:* {r[1]}\n🏁 *DESTINO:* {r[2]}\n\n¿Sigue disponible para cargar?")
                             st.markdown(f'<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>ID/CUIT:</b> {cuit_val}<br><a href="https://api.whatsapp.com/send?phone={w}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a></div>', unsafe_allow_html=True)
                 except: continue
 
@@ -134,12 +135,14 @@ with t2:
                 try:
                     if pd.to_datetime(r[0], dayfirst=True).date() == b_fecha:
                         if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()):
+                            # En Cargas: WhatsApp es r[4] y Empresa es r[5]
                             es_v = es_vip(r[5]) if len(r)>5 else False
                             clase = "card-vip" if es_v else "card-white"
                             label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if es_v else ""
                             emp = str(r[5]).replace(".0", "") if len(r)>5 else "-"
-                            msg = urllib.parse.quote(f"Hola! Me interesa la carga {r[3]} en Retorno Match VIP.")
-                            st.markdown(f'<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {emp}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
+                            w = limpiar_wsp(r[4]) if len(r)>4 else "5491111111111"
+                            msg = urllib.parse.quote(f"¡Hola! Te hablo por la carga publicada en *RETORNO MATCH VIP* 🚛.\n\n📦 *DETALLE:* {r[3]}\n📍 *RUTA:* {r[1]} ➔ {r[2]}\n\n¿Sigue disponible?")
+                            st.markdown(f'<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {emp}<br><a href="https://api.whatsapp.com/send?phone={w}&text={msg}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
                 except: continue
 
 # --- 8. PANEL DE CONTROL (BOTONES DE BORRADO) ---
