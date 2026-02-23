@@ -38,8 +38,17 @@ def cargar_datos_seguros():
 
 df_ch_raw, df_ca_raw, LISTA_VIPS_GLOBAL = cargar_datos_seguros()
 
+# --- LÓGICA DE PUBLICIDAD EN VIVO ---
+hoy = datetime.now().date()
+def es_fecha(f, target):
+    try: return pd.to_datetime(f, dayfirst=True).date() == target
+    except: return False
+
+cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))])
+cant_cargas = len(df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))])
+
 if 'anuncios' not in st.session_state:
-    st.session_state.anuncios = "📢 ¡SISTEMA VIP ACTIVADO! -- Consultas aquí --"
+    st.session_state.anuncios = "¡Bienvenido al Sistema VIP!"
 
 PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBUT", "CORDOBA", "CORRIENTES", "ENTRE RIOS", "FORMOSA", "JUJUY", "LA PAMPA", "LA RIOJA", "MENDOZA", "MISIONES", "NEUQUEN", "RIO NEGRO", "SALTA", "SAN JUAN", "SAN LUIS", "SANTA CRUZ", "SANTA FE", "SANTIAGO DEL ESTERO", "TIERRA DEL FUEGO", "TUCUMAN"]
 EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
@@ -75,17 +84,13 @@ def limpiar_wsp(num):
     if clean.startswith("15"): clean = clean.replace("15", "", 1)
     return "549" + clean if not clean.startswith("549") else clean
 
-def es_fecha(f, target):
-    try: return pd.to_datetime(f, dayfirst=True).date() == target
-    except: return False
-
 def es_vip(dato):
     return str(dato).strip().upper().replace(".0", "") in LISTA_VIPS_GLOBAL
 
 # --- 6. INTERFAZ ---
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
 c1, c2, c3, c4, c5 = st.columns([1.5, 1.5, 1.5, 1.5, 1])
-with c1: b_fecha = st.date_input("📅 FECHA:", datetime.now().date())
+with c1: b_fecha = st.date_input("📅 FECHA:", hoy)
 with c2: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
 with c3: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
 with c4: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
@@ -94,11 +99,13 @@ with c5:
     if st.button("🔄 ACTUALIZAR", use_container_width=True): 
         st.cache_data.clear(); st.rerun()
 
-st.markdown(f'<div class="radar-container"><marquee scrollamount="8">🚛 FECHA: {b_fecha.strftime("%d/%m/%Y")} -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz.</marquee></div>', unsafe_allow_html=True)
+# --- BARRA DE PUBLICIDAD CON CONTEO EN VIVO ---
+radar_txt = f"🔥 EN VIVO: {cant_camiones} Camiones y {cant_cargas} Cargas disponibles hoy -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz."
+st.markdown(f'<div class="radar-container"><marquee scrollamount="8">{radar_txt}</marquee></div>', unsafe_allow_html=True)
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
-# --- TAB 1: CAMIONES ---
+# --- TAB 1: CAMIONES (EMPRESA CONTACTA AL CHOFER) ---
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -114,14 +121,21 @@ with t1:
         if not df_ch_raw.empty:
             df_ch_raw['vip'] = df_ch_raw.apply(lambda r: es_vip(r[4]) or es_vip(r[5]), axis=1)
             df_f = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
-            if df_f.empty: st.info("No hay camiones para hoy.")
             for _, r in df_f.iterrows():
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])):
                     val_a, val_b = limpiar_dato_numerico(r[4]), limpiar_dato_numerico(r[5])
-                    cuit_final, wsp_final = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
-                    st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ CHOFER VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit_final}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_final)}&text=Hola!" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a></div>', unsafe_allow_html=True)
+                    cuit, wsp = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
+                    # MENSAJE PRO CONTACTO CHOFER
+                    msg_chofer = urllib.parse.quote(f"Estimado/a, me contacto desde RETORNO MATCH VIP. Vi su camión disponible ({r[3]}) para la ruta {r[1]} -> {r[2]}. Quisiera consultarle disponibilidad.")
+                    st.markdown(f'''
+                    <div class="{"card-vip" if r["vip"] else "card-white"}">
+                        {"<div class='vip-label'>⭐ CHOFER VIP</div>" if r["vip"] else ""}
+                        <div class="route-txt">{r[1]} ➔ {r[2]}</div>
+                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit}<br>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp)}&text={msg_chofer}" target="_blank" class="btn-wsp">💬 CONTACTAR CHOFER PROFESIONAL</a>
+                    </div>''', unsafe_allow_html=True)
 
-# --- TAB 2: CARGAS (CORREGIDO: AHORA PIDE LOCALIDAD) ---
+# --- TAB 2: CARGAS (CHOFER CONTACTA A LA EMPRESA) ---
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -131,28 +145,28 @@ with t2:
             d_prov = st.selectbox("Prov. Destino", PROVINCIAS[1:]); d_loc = st.text_input("Loc. Destino")
             e_tipo = st.selectbox("Equipo", EQUIPOS[1:]); cu_id = st.text_input("CUIT/ID"); wsp_num = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR CAMIÓN"):
-                # Enviamos Origen y Destino combinados (Provincia + Localidad)
-                requests.post(URL_CHOFERES_POST, data={
-                    "entry.1304806144": f"{o_prov} ({o_loc})", 
-                    "entry.1519265625": f"{d_prov} ({d_loc})", 
-                    "entry.597193898": e_tipo, 
-                    "entry.1542650763": cu_id, 
-                    "entry.1574172378": wsp_num
-                })
+                requests.post(URL_CHOFERES_POST, data={"entry.1304806144": f"{o_prov} ({o_loc})", "entry.1519265625": f"{d_prov} ({d_loc})", "entry.597193898": e_tipo, "entry.1542650763": cu_id, "entry.1574172378": wsp_num})
                 st.cache_data.clear(); st.success("¡Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
             df_ca_raw['vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
             df_f2 = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
-            if df_f2.empty: st.info("No hay cargas para hoy.")
             for _, r in df_f2.iterrows():
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()):
-                    st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\"vip-label\">⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text=Hola!" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
+                    # MENSAJE PRO CONTACTO EMPRESA
+                    msg_empresa = urllib.parse.quote(f"Hola, somos de RETORNO MATCH VIP. Consulto por la carga de {r[3]} en la ruta {r[1]} -> {r[2]} publicada por la empresa {r[5]}. ¿Sigue disponible?")
+                    st.markdown(f'''
+                    <div class="{"card-vip" if r["vip"] else "card-white"}">
+                        {"<div class='vip-label'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}
+                        <div class="route-txt">{r[1]} ➔ {r[2]}</div>
+                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_empresa}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA AHORA</a>
+                    </div>''', unsafe_allow_html=True)
 
 # --- PIE DE PÁGINA ---
 st.markdown(f"""
 <div class="legal-footer">
-    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
+    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz y sus legales</p>
     <p style="font-style: italic;">No nos responsabilizamos por acuerdos entre partes.</p>
     <p><b>Prohibida la copia total o parcial sin autorización de Ignacio Diaz.</b></p>
     <p>© 2026 RETORNO MATCH VIP</p>
