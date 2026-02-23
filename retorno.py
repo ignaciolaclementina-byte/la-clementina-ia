@@ -53,7 +53,7 @@ if 'anuncios' not in st.session_state:
 PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBUT", "CORDOBA", "CORRIENTES", "ENTRE RIOS", "FORMOSA", "JUJUY", "LA PAMPA", "LA RIOJA", "MENDOZA", "MISIONES", "NEUQUEN", "RIO NEGRO", "SALTA", "SAN JUAN", "SAN LUIS", "SANTA CRUZ", "SANTA FE", "SANTIAGO DEL ESTERO", "TIERRA DEL FUEGO", "TUCUMAN"]
 EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
 
-# IMPORTANTE: st.set_page_config debe ir después de cargar datos en esta estructura específica si se usa st.rerun preventivo
+# IMPORTANTE: st.set_page_config debe ir después de cargar datos en esta estructura específica
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
 # --- 4. ESTILOS VIP PERSONALIZADOS ---
@@ -185,7 +185,7 @@ with tab2:
                         <a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR DISPONIBILIDAD</a>
                     </div>''', unsafe_allow_html=True)
 
-# --- PIE DE PÁGINA (BLINDADO) ---
+# --- PIE DE PÁGINA (BLINDADO - CREADO POR IGNACIO DIAZ) ---
 st.markdown(f"""
 <div class="legal-footer">
     <p style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 5px;">Creado por Ignacio Diaz</p>
