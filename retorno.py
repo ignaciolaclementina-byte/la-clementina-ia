@@ -24,7 +24,7 @@ if time.time() - st.session_state.last_heartbeat > 900:
     st.rerun()
 
 # --- 3. GESTIÓN DE ESTADO ---
-# Nota: "FLEMING" se mantiene aquí como respaldo, pero el sistema ahora es dinámico.
+# "FLEMING" ya está aquí por defecto para todos
 if 'socios_activos' not in st.session_state:
     st.session_state.socios_activos = "FLEMING, 20334445551, TRANSPORTES SAN JORGE, LOGISTICA DIAZ"
 
@@ -94,13 +94,13 @@ def es_fecha_seleccionada(f, fecha_target):
         return False
 
 def es_vip(dato):
-    if not dato or str(dato) == "-": return False
+    if not dato or str(dato) == "-" or str(dato) == "nan": return False
     lista_vip = [s.strip().upper() for s in st.session_state.socios_activos.split(",") if s.strip()]
     dato_str = str(dato).strip().upper()
     if dato_str.endswith(".0"): dato_str = dato_str[:-2]
     return any(vip in dato_str for vip in lista_vip)
 
-# --- 6. CARGA DE DATOS ---
+# --- 6. DATOS ---
 try:
     df_ch_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
     df_ca_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
@@ -123,7 +123,7 @@ st.markdown(f'<div class="radar-container"><marquee scrollamount="8">🚛 FECHA:
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
 
-# --- TAB 1: SOY EMPRESA (Estructura col_f1 Form, col_r1 Resultados) ---
+# --- TAB 1 ---
 with t1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -138,18 +138,17 @@ with t1:
                 st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            # Identificación de VIP en choferes (Columnas 4 o 5 según tu Excel)
-            df_ch_raw['es_vip'] = df_ch_raw.apply(lambda r: es_vip(r[4]) or (es_vip(r[5]) if len(r)>5 else False), axis=1)
+            df_ch_raw['es_vip'] = df_ch_raw.apply(lambda r: es_vip(r[4]) if len(r) > 4 else False, axis=1)
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ch.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
-                    wsp_final = limpiar_wsp(r[4])
-                    msg = urllib.parse.quote(f"¡Hola! Te contacto a través de *RETORNO MATCH VIP* 🚛.\n\nHe visto tu camión *{r[3]}* disponible para la ruta:\n📍 *ORIGEN:* {r[1]}\n🏁 *DESTINO:* {r[2]}\n\n¿Sigue disponible para cargar? ¡Espero tu respuesta!")
+                    wsp_final = limpiar_wsp(r[4]) if len(r) > 4 else "5491111111111"
+                    msg = urllib.parse.quote(f"¡Hola! Te contacto a través de *RETORNO MATCH VIP* 🚛.\n\nHe visto tu camión *{r[3]}* disponible para la ruta:\n📍 *ORIGEN:* {r[1]}\n🏁 *DESTINO:* {r[2]}")
                     st.markdown(f'<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]}<br><a href="https://api.whatsapp.com/send?phone={wsp_final}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a></div>', unsafe_allow_html=True)
 
-# --- TAB 2: SOY CHOFER (Estructura col_f2 Form, col_r2 Resultados) ---
+# --- TAB 2 ---
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -160,57 +159,44 @@ with t2:
             e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID")
             w = st.text_input("WhatsApp (Sin 0 ni 15)")
             if st.form_submit_button("SUBIR CAMIÓN"):
-                requests.post(URL_CHOFERES_POST, data={"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({eld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w})
+                requests.post(URL_CHOFERES_POST, data={"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w})
                 st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
-            df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip) # Columna de Empresa
+            df_ca_raw['es_vip'] = df_ca_raw.apply(lambda r: es_vip(r[5]) if len(r) > 5 else False, axis=1)
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             for _, r in df_final_ca.iterrows():
                 if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
-                    empresa_visual = str(r[5]).replace(".0", "").strip()
-                    msg_carga = urllib.parse.quote(f"¡Hola! Te hablo por la carga publicada en *RETORNO MATCH VIP* 🚛.\n\n📦 *DETALLE:* {r[3]}\n📍 *RUTA:* {r[1]} ➔ {r[2]}\n🏢 *EMPRESA:* {empresa_visual}\n\n¿Sigue disponible? Me interesa consultar detalles.")
+                    empresa_visual = str(r[5]) if len(r) > 5 else "-"
+                    msg_carga = urllib.parse.quote(f"¡Hola! Te hablo por la carga publicada en *RETORNO MATCH VIP* 🚛.\n\n📦 *DETALLE:* {r[3]}\n📍 *RUTA:* {r[1]} ➔ {r[2]}")
                     st.markdown(f'<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_visual}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
 
 # --- 9. PANEL DE CONTROL (RESTAURADO) ---
 st.markdown("---")
 with st.expander("⚙️ PANEL DE CONTROL (SÓLO IGNACIO DIAZ)"):
     input_pin = st.text_input("Introduce el PIN de Administrador:", type="password")
-    
     if input_pin == ADMIN_PIN:
-        st.success("Acceso Concedido, Ignacio.")
         st.session_state.anuncios = st.text_area("Radar publicitario:", st.session_state.anuncios)
-        
         st.markdown("### ⭐ GESTIÓN DE SOCIOS VIP")
         lista_vips = [s.strip() for s in st.session_state.socios_activos.split(",") if s.strip()]
-        
-        # Mostrar lista con botones de borrar
         for socio in lista_vips:
-            col_v1, col_v2 = st.columns([4, 1])
-            with col_v1: st.code(socio)
-            with col_v2:
+            cv1, cv2 = st.columns([4, 1])
+            with cv1: st.code(socio)
+            with cv2:
                 if st.button("🗑️ Borrar", key=f"del_{socio}"):
                     lista_vips.remove(socio)
-                    st.session_state.socios_activos = ", ".join(lista_vips)
-                    st.rerun()
-        
-        nuevo_vip = st.text_input("Agregar nuevo VIP (Nombre o CUIT):")
-        if st.button("➕ AGREGAR SOCIO"):
-            if nuevo_vip and nuevo_vip not in lista_vips:
-                lista_vips.append(nuevo_vip)
-                st.session_state.socios_activos = ", ".join(lista_vips)
-                st.rerun()
-        
-        if st.button("🚀 GUARDAR CAMBIOS GLOBALES"):
-            st.cache_data.clear()
-            st.success("Actualizado. Nota: Para que sea permanente para todos los celulares, agregalo al código.")
-            st.rerun()
+                    st.session_state.socios_activos = ", ".join(lista_vips); st.rerun()
+        nuevo_v = st.text_input("Agregar VIP:")
+        if st.button("➕ AGREGAR"):
+            if nuevo_v and nuevo_v not in lista_vips:
+                lista_vips.append(nuevo_v)
+                st.session_state.socios_activos = ", ".join(lista_vips); st.rerun()
     elif input_pin != "":
         st.error("PIN Incorrecto.")
 
-# --- 10. PIE DE PÁGINA LEGAL (BLINDADO) ---
+# --- 10. PIE DE PÁGINA LEGAL ---
 st.markdown(f"""
 <div class="legal-footer">
     <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz y sus legales</p>
