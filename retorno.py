@@ -24,10 +24,9 @@ if time.time() - st.session_state.last_heartbeat > 900:
     st.rerun()
 
 # --- 3. CARGA DE DATOS ---
-@st.cache_data(ttl=10) # Reducido a 10 segundos para mayor frescura
+@st.cache_data(ttl=10)
 def cargar_datos_seguros():
     try:
-        # Forzamos la descarga fresca agregando un timestamp a la URL
         t = int(time.time())
         df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}").fillna("-")
         df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
@@ -77,9 +76,7 @@ def limpiar_wsp(num):
     return "549" + clean if not clean.startswith("549") else clean
 
 def es_fecha(f, target):
-    try:
-        # Comparamos solo la parte de la fecha (Y-m-d) ignorando horas
-        return pd.to_datetime(f, dayfirst=True).date() == target
+    try: return pd.to_datetime(f, dayfirst=True).date() == target
     except: return False
 
 def es_vip(dato):
@@ -95,8 +92,7 @@ with c4: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
 with c5:
     st.write("<br>", unsafe_allow_html=True)
     if st.button("🔄 ACTUALIZAR", use_container_width=True): 
-        st.cache_data.clear()
-        st.rerun()
+        st.cache_data.clear(); st.rerun()
 
 st.markdown(f'<div class="radar-container"><marquee scrollamount="8">🚛 FECHA: {b_fecha.strftime("%d/%m/%Y")} -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz.</marquee></div>', unsafe_allow_html=True)
 
@@ -113,45 +109,42 @@ with t1:
             ec = st.text_input("Carga"); en = st.text_input("Nombre Empresa"); ew = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR CARGA"):
                 requests.post(URL_CARGAS_POST, data={"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": ec, "entry.1930562861": en, "entry.466540450": ew})
-                st.cache_data.clear() # Limpiamos para que aparezca al recargar
-                st.success("¡Publicado!"); time.sleep(1); st.rerun()
+                st.cache_data.clear(); st.success("¡Publicado!"); time.sleep(1); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
             df_ch_raw['vip'] = df_ch_raw.apply(lambda r: es_vip(r[4]) or es_vip(r[5]), axis=1)
             df_f = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
-            if df_f.empty:
-                st.info("No hay camiones para esta fecha.")
+            if df_f.empty: st.info("No hay camiones para hoy.")
             for _, r in df_f.iterrows():
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])):
-                    val_a = limpiar_dato_numerico(r[4])
-                    val_b = limpiar_dato_numerico(r[5])
+                    val_a, val_b = limpiar_dato_numerico(r[4]), limpiar_dato_numerico(r[5])
                     cuit_final, wsp_final = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
-                    st.markdown(f'''
-                    <div class="{"card-vip" if r["vip"] else "card-white"}">
-                        {"<div class='vip-label'>⭐ CHOFER VIP</div>" if r["vip"] else ""}
-                        <div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit_final}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_final)}&text=Hola!" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a>
-                    </div>''', unsafe_allow_html=True)
+                    st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ CHOFER VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit_final}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_final)}&text=Hola!" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a></div>', unsafe_allow_html=True)
 
-# --- TAB 2: CARGAS ---
+# --- TAB 2: CARGAS (CORREGIDO: AHORA PIDE LOCALIDAD) ---
 with t2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
         st.markdown("<h4 style='color:white;'>📢 Publicar Camión</h4>", unsafe_allow_html=True)
         with st.form("f_ch", clear_on_submit=True):
-            o = st.selectbox("Origen", PROVINCIAS[1:]); d = st.selectbox("Destino", PROVINCIAS[1:])
-            e = st.selectbox("Equipo", EQUIPOS[1:]); cu = st.text_input("CUIT/ID"); w = st.text_input("WhatsApp")
+            o_prov = st.selectbox("Prov. Origen", PROVINCIAS[1:]); o_loc = st.text_input("Loc. Origen")
+            d_prov = st.selectbox("Prov. Destino", PROVINCIAS[1:]); d_loc = st.text_input("Loc. Destino")
+            e_tipo = st.selectbox("Equipo", EQUIPOS[1:]); cu_id = st.text_input("CUIT/ID"); wsp_num = st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR CAMIÓN"):
-                requests.post(URL_CHOFERES_POST, data={"entry.1304806144": o, "entry.1519265625": d, "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w})
-                st.cache_data.clear() # Limpiamos para que aparezca al recargar
-                st.success("¡Publicado!"); time.sleep(1); st.rerun()
+                # Enviamos Origen y Destino combinados (Provincia + Localidad)
+                requests.post(URL_CHOFERES_POST, data={
+                    "entry.1304806144": f"{o_prov} ({o_loc})", 
+                    "entry.1519265625": f"{d_prov} ({d_loc})", 
+                    "entry.597193898": e_tipo, 
+                    "entry.1542650763": cu_id, 
+                    "entry.1574172378": wsp_num
+                })
+                st.cache_data.clear(); st.success("¡Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
             df_ca_raw['vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
             df_f2 = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
-            if df_f2.empty:
-                st.info("No hay cargas para esta fecha.")
+            if df_f2.empty: st.info("No hay cargas para hoy.")
             for _, r in df_f2.iterrows():
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()):
                     st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\"vip-label\">⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text=Hola!" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>', unsafe_allow_html=True)
@@ -169,4 +162,4 @@ st.markdown(f"""
 with st.expander("⚙️ ADMIN"):
     if st.text_input("PIN:", type="password") == ADMIN_PIN:
         st.session_state.anuncios = st.text_area("Radar:", st.session_state.anuncios)
-        st.markdown(f'<a href="https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_VIP}" target="_blank">➕ GESTIONAR VIP EN EXCEL</a>', unsafe_allow_html=True)
+        st.markdown(f'<a href="https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={GID_VIP}" target="_blank">➕ GESTIONAR VIP</a>', unsafe_allow_html=True)
