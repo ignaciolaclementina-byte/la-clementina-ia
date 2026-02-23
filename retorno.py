@@ -127,7 +127,6 @@ with t1:
                     val_a, val_b = limpiar_dato_numerico(r[4]), limpiar_dato_numerico(r[5])
                     cuit, wsp = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
                     
-                    # --- WHATSAPP PROFESIONAL (PARA CHOFER) ---
                     texto_wsp = (
                         f"─── *RETORNO MATCH VIP* ───\n"
                         f"✅ *SOLICITUD DE TRANSPORTE*\n\n"
@@ -168,7 +167,6 @@ with t2:
             for _, r in df_f2.iterrows():
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()):
                     
-                    # --- WHATSAPP PROFESIONAL (PARA EMPRESA) ---
                     texto_wsp_ca = (
                         f"─── *RETORNO MATCH VIP* ───\n"
                         f"📦 *INTERÉS EN CARGA DISPONIBLE*\n\n"
@@ -191,7 +189,7 @@ with t2:
 # --- PIE DE PÁGINA ---
 st.markdown(f"""
 <div class="legal-footer">
-    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz y sus legales</p>
+    <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
     <p style="font-style: italic;">No nos responsabilizamos por acuerdos entre partes.</p>
     <p><b>Prohibida la copia total o parcial sin autorización de Ignacio Diaz.</b></p>
     <p>© 2026 RETORNO MATCH VIP</p>
