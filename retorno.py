@@ -64,7 +64,8 @@ st.markdown("""
     .card-vip { background: #fff9e6 !important; border: 3px solid #f1c40f !important; border-radius: 15px; padding: 20px; margin-bottom: 15px; color: #333; box-shadow: 0px 4px 20px rgba(241, 196, 15, 0.5); }
     .vip-label { background: #f1c40f; color: black; padding: 4px 12px; border-radius: 20px; font-weight: 900; font-size: 14px; display: inline-block; margin-bottom: 10px; }
     .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
-    .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
+    .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .btn-wsp:hover { background-color: #128C7E; transform: scale(1.02); transition: 0.2s; }
     .stTabs [data-baseweb="tab"] { flex: 1; height: 70px !important; background-color: #2c3e50 !important; color: white !important; font-size: 18px !important; font-weight: 900 !important; }
     .stTabs [aria-selected="true"] { background-color: #3498db !important; }
     .legal-footer { text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px; }
@@ -100,7 +101,7 @@ with c5:
         st.cache_data.clear(); st.rerun()
 
 # --- BARRA DE PUBLICIDAD CON CONTEO EN VIVO ---
-radar_txt = f"🔥 EN VIVO: {cant_camiones} Camiones y {cant_cargas} Cargas disponibles hoy -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz."
+radar_txt = f"🔥 DISPONIBLES HOY: {cant_camiones} Camiones y {cant_cargas} Cargas en espera -- ⭐ {st.session_state.anuncios} -- Creado por Ignacio Diaz."
 st.markdown(f'<div class="radar-container"><marquee scrollamount="8">{radar_txt}</marquee></div>', unsafe_allow_html=True)
 
 t1, t2 = st.tabs(["🚀 VER CAMIONES (SOY EMPRESA)", "🏢 VER CARGAS (SOY CHOFER)"])
@@ -125,14 +126,27 @@ with t1:
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])):
                     val_a, val_b = limpiar_dato_numerico(r[4]), limpiar_dato_numerico(r[5])
                     cuit, wsp = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
-                    # MENSAJE PRO CONTACTO CHOFER
-                    msg_chofer = urllib.parse.quote(f"Estimado/a, me contacto desde RETORNO MATCH VIP. Vi su camión disponible ({r[3]}) para la ruta {r[1]} -> {r[2]}. Quisiera consultarle disponibilidad.")
+                    
+                    # --- WHATSAPP PROFESIONAL (PARA CHOFER) ---
+                    texto_wsp = (
+                        f"─── *RETORNO MATCH VIP* ───\n"
+                        f"✅ *SOLICITUD DE TRANSPORTE*\n\n"
+                        f"Estimado/a, me contacto interesado en su unidad disponible:\n\n"
+                        f"📍 *ORIGEN:* {r[1]}\n"
+                        f"🏁 *DESTINO:* {r[2]}\n"
+                        f"🚛 *EQUIPO:* {r[3]}\n"
+                        f"🆔 *CUIT/ID:* {cuit}\n\n"
+                        f"¿Podría confirmarme disponibilidad y tarifa para coordinar la carga? Quedo a la espera de sus comentarios.\n\n"
+                        f"Saludos cordiales."
+                    )
+                    link_wsp = f"https://api.whatsapp.com/send?phone={limpiar_wsp(wsp)}&text={urllib.parse.quote(texto_wsp)}"
+                    
                     st.markdown(f'''
                     <div class="{"card-vip" if r["vip"] else "card-white"}">
                         {"<div class='vip-label'>⭐ CHOFER VIP</div>" if r["vip"] else ""}
                         <div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp)}&text={msg_chofer}" target="_blank" class="btn-wsp">💬 CONTACTAR CHOFER PROFESIONAL</a>
+                        <a href="{link_wsp}" target="_blank" class="btn-wsp">✉️ ENVIAR PROPUESTA FORMAL</a>
                     </div>''', unsafe_allow_html=True)
 
 # --- TAB 2: CARGAS (CHOFER CONTACTA A LA EMPRESA) ---
@@ -153,14 +167,25 @@ with t2:
             df_f2 = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
             for _, r in df_f2.iterrows():
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()):
-                    # MENSAJE PRO CONTACTO EMPRESA
-                    msg_empresa = urllib.parse.quote(f"Hola, somos de RETORNO MATCH VIP. Consulto por la carga de {r[3]} en la ruta {r[1]} -> {r[2]} publicada por la empresa {r[5]}. ¿Sigue disponible?")
+                    
+                    # --- WHATSAPP PROFESIONAL (PARA EMPRESA) ---
+                    texto_wsp_ca = (
+                        f"─── *RETORNO MATCH VIP* ───\n"
+                        f"📦 *INTERÉS EN CARGA DISPONIBLE*\n\n"
+                        f"Hola, me contacto desde la plataforma para consultar por la siguiente carga:\n\n"
+                        f"🏢 *EMPRESA:* {r[5]}\n"
+                        f"📦 *MERCADERÍA:* {r[3]}\n"
+                        f"📍 *RUTA:* {r[1]} ➔ {r[2]}\n\n"
+                        f"Tengo una unidad disponible en la zona. ¿Sigue disponible para ser cargada hoy? Gracias."
+                    )
+                    link_wsp_ca = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={urllib.parse.quote(texto_wsp_ca)}"
+                    
                     st.markdown(f'''
                     <div class="{"card-vip" if r["vip"] else "card-white"}">
                         {"<div class='vip-label'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}
                         <div class="route-txt">{r[1]} ➔ {r[2]}</div>
                         <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={msg_empresa}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA AHORA</a>
+                        <a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR DISPONIBILIDAD CARGA</a>
                     </div>''', unsafe_allow_html=True)
 
 # --- PIE DE PÁGINA ---
