@@ -4,6 +4,7 @@ import time
 import requests
 import urllib.parse
 from datetime import datetime
+import re
 
 # --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - CREADO POR IGNACIO DIAZ) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
@@ -38,7 +39,7 @@ def cargar_datos_seguros():
 
 df_ch_raw, df_ca_raw, LISTA_VIPS_GLOBAL = cargar_datos_seguros()
 
-# Lógica de tiempo robusta para evitar errores de Streamlit
+# Lógica de tiempo robusta
 hoy = datetime.now().date()
 def es_fecha(f, target):
     try: 
@@ -57,7 +58,7 @@ EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acopla
 
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
-# --- 4. ESTILOS VIP PERSONALIZADOS (TU ESTRUCTURA ORIGINAL) ---
+# --- 4. ESTILOS VIP PERSONALIZADOS (ESTRUCTURA IGNACIO DIAZ) ---
 st.markdown("""
 <style>
     .stApp { background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important; background-size: cover !important; background-attachment: fixed !important; }
@@ -155,7 +156,7 @@ with tab2:
                     link_wsp_ca = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={urllib.parse.quote(texto_wsp_ca)}"
                     st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR DISPONIBILIDAD</a></div>', unsafe_allow_html=True)
 
-# --- TAB 3: ARRIME COSECHA (MANTENIENDO ESTRUCTURA PERO CON TARIFA/DETALLE) ---
+# --- TAB 3: ARRIME COSECHA ---
 with tab3:
     st.markdown("<h3 style='color:#f1c40f; text-align:center;'>🌾 SECCIÓN ESPECIAL: ARRIME DE COSECHA</h3>", unsafe_allow_html=True)
     col_a1, col_a2 = st.columns([1, 2.2])
@@ -167,16 +168,24 @@ with tab3:
             t_val = st.text_input("💰 Tarifa")
             w_arr = st.text_input("📱 WhatsApp")
             if st.form_submit_button("PUBLICAR ARRIME"):
-                # Formato blindado para separar datos
                 requests.post(URL_CARGAS_POST, data={"entry.610070407": "ARRIME ZONA", "entry.170847116": z_loc, "entry.576675281": f"ARRIME|{g_det}|{t_val}", "entry.1930562861": "COSECHA", "entry.466540450": w_arr})
                 st.cache_data.clear(); st.success("¡Arrime Publicado!"); time.sleep(1); st.rerun()
     with col_a2:
         if not df_ca_raw.empty:
             df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
             for _, r in df_arrime.iterrows():
-                parts = str(r[3]).split("|")
-                detalle = parts[1] if len(parts) > 1 else r[3]
-                tarifa = parts[2] if len(parts) > 2 else "A consultar"
+                # Lógica de extracción de tarifa mejorada
+                texto_celda = str(r[3])
+                if "|" in texto_celda:
+                    parts = texto_celda.split("|")
+                    detalle = parts[1] if len(parts) > 1 else texto_celda
+                    tarifa = parts[2] if len(parts) > 2 else "A consultar"
+                else:
+                    detalle = texto_celda
+                    # Si no hay |, intentamos extraer un número del texto (ej. si pusieron 23500 directo)
+                    numeros = re.findall(r'\d+', texto_celda)
+                    tarifa = numeros[0] if numeros else "A consultar"
+
                 msg_arr = f"─── *RETORNO MATCH VIP - ARRIME* ───\n🌾 *COSECHA*\n\nHola, me interesa el arrime en {r[2]}. ¿Cómo procedemos?"
                 link_arr = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={urllib.parse.quote(msg_arr)}"
                 st.markdown(f'''
@@ -189,7 +198,7 @@ with tab3:
                     <a href="{link_arr}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR POR ARRIME</a>
                 </div>''', unsafe_allow_html=True)
 
-# --- PIE DE PÁGINA (BLINDADO - CREADO POR IGNACIO DIAZ) ---
+# --- PIE DE PÁGINA ---
 st.markdown(f"""
 <div class="legal-footer">
     <p style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 5px;">Creado por Ignacio Diaz</p>
