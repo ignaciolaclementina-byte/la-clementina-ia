@@ -127,6 +127,7 @@ with t1:
                     val_a, val_b = limpiar_dato_numerico(r[4]), limpiar_dato_numerico(r[5])
                     cuit, wsp = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
                     
+                    # --- WHATSAPP PROFESIONAL ---
                     texto_wsp = (
                         f"─── *RETORNO MATCH VIP* ───\n"
                         f"✅ *SOLICITUD DE TRANSPORTE*\n\n"
@@ -186,7 +187,7 @@ with t2:
                         <a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR DISPONIBILIDAD CARGA</a>
                     </div>''', unsafe_allow_html=True)
 
-# --- PIE DE PÁGINA ---
+# --- PIE DE PÁGINA (ESTRUCTURA BLINDADA POR IGNACIO DIAZ) ---
 st.markdown(f"""
 <div class="legal-footer">
     <p style="font-size: 18px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
