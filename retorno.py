@@ -114,7 +114,6 @@ def es_vip(dato):
 # --- 6. INTERFAZ ---
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
 
-# LOGIN VIP (Identificación para desbloqueo)
 with st.container():
     c_log1, c_log2 = st.columns([2, 1])
     with c_log1:
@@ -144,7 +143,6 @@ with tab1:
             ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
             ec = st.text_input("Mercadería"); en = st.text_input("Nombre Empresa"); ew = st.text_input("WhatsApp (Sin 0 ni 15)")
             if st.form_submit_button("SUBIR CARGA AL SISTEMA"):
-                st.toast("🚀 Procesando publicación...", icon="📦")
                 requests.post(URL_CARGAS_POST, data={"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": ec, "entry.1930562861": en, "entry.466540450": ew})
                 st.cache_data.clear(); st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
     with col_r1:
@@ -156,11 +154,18 @@ with tab1:
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])) and match_text:
                     val_a, val_b = limpiar_dato_numerico(r[4]), limpiar_dato_numerico(r[5])
                     cuit, wsp = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
-                    texto_wsp = f"─── *RETORNO MATCH VIP* ───\n✅ *SOLICITUD DE TRANSPORTE*\n\n📍 *ORIGEN:* {r[1]}\n🏁 *DESTINO:* {r[2]}\n🚛 *EQUIPO:* {r[3]}\n\nHola, me interesa su unidad vista en el sistema. ¿Está disponible?"
+                    # MENSAJE PROFESIONAL PARA CAMIONERO
+                    texto_wsp = (f"⭐ *CONSULTA DE TRANSPORTE - MATCH VIP*\n"
+                                 f"------------------------------------------\n"
+                                 f"Estimado/a, nos comunicamos por su unidad disponible:\n\n"
+                                 f"📍 *ORIGEN:* {r[1]}\n"
+                                 f"🏁 *DESTINO:* {r[2]}\n"
+                                 f"🚛 *EQUIPO:* {r[3]}\n\n"
+                                 f"Por favor, confírme disponibilidad para coordinar carga. Aguardamos su respuesta. Saludos.")
                     link_wsp = f"https://api.whatsapp.com/send?phone={limpiar_wsp(wsp)}&text={urllib.parse.quote(texto_wsp)}"
                     st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ CHOFER VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit}<br><a href="{link_wsp}" target="_blank" class="btn-wsp">✉️ ENVIAR PROPUESTA FORMAL</a></div>', unsafe_allow_html=True)
 
-# --- TAB 2: CARGAS (CON BLOQUEO VIP DE 30 MINUTOS) ---
+# --- TAB 2: CARGAS ---
 with tab2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -170,7 +175,6 @@ with tab2:
             d_prov = st.selectbox("Prov. Destino", PROVINCIAS[1:]); d_loc = st.text_input("Loc. Destino")
             e_tipo = st.selectbox("Equipo", EQUIPOS[1:]); cu_id = st.text_input("CUIT/ID"); wsp_num = st.text_input("WhatsApp (Sin 0 ni 15)")
             if st.form_submit_button("SUBIR CAMIÓN AL SISTEMA"):
-                st.toast("🚀 Registrando unidad...", icon="🚛")
                 requests.post(URL_CHOFERES_POST, data={"entry.1304806144": f"{o_prov} ({o_loc})", "entry.1519265625": f"{d_prov} ({d_loc})", "entry.597193898": e_tipo, "entry.1542650763": cu_id, "entry.1574172378": wsp_num})
                 st.cache_data.clear(); st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
     with col_r2:
@@ -185,17 +189,18 @@ with tab2:
                 match_text = busqueda_libre in str(r).upper()
 
                 if es_exclusiva and not soy_vip_actual:
-                    # TARJETA BLOQUEADA PARA NO-VIP
-                    msg_comprar = f"Hola Ignacio, quiero ser VIP para ver las cargas nuevas. CUIT: {user_cuit}"
+                    msg_comprar = f"⭐ *SOLICITUD DE ACCESO VIP*\n----------------------------------\nHola Ignacio, solicito el alta VIP para ver las cargas exclusivas del sistema.\n\n🆔 *MI CUIT:* {user_cuit}"
                     link_comprar = f"https://api.whatsapp.com/send?phone={WSP_VENTAS_VIP}&text={urllib.parse.quote(msg_comprar)}"
-                    st.markdown(f'''
-                    <div class="card-bloqueada">
-                        🔒 CARGA EXCLUSIVA VIP<br>
-                        <small>Estará disponible para todos en {int(TIEMPO_EXCLUSIVO_MIN - minutos)} min</small><br>
-                        <a href="{link_comprar}" target="_blank" style="color:#f1c40f; font-weight:bold; text-decoration:none;">⭐ QUIERO ACCESO VIP</a>
-                    </div>''', unsafe_allow_html=True)
+                    st.markdown(f'<div class="card-bloqueada">🔒 CARGA EXCLUSIVA VIP<br><small>Estará libre en {int(TIEMPO_EXCLUSIVO_MIN - minutos)} min</small><br><a href="{link_comprar}" target="_blank" style="color:#f1c40f; font-weight:bold; text-decoration:none;">⭐ QUIERO ACCESO VIP</a></div>', unsafe_allow_html=True)
                 elif (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and match_text:
-                    texto_wsp_ca = f"─── *RETORNO MATCH VIP* ───\n📦 *INTERÉS EN CARGA*\n\n📍 *TRAYECTO:* {r[1]} a {r[2]}\n📦 *CARGA:* {r[3]}\n🏢 *EMPRESA:* {r[5]}"
+                    # MENSAJE PROFESIONAL PARA EMPRESA/DADOR
+                    texto_wsp_ca = (f"🏢 *CONSULTA DE CARGA - MATCH VIP*\n"
+                                    f"------------------------------------------\n"
+                                    f"Buen día. Me pongo en contacto por la carga publicada en el sistema:\n\n"
+                                    f"📍 *TRAYECTO:* {r[1]} a {r[2]}\n"
+                                    f"📦 *CARGA:* {r[3]}\n"
+                                    f"💼 *PUBLICADO POR:* {r[5]}\n\n"
+                                    f"Dispongo de unidad en la zona. ¿Sigue disponible para asignar? Muchas gracias.")
                     link_wsp_ca = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={urllib.parse.quote(texto_wsp_ca)}"
                     st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR DISPONIBILIDAD</a></div>', unsafe_allow_html=True)
 
@@ -216,7 +221,13 @@ with tab3:
             df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
             cols_arrime = st.columns(2) 
             for i, (_, r) in enumerate(df_arrime.iterrows()):
-                msg_arr = f"─── *RETORNO MATCH VIP - ARRIME* ───\n🌾 *COSECHA 2026*\n📍 *ZONA:* {r[2]}\n🌾 *DETALLE:* {r[3]}"
+                # MENSAJE PROFESIONAL PARA ARRIME/COSECHA
+                msg_arr = (f"🚜 *OPERATIVO COSECHA 2026 - MATCH VIP*\n"
+                           f"------------------------------------------\n"
+                           f"Estimado, consulto por el operativo de arrime publicado:\n\n"
+                           f"📍 *ZONA:* {r[2]}\n"
+                           f"🌾 *DETALLE:* {r[3]}\n\n"
+                           f"Me gustaría recibir más información para incorporar unidades al trabajo. Saludos.")
                 link_arr = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={urllib.parse.quote(msg_arr)}"
                 with cols_arrime[i % 2]:
                     st.markdown(f'<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>{r[3]}<br><a href="{link_arr}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR POR ARRIME</a></div>', unsafe_allow_html=True)
