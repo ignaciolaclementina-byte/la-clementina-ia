@@ -19,12 +19,17 @@ ADMIN_PIN = "1323"
 TIEMPO_EXCLUSIVO_MIN = 30  # Ventaja competitiva para usuarios VIP
 WSP_VENTAS_VIP = "5493401525621" # Tu contacto para nuevos clientes VIP
 
-# --- 2. SISTEMA ANTI-PAUSA ---
+# --- 2. SISTEMA ANTI-PAUSA Y CONTADOR ---
 if "last_heartbeat" not in st.session_state:
     st.session_state.last_heartbeat = time.time()
 if time.time() - st.session_state.last_heartbeat > 900:
     st.session_state.last_heartbeat = time.time()
     st.rerun()
+
+# Lógica de Contador de Visitas
+if "visitas" not in st.session_state:
+    st.session_state.visitas = 1
+    # Aquí podrías conectar a una DB externa, por ahora es por sesión activa.
 
 # --- 3. CARGA DE DATOS SEGUROS ---
 @st.cache_data(ttl=10)
@@ -244,6 +249,7 @@ st.markdown(f"""
 
 with st.expander("⚙️ ADMIN"):
     if st.text_input("PIN:", type="password") == ADMIN_PIN:
+        st.write(f"📊 **Métricas de Hoy:** {st.session_state.get('visitas', 0)} sesiones activas.")
         st.session_state.anuncios = st.text_area("Texto Radar:", st.session_state.anuncios)
         if st.button("LIMPIAR CACHÉ"):
             st.cache_data.clear()
