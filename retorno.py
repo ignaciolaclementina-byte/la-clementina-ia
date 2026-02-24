@@ -32,7 +32,10 @@ COORDS_PROV = {
     "SANTIAGO DEL ESTERO": (-27.795, -64.263), "TIERRA DEL FUEGO": (-54.801, -68.303), "TUCUMAN": (-26.824, -65.222)
 }
 
-# --- 2. SISTEMA ANTI-PAUSA Y CONTADOR ---
+PROVINCIAS = ["CUALQUIERA"] + sorted(list(COORDS_PROV.keys()))
+EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
+
+# --- 2. SISTEMA ANTI-PAUSA ---
 if "last_heartbeat" not in st.session_state:
     st.session_state.last_heartbeat = time.time()
 if time.time() - st.session_state.last_heartbeat > 900:
@@ -58,16 +61,15 @@ ahora = datetime.now(); hoy = ahora.date()
 def generar_manifiesto_pdf(tipo, origen, destino, detalle, contacto, empresa="Particular"):
     pdf = FPDF()
     pdf.add_page()
-    # Encabezado
     pdf.set_fill_color(30, 55, 153)
     pdf.rect(0, 0, 210, 40, 'F')
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 20)
     pdf.cell(0, 10, "RETORNO MATCH VIP - MANIFIESTO", ln=True, align='C')
     pdf.set_font("Arial", size=10)
-    pdf.cell(0, 10, f"Documento generado el: {ahora.strftime('%d/%m/%Y %H:%M')}", ln=True, align='C')
+    pdf.cell(0, 10, f"Documento oficial generado por el sistema de Ignacio Diaz", ln=True, align='C')
+    pdf.cell(0, 10, f"Fecha: {ahora.strftime('%d/%m/%Y %H:%M')}", ln=True, align='C')
     
-    # Cuerpo
     pdf.set_text_color(0, 0, 0)
     pdf.ln(20)
     pdf.set_font("Arial", 'B', 14)
@@ -76,23 +78,18 @@ def generar_manifiesto_pdf(tipo, origen, destino, detalle, contacto, empresa="Pa
     pdf.ln(5)
     
     pdf.set_font("Arial", size=12)
-    datos = [
-        ("ORIGEN:", origen), ("DESTINO:", destino),
-        ("DETALLE:", detalle), ("CONTACTO:", contacto),
-        ("EMPRESA/DADOR:", empresa)
-    ]
+    datos = [("ORIGEN:", origen), ("DESTINO:", destino), ("DETALLE:", detalle), ("CONTACTO:", contacto), ("EMPRESA:", empresa)]
     for label, valor in datos:
         pdf.set_font("Arial", 'B', 11); pdf.cell(50, 8, label)
         pdf.set_font("Arial", size=11); pdf.cell(0, 8, str(valor), ln=True)
     
     pdf.ln(20)
     pdf.set_font("Arial", 'I', 9)
-    pdf.multi_cell(0, 5, "Nota: Este documento es una constancia de contacto generada por el sistema. Retorno Match VIP no se responsabiliza por las condiciones pactadas entre las partes.")
+    pdf.multi_cell(0, 5, "Nota: Este documento es una constancia de contacto. Retorno Match VIP no se responsabiliza por las condiciones pactadas.")
     
-    # Pie de página
     pdf.set_y(-30)
     pdf.set_font("Arial", 'B', 10)
-    pdf.cell(0, 10, "Creado por Ignacio Diaz", align='C', ln=True)
+    pdf.cell(0, 10, "Creado por Ignacio Diaz - Prohibida su reproducción sin autorización", align='C', ln=True)
     return pdf.output(dest='S').encode('latin-1')
 
 def calcular_distancia(o_str, d_str):
@@ -101,9 +98,8 @@ def calcular_distancia(o_str, d_str):
         d_clean = next((p for p in COORDS_PROV if p in d_str.upper()), None)
         if o_clean and d_clean:
             lat1, lon1 = COORDS_PROV[o_clean]; lat2, lon2 = COORDS_PROV[d_clean]
-            r = 6371; dlat = math.radians(lat2-lat1); dlon = math.radians(lon2-lon1)
-            a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2
-            return f"📍 {int(r * (2 * math.atan2(math.sqrt(a), math.sqrt(1-a))))} km aprox."
+            a = math.sin(math.radians(lat2-lat1)/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(math.radians(lon2-lon1)/2)**2
+            return f"📍 {int(6371 * (2 * math.atan2(math.sqrt(a), math.sqrt(1-a))))} km aprox."
     except: pass
     return ""
 
@@ -130,10 +126,9 @@ st.markdown("""
 <style>
     .stApp { background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075'); background-size: cover; background-attachment: fixed; }
     .radar-container { background: rgba(231, 76, 60, 0.9); color: white; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; text-align: center; border: 1px solid #f1c40f; }
-    .card-white, .card-vip { border-radius: 15px; padding: 20px; margin-bottom: 15px; transition: 0.3s; }
-    .card-white { background: white; border-left: 10px solid #3498db; color: #333; }
-    .card-vip { background: #fff9e6; border: 3px solid #f1c40f; color: #333; }
-    .dist-badge { background: #34495e; color: #f1c40f; padding: 2px 8px; border-radius: 5px; font-size: 12px; float: right; }
+    .card-white, .card-vip { border-radius: 15px; padding: 20px; margin-bottom: 15px; transition: 0.3s; background: white; border-left: 10px solid #3498db; color: #333; }
+    .card-vip { background: #fff9e6; border: 3px solid #f1c40f; }
+    .dist-badge { background: #34495e; color: #f1c40f; padding: 2px 8px; border-radius: 5px; font-size: 12px; float: right; font-weight: bold; }
     .route-txt { font-size: 20px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 10px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
     .legal-footer { text-align: center; color: rgba(255,255,255,0.7); padding: 50px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); }
@@ -143,51 +138,65 @@ st.markdown("""
 # --- 6. INTERFAZ ---
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
 
-user_cuit = st.text_input("🔑 CUIT de Acceso:", "").strip()
-soy_vip_actual = es_vip(user_cuit)
-if soy_vip_actual: st.success("✅ ACCESO VIP ACTIVO")
+with st.sidebar:
+    st.markdown("### 🔐 ACCESO")
+    user_cuit = st.text_input("Ingresar CUIT:", "").strip()
+    soy_vip_actual = es_vip(user_cuit)
+    if soy_vip_actual: st.success("✅ VIP ACTIVO")
 
 c1, c2, c3, c4 = st.columns(4)
 with c1: b_fecha = st.date_input("📅 FECHA:", hoy)
 with c2: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
 with c3: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
 with c4: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
-busqueda_libre = st.text_input("🔎 Búsqueda rápida", "").upper()
+busqueda_libre = st.text_input("🔎 Búsqueda rápida (Empresa, Producto, Localidad...)", "").upper()
 
-st.markdown(f'<div class="radar-container"><marquee scrollamount="8">Creado por Ignacio Diaz -- Cosecha Activa 2026 -- {st.session_state.get("anuncios","")}</marquee></div>', unsafe_allow_html=True)
+st.markdown(f'<div class="radar-container"><marquee scrollamount="8">Creado por Ignacio Diaz -- Cosecha Activa 2026 -- {st.session_state.get("anuncios","Conectando el transporte argentino")}</marquee></div>', unsafe_allow_html=True)
 
-tab1, tab2 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS"])
+tab1, tab2, tab_adm = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "📊 ADMIN"])
 
-# --- SECCION CAMIONES (Lógica simplificada para brevedad, igual a la anterior) ---
+# --- SECCION CAMIONES ---
 with tab1:
-    col_f1, col_r1 = st.columns([1, 2.2])
-    with col_r1:
-        if not df_ch_raw.empty:
-            df_ch_raw['vip'] = df_ch_raw.apply(lambda r: es_vip(r[4]) or es_vip(r[5]), axis=1)
-            df_f = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
-            for _, r in df_f.iterrows():
-                dist = calcular_distancia(str(r[1]), str(r[2]))
-                if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (busqueda_libre in str(r).upper()):
-                    wsp = r[4] if len(str(r[4])) < 11 else r[5]
-                    st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}"><span class="dist-badge">{dist}</span><div class="route-txt">{r[1]} ➔ {r[2]}</div><b>EQUIPO:</b> {r[3]} | 📱 {ocultar_telefono(wsp)}</div>', unsafe_allow_html=True)
-                    # Boton de Descarga PDF
-                    pdf_bytes = generar_manifiesto_pdf("CAMIÓN DISPONIBLE", r[1], r[2], r[3], wsp)
-                    st.download_button(label="📄 Descargar Manifiesto", data=pdf_bytes, file_name=f"Manifiesto_{r[1]}.pdf", mime="application/pdf", key=f"pdf_{r[0]}")
+    if not df_ch_raw.empty:
+        df_ch_raw['vip'] = df_ch_raw.apply(lambda r: es_vip(r[4]) or es_vip(r[5]), axis=1)
+        df_f = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
+        for _, r in df_f.iterrows():
+            dist = calcular_distancia(str(r[1]), str(r[2]))
+            if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (busqueda_libre in str(r).upper()):
+                wsp = r[4] if len(str(r[4])) < 11 else r[5]
+                st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}"><span class="dist-badge">{dist}</span><div class="route-txt">{r[1]} ➔ {r[2]}</div><b>EQUIPO:</b> {r[3]} | 📱 {ocultar_telefono(wsp)}</div>', unsafe_allow_html=True)
+                pdf_bytes = generar_manifiesto_pdf("CAMIÓN DISPONIBLE", r[1], r[2], r[3], wsp)
+                st.download_button(label="📄 Descargar Manifiesto", data=pdf_bytes, file_name=f"Manifiesto_{r[1]}.pdf", mime="application/pdf", key=f"ch_{_}")
 
 # --- SECCION CARGAS ---
 with tab2:
-    col_f2, col_r2 = st.columns([1, 2.2])
-    with col_r2:
+    if not df_ca_raw.empty:
+        df_ca_raw['vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
+        df_f2 = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
+        for _, r in df_f2.iterrows():
+            dist = calcular_distancia(str(r[1]), str(r[2]))
+            if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (busqueda_libre in str(r).upper()):
+                st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}"><span class="dist-badge">{dist}</span><div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 {r[5]}</div>', unsafe_allow_html=True)
+                pdf_bytes = generar_manifiesto_pdf("CARGA DISPONIBLE", r[1], r[2], r[3], r[4], r[5])
+                st.download_button(label="📄 Descargar Ficha", data=pdf_bytes, file_name=f"Carga_{r[5]}.pdf", mime="application/pdf", key=f"ca_{_}")
+
+# --- PANEL ADMIN CON DASHBOARD ---
+with tab_adm:
+    if st.text_input("PIN:", type="password") == ADMIN_PIN:
+        st.markdown("### 📊 ESTADÍSTICAS DE HOY")
+        col_m1, col_m2, col_m3 = st.columns(3)
+        col_m1.metric("Camiones", len(df_ch_raw))
+        col_m2.metric("Cargas", len(df_ca_raw))
+        col_m3.metric("VIPs", len(LISTA_VIPS_GLOBAL))
+        
+        st.write("---")
         if not df_ca_raw.empty:
-            df_ca_raw['vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
-            df_f2 = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
-            for _, r in df_f2.iterrows():
-                dist = calcular_distancia(str(r[1]), str(r[2]))
-                if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (busqueda_libre in str(r).upper()):
-                    st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}"><span class="dist-badge">{dist}</span><div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 {r[5]}</div>', unsafe_allow_html=True)
-                    # Boton de Descarga PDF
-                    pdf_bytes = generar_manifiesto_pdf("CARGA DISPONIBLE", r[1], r[2], r[3], r[4], r[5])
-                    st.download_button(label="📄 Descargar Ficha de Carga", data=pdf_bytes, file_name=f"Carga_{r[5]}.pdf", mime="application/pdf", key=f"pdf_ca_{r[0]}")
+            st.write("📈 **Top Rutas Solicitadas**")
+            st.bar_chart(df_ca_raw.iloc[:, 1].value_counts().head(5))
+        
+        if st.button("LIMPIAR CACHÉ"):
+            st.cache_data.clear()
+            st.rerun()
 
 # --- PIE DE PÁGINA (BLINDADO - CREADO POR IGNACIO DIAZ) ---
 st.markdown(f"""
