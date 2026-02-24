@@ -26,10 +26,9 @@ if time.time() - st.session_state.last_heartbeat > 900:
     st.session_state.last_heartbeat = time.time()
     st.rerun()
 
-# Lógica de Contador de Visitas
+# Lógica de Contador de Visitas (Sesión Activa)
 if "visitas" not in st.session_state:
     st.session_state.visitas = 1
-    # Aquí podrías conectar a una DB externa, por ahora es por sesión activa.
 
 # --- 3. CARGA DE DATOS SEGUROS ---
 @st.cache_data(ttl=10)
@@ -159,7 +158,7 @@ with tab1:
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])) and match_text:
                     val_a, val_b = limpiar_dato_numerico(r[4]), limpiar_dato_numerico(r[5])
                     cuit, wsp = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
-                    # MENSAJE ULTRA PROFESIONAL - CAMIONES
+                    # MENSAJE PROFESIONAL
                     texto_wsp = (f"⭐ *CONSULTA LOGÍSTICA - MATCH VIP*\n"
                                  f"--------------------------------------------------\n"
                                  f"Estimado/a, nos contactamos por su unidad disponible:\n\n"
@@ -198,7 +197,6 @@ with tab2:
                     link_comprar = f"https://api.whatsapp.com/send?phone={WSP_VENTAS_VIP}&text={urllib.parse.quote(msg_comprar)}"
                     st.markdown(f'<div class="card-bloqueada">🔒 CARGA EXCLUSIVA VIP<br><small>Disponible para todos en {int(TIEMPO_EXCLUSIVO_MIN - minutos)} min</small><br><a href="{link_comprar}" target="_blank" style="color:#f1c40f; font-weight:bold; text-decoration:none;">⭐ ACTIVAR MI ACCESO VIP</a></div>', unsafe_allow_html=True)
                 elif (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and match_text:
-                    # MENSAJE ULTRA PROFESIONAL - CARGAS
                     texto_wsp_ca = (f"🏢 *SOLICITUD DE ASIGNACIÓN - MATCH VIP*\n"
                                     f"--------------------------------------------------\n"
                                     f"Buen día. Me pongo en contacto por la carga publicada en el portal:\n\n"
@@ -226,7 +224,6 @@ with tab3:
             df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
             cols_arrime = st.columns(2) 
             for i, (_, r) in enumerate(df_arrime.iterrows()):
-                # MENSAJE ULTRA PROFESIONAL - COSECHA
                 msg_arr = (f"🚜 *OPERATIVO COSECHA 2026 - MATCH VIP*\n"
                            f"--------------------------------------------------\n"
                            f"Estimado, consulto por la vacante para operativo de arrime:\n\n"
@@ -249,7 +246,7 @@ st.markdown(f"""
 
 with st.expander("⚙️ ADMIN"):
     if st.text_input("PIN:", type="password") == ADMIN_PIN:
-        st.write(f"📊 **Métricas de Hoy:** {st.session_state.get('visitas', 0)} sesiones activas.")
+        st.write(f"📊 **Sesiones hoy:** {st.session_state.get('visitas', 0)}")
         st.session_state.anuncios = st.text_area("Texto Radar:", st.session_state.anuncios)
         if st.button("LIMPIAR CACHÉ"):
             st.cache_data.clear()
