@@ -26,7 +26,6 @@ if time.time() - st.session_state.last_heartbeat > 900:
     st.session_state.last_heartbeat = time.time()
     st.rerun()
 
-# Lógica de Contador de Visitas (Sesión Activa)
 if "visitas" not in st.session_state:
     st.session_state.visitas = 1
 
@@ -45,7 +44,6 @@ def cargar_datos_seguros():
 
 df_ch_raw, df_ca_raw, LISTA_VIPS_GLOBAL = cargar_datos_seguros()
 
-# Lógica de tiempo robusta
 ahora = datetime.now()
 hoy = ahora.date()
 
@@ -79,27 +77,23 @@ st.markdown("""
 <style>
     .stApp { background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important; background-size: cover !important; background-attachment: fixed !important; }
     .radar-container { background: rgba(231, 76, 60, 0.9); color: white; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; border: 1px solid #f1c40f; text-align: center; }
-    
     .card-white, .card-vip, .card-cosecha, .card-bloqueada { transition: all 0.3s ease-in-out; cursor: pointer; border-radius: 15px; padding: 20px; margin-bottom: 15px; }
     .card-white:hover, .card-vip:hover, .card-cosecha:hover { transform: translateY(-5px); box-shadow: 0px 10px 20px rgba(0,0,0,0.4) !important; }
-
     .card-white { background: white !important; border-left: 10px solid #3498db; color: #333; }
     .card-vip { background: #fff9e6 !important; border: 3px solid #f1c40f !important; color: #333; box-shadow: 0px 4px 15px rgba(241, 196, 15, 0.3); }
     .card-cosecha { background: #e8f5e9 !important; border: 2px solid #2e7d32 !important; color: #1b5e20; min-height: 220px; }
     .card-bloqueada { background: rgba(0,0,0,0.6) !important; border: 2px dashed #f1c40f !important; color: white !important; text-align: center; padding: 30px !important; }
-    
     .vip-label { background: #f1c40f; color: black; padding: 4px 12px; border-radius: 20px; font-weight: 900; font-size: 14px; display: inline-block; margin-bottom: 10px; }
     .route-txt { font-size: 20px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 10px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
     .btn-wsp:hover { background-color: #128C7E; }
-    
     .legal-footer { text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px; }
     .stTabs [data-baseweb="tab"] { flex: 1; height: 60px !important; background-color: #2c3e50 !important; color: white !important; font-size: 16px !important; font-weight: 900 !important; }
     .stTabs [aria-selected="true"] { background-color: #3498db !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 5. FUNCIONES AUXILIARES ---
+# --- 5. FUNCIONES AUXILIARES (CON BLINDAJE DE DATOS) ---
 def limpiar_dato_numerico(dato):
     s = str(dato).strip()
     if s.endswith(".0"): s = s[:-2]
@@ -111,6 +105,13 @@ def limpiar_wsp(num):
     if clean.startswith("0"): clean = clean[1:]
     if clean.startswith("15"): clean = clean.replace("15", "", 1)
     return "549" + clean if not clean.startswith("549") else clean
+
+def ocultar_telefono(num):
+    """Ofuscación para proteger base de datos - Ignacio Diaz"""
+    clean = limpiar_dato_numerico(num)
+    if len(clean) > 4:
+        return f"*******{clean[-4:]}"
+    return "*******"
 
 def es_vip(dato):
     return str(dato).strip().upper().replace(".0", "") in LISTA_VIPS_GLOBAL
@@ -158,7 +159,6 @@ with tab1:
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])) and match_text:
                     val_a, val_b = limpiar_dato_numerico(r[4]), limpiar_dato_numerico(r[5])
                     cuit, wsp = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
-                    # MENSAJE PROFESIONAL
                     texto_wsp = (f"⭐ *CONSULTA LOGÍSTICA - MATCH VIP*\n"
                                  f"--------------------------------------------------\n"
                                  f"Estimado/a, nos contactamos por su unidad disponible:\n\n"
@@ -167,7 +167,7 @@ with tab1:
                                  f"🚛 *EQUIPO:* {r[3]}\n\n"
                                  f"Por favor, confírme disponibilidad para coordinar carga inmediata. Aguardamos su respuesta. Saludos.")
                     link_wsp = f"https://api.whatsapp.com/send?phone={limpiar_wsp(wsp)}&text={urllib.parse.quote(texto_wsp)}"
-                    st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ CHOFER VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit}<br><a href="{link_wsp}" target="_blank" class="btn-wsp">✉️ ENVIAR PROPUESTA FORMAL</a></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ CHOFER VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit} | 📱 <b>TEL:</b> {ocultar_telefono(wsp)}<br><a href="{link_wsp}" target="_blank" class="btn-wsp">✉️ ENVIAR PROPUESTA FORMAL</a></div>', unsafe_allow_html=True)
 
 # --- TAB 2: CARGAS ---
 with tab2:
@@ -205,7 +205,7 @@ with tab2:
                                     f"💼 *DADOR:* {r[5]}\n\n"
                                     f"Cuento con unidad disponible en zona para asignar. ¿Sigue vigente la carga? Muchas gracias.")
                     link_wsp_ca = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={urllib.parse.quote(texto_wsp_ca)}"
-                    st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR DISPONIBILIDAD</a></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]} | 📱 <b>TEL:</b> {ocultar_telefono(r[4])}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR DISPONIBILIDAD</a></div>', unsafe_allow_html=True)
 
 # --- TAB 3: ARRIME COSECHA ---
 with tab3:
@@ -232,7 +232,7 @@ with tab3:
                            f"Solicito requisitos y condiciones para incorporar unidades al servicio. Aguardo respuesta.")
                 link_arr = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={urllib.parse.quote(msg_arr)}"
                 with cols_arrime[i % 2]:
-                    st.markdown(f'<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>{r[3]}<br><a href="{link_arr}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR POR ARRIME</a></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>{r[3]} | 📱 {ocultar_telefono(r[4])}<br><a href="{link_arr}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR POR ARRIME</a></div>', unsafe_allow_html=True)
 
 # --- PIE DE PÁGINA (BLINDADO - CREADO POR IGNACIO DIAZ) ---
 st.markdown(f"""
