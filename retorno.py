@@ -102,16 +102,15 @@ st.markdown("""
     .btn-wsp { background-color: #25D366; color: white !important; padding: 10px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
     .btn-wsp:hover { background-color: #128C7E; }
     /* Botón Manifiesto */
-    .btn-pdf { background-color: #e74c3c; color: white !important; padding: 8px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 5px; font-size: 13px; border: 1px solid #c0392b; }
+    .btn-manifiesto { background-color: #e74c3c; color: white; padding: 10px; border-radius: 10px; font-weight: bold; width: 100%; border: none; margin-top: 5px; cursor: pointer; }
     .legal-footer { text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px; }
     .stTabs [data-baseweb="tab"] { flex: 1; height: 60px !important; background-color: #2c3e50 !important; color: white !important; font-size: 16px !important; font-weight: 900 !important; }
     .stTabs [aria-selected="true"] { background-color: #3498db !important; }
-    
-    /* Estilos para la Impresión del Manifiesto */
+
     @media print {
         body * { visibility: hidden; }
-        .print-area, .print-area * { visibility: visible; }
-        .print-area { position: absolute; left: 0; top: 0; width: 100%; border: 2px solid black; padding: 20px; color: black !important; background: white !important; }
+        .print-section, .print-section * { visibility: visible; }
+        .print-section { position: absolute; left: 0; top: 0; width: 100%; color: black !important; background: white !important; padding: 30px; border: 1px solid #000; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -230,7 +229,7 @@ with tab2:
             df_ca_raw['vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
             df_ca_filtered = df_ca_raw[~df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
             df_f2 = df_ca_filtered[df_ca_filtered.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
-            for _, r in df_f2.iterrows():
+            for idx, r in df_f2.iterrows():
                 minutos = obtener_minutos_desde_publicacion(r[0])
                 distancia = calcular_distancia(str(r[1]), str(r[2]))
                 if minutos < TIEMPO_EXCLUSIVO_MIN and not soy_vip_actual:
@@ -238,31 +237,37 @@ with tab2:
                 elif (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (busqueda_libre in str(r).upper()):
                     link_wsp_ca = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text=Consulta carga {r[1]} a {r[2]}"
                     
-                    # Lógica para Manifiesto de Carga (Ignacio Diaz)
-                    manifiesto_html = f"""
-                    <div style='display:none;'><div id='manifiesto_{_}' class='print-area'>
-                        <h2 style='text-align:center;'>MANIFIESTO DE CARGA - RETORNO MATCH VIP</h2>
-                        <hr>
-                        <p><b>FECHA:</b> {hoy}</p>
-                        <p><b>ORIGEN:</b> {r[1]}</p>
-                        <p><b>DESTINO:</b> {r[2]}</p>
-                        <p><b>MERCADERÍA:</b> {r[3]}</p>
-                        <p><b>EMPRESA:</b> {r[5]}</p>
-                        <br><br>
-                        <p style='text-align:right;'>__________________________<br>Firma Transportista</p>
-                        <footer style='margin-top:50px; font-size:10px; text-align:center;'>Creado por Ignacio Diaz</footer>
-                    </div></div>
-                    """
-                    
+                    # --- BLOQUE MANIFIESTO CORREGIDO ---
+                    r_id = f"print_{idx}"
                     st.markdown(f'''
                         <div class="{"card-vip" if r["vip"] else "card-white"}">
-                            {f"<span class=\'dist-badge\'>{distancia}</span>" if distancia else ""}
-                            {"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}
+                            {f"<span class='dist-badge'>{distancia}</span>" if distancia else ""}
+                            {"<div class='vip-label'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}
                             <div class="route-txt">{r[1]} ➔ {r[2]}</div>
                             <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]} | 📱 <b>TEL:</b> {ocultar_telefono(r[4])}
                             <a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR</a>
-                            <button onclick="var printContents = document.getElementById('manifiesto_{_}').innerHTML; var originalContents = document.body.innerHTML; document.body.innerHTML = printContents; window.print(); document.body.innerHTML = originalContents; window.location.reload();" class="btn-pdf">📄 GENERAR MANIFIESTO (PDF)</button>
-                            {manifiesto_html}
+                            <button class="btn-manifiesto" onclick="window.print()">📄 IMPRIMIR MANIFIESTO</button>
+                            
+                            <div style="display:none;">
+                                <div class="print-section">
+                                    <h1 style="text-align:center;">MANIFIESTO DE CARGA</h1>
+                                    <h3 style="text-align:center; color: #555;">RETORNO MATCH VIP</h3>
+                                    <hr>
+                                    <p><b>FECHA DE VIAJE:</b> {hoy}</p>
+                                    <p><b>ORIGEN:</b> {r[1]}</p>
+                                    <p><b>DESTINO:</b> {r[2]}</p>
+                                    <p><b>MERCADERÍA:</b> {r[3]}</p>
+                                    <p><b>EMPRESA:</b> {r[5]}</p>
+                                    <br><br><br>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <p>_______________________<br>Firma Chofer</p>
+                                        <p>_______________________<br>Firma Empresa</p>
+                                    </div>
+                                    <footer style="margin-top:100px; text-align:center; font-size: 12px; border-top: 1px solid #ccc;">
+                                        <p>Creado por Ignacio Diaz - © 2026</p>
+                                    </footer>
+                                </div>
+                            </div>
                         </div>
                     ''', unsafe_allow_html=True)
 
