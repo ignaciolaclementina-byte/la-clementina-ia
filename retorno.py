@@ -154,14 +154,14 @@ with tab1:
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])) and match_text:
                     val_a, val_b = limpiar_dato_numerico(r[4]), limpiar_dato_numerico(r[5])
                     cuit, wsp = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
-                    # MENSAJE PROFESIONAL PARA CAMIONERO
-                    texto_wsp = (f"⭐ *CONSULTA DE TRANSPORTE - MATCH VIP*\n"
-                                 f"------------------------------------------\n"
-                                 f"Estimado/a, nos comunicamos por su unidad disponible:\n\n"
+                    # MENSAJE ULTRA PROFESIONAL - CAMIONES
+                    texto_wsp = (f"⭐ *CONSULTA LOGÍSTICA - MATCH VIP*\n"
+                                 f"--------------------------------------------------\n"
+                                 f"Estimado/a, nos contactamos por su unidad disponible:\n\n"
                                  f"📍 *ORIGEN:* {r[1]}\n"
                                  f"🏁 *DESTINO:* {r[2]}\n"
                                  f"🚛 *EQUIPO:* {r[3]}\n\n"
-                                 f"Por favor, confírme disponibilidad para coordinar carga. Aguardamos su respuesta. Saludos.")
+                                 f"Por favor, confírme disponibilidad para coordinar carga inmediata. Aguardamos su respuesta. Saludos.")
                     link_wsp = f"https://api.whatsapp.com/send?phone={limpiar_wsp(wsp)}&text={urllib.parse.quote(texto_wsp)}"
                     st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ CHOFER VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit}<br><a href="{link_wsp}" target="_blank" class="btn-wsp">✉️ ENVIAR PROPUESTA FORMAL</a></div>', unsafe_allow_html=True)
 
@@ -189,18 +189,18 @@ with tab2:
                 match_text = busqueda_libre in str(r).upper()
 
                 if es_exclusiva and not soy_vip_actual:
-                    msg_comprar = f"⭐ *SOLICITUD DE ACCESO VIP*\n----------------------------------\nHola Ignacio, solicito el alta VIP para ver las cargas exclusivas del sistema.\n\n🆔 *MI CUIT:* {user_cuit}"
+                    msg_comprar = f"⭐ *SOLICITUD DE ALTA VIP - RETORNO MATCH*\n--------------------------------------------------\nHola Ignacio, solicito el acceso VIP para visualizar las cargas exclusivas del sistema.\n\n🆔 *MI CUIT/ID:* {user_cuit}"
                     link_comprar = f"https://api.whatsapp.com/send?phone={WSP_VENTAS_VIP}&text={urllib.parse.quote(msg_comprar)}"
-                    st.markdown(f'<div class="card-bloqueada">🔒 CARGA EXCLUSIVA VIP<br><small>Estará libre en {int(TIEMPO_EXCLUSIVO_MIN - minutos)} min</small><br><a href="{link_comprar}" target="_blank" style="color:#f1c40f; font-weight:bold; text-decoration:none;">⭐ QUIERO ACCESO VIP</a></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="card-bloqueada">🔒 CARGA EXCLUSIVA VIP<br><small>Disponible para todos en {int(TIEMPO_EXCLUSIVO_MIN - minutos)} min</small><br><a href="{link_comprar}" target="_blank" style="color:#f1c40f; font-weight:bold; text-decoration:none;">⭐ ACTIVAR MI ACCESO VIP</a></div>', unsafe_allow_html=True)
                 elif (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and match_text:
-                    # MENSAJE PROFESIONAL PARA EMPRESA/DADOR
-                    texto_wsp_ca = (f"🏢 *CONSULTA DE CARGA - MATCH VIP*\n"
-                                    f"------------------------------------------\n"
-                                    f"Buen día. Me pongo en contacto por la carga publicada en el sistema:\n\n"
+                    # MENSAJE ULTRA PROFESIONAL - CARGAS
+                    texto_wsp_ca = (f"🏢 *SOLICITUD DE ASIGNACIÓN - MATCH VIP*\n"
+                                    f"--------------------------------------------------\n"
+                                    f"Buen día. Me pongo en contacto por la carga publicada en el portal:\n\n"
                                     f"📍 *TRAYECTO:* {r[1]} a {r[2]}\n"
                                     f"📦 *CARGA:* {r[3]}\n"
-                                    f"💼 *PUBLICADO POR:* {r[5]}\n\n"
-                                    f"Dispongo de unidad en la zona. ¿Sigue disponible para asignar? Muchas gracias.")
+                                    f"💼 *DADOR:* {r[5]}\n\n"
+                                    f"Cuento con unidad disponible en zona para asignar. ¿Sigue vigente la carga? Muchas gracias.")
                     link_wsp_ca = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={urllib.parse.quote(texto_wsp_ca)}"
                     st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}">{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR DISPONIBILIDAD</a></div>', unsafe_allow_html=True)
 
@@ -221,13 +221,13 @@ with tab3:
             df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
             cols_arrime = st.columns(2) 
             for i, (_, r) in enumerate(df_arrime.iterrows()):
-                # MENSAJE PROFESIONAL PARA ARRIME/COSECHA
+                # MENSAJE ULTRA PROFESIONAL - COSECHA
                 msg_arr = (f"🚜 *OPERATIVO COSECHA 2026 - MATCH VIP*\n"
-                           f"------------------------------------------\n"
-                           f"Estimado, consulto por el operativo de arrime publicado:\n\n"
+                           f"--------------------------------------------------\n"
+                           f"Estimado, consulto por la vacante para operativo de arrime:\n\n"
                            f"📍 *ZONA:* {r[2]}\n"
-                           f"🌾 *DETALLE:* {r[3]}\n\n"
-                           f"Me gustaría recibir más información para incorporar unidades al trabajo. Saludos.")
+                           f"🌾 *TRABAJO:* {r[3]}\n\n"
+                           f"Solicito requisitos y condiciones para incorporar unidades al servicio. Aguardo respuesta.")
                 link_arr = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={urllib.parse.quote(msg_arr)}"
                 with cols_arrime[i % 2]:
                     st.markdown(f'<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>{r[3]}<br><a href="{link_arr}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR POR ARRIME</a></div>', unsafe_allow_html=True)
