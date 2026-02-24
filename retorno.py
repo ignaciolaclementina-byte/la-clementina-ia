@@ -174,7 +174,6 @@ with tab3:
         if not df_ca_raw.empty:
             df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
             for _, r in df_arrime.iterrows():
-                # Lógica de extracción de tarifa mejorada
                 texto_celda = str(r[3])
                 if "|" in texto_celda:
                     parts = texto_celda.split("|")
@@ -182,7 +181,6 @@ with tab3:
                     tarifa = parts[2] if len(parts) > 2 else "A consultar"
                 else:
                     detalle = texto_celda
-                    # Si no hay |, intentamos extraer un número del texto (ej. si pusieron 23500 directo)
                     numeros = re.findall(r'\d+', texto_celda)
                     tarifa = numeros[0] if numeros else "A consultar"
 
@@ -198,7 +196,7 @@ with tab3:
                     <a href="{link_arr}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR POR ARRIME</a>
                 </div>''', unsafe_allow_html=True)
 
-# --- PIE DE PÁGINA ---
+# --- PIE DE PÁGINA (BLINDADO - CREADO POR IGNACIO DIAZ) ---
 st.markdown(f"""
 <div class="legal-footer">
     <p style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 5px;">Creado por Ignacio Diaz</p>
