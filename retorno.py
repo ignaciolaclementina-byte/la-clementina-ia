@@ -93,7 +93,20 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 5. FUNCIONES AUXILIARES (CON BLINDAJE DE DATOS) ---
+# --- 5. FUNCIONES AUXILIARES (CON BLINDAJE DE DATOS - IGNACIO DIAZ) ---
+def validar_cuit(cuit):
+    """Validador matemático Algoritmo Módulo 11 para CUIT Argentino"""
+    cuit = "".join(filter(str.isdigit, str(cuit)))
+    if len(cuit) != 11: return False
+    base = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
+    aux = 0
+    for i in range(10):
+        aux += int(cuit[i]) * base[i]
+    aux = 11 - (aux % 11)
+    if aux == 11: aux = 0
+    if aux == 10: aux = 9 # Caso especial para validación AFIP
+    return aux == int(cuit[10])
+
 def limpiar_dato_numerico(dato):
     s = str(dato).strip()
     if s.endswith(".0"): s = s[:-2]
@@ -114,7 +127,8 @@ def ocultar_telefono(num):
     return "*******"
 
 def es_vip(dato):
-    return str(dato).strip().upper().replace(".0", "") in LISTA_VIPS_GLOBAL
+    val = str(dato).strip().upper().replace(".0", "")
+    return val in LISTA_VIPS_GLOBAL
 
 # --- 6. INTERFAZ ---
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
@@ -123,7 +137,13 @@ with st.container():
     c_log1, c_log2 = st.columns([2, 1])
     with c_log1:
         user_cuit = st.text_input("🔑 Ingrese su CUIT para acceso completo:", "").strip()
-soy_vip_actual = es_vip(user_cuit)
+        # Validación en tiempo real del CUIT ingresado
+        if user_cuit and not validar_cuit(user_cuit):
+            st.error("⚠️ El CUIT ingresado no es válido matemáticamente.")
+            soy_vip_actual = False
+        else:
+            soy_vip_actual = es_vip(user_cuit)
+            if soy_vip_actual: st.success(f"✅ ACCESO VIP ACTIVO PARA CUIT: {user_cuit}")
 
 with st.container():
     c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
@@ -179,8 +199,11 @@ with tab2:
             d_prov = st.selectbox("Prov. Destino", PROVINCIAS[1:]); d_loc = st.text_input("Loc. Destino")
             e_tipo = st.selectbox("Equipo", EQUIPOS[1:]); cu_id = st.text_input("CUIT/ID"); wsp_num = st.text_input("WhatsApp (Sin 0 ni 15)")
             if st.form_submit_button("SUBIR CAMIÓN AL SISTEMA"):
-                requests.post(URL_CHOFERES_POST, data={"entry.1304806144": f"{o_prov} ({o_loc})", "entry.1519265625": f"{d_prov} ({d_loc})", "entry.597193898": e_tipo, "entry.1542650763": cu_id, "entry.1574172378": wsp_num})
-                st.cache_data.clear(); st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
+                if validar_cuit(cu_id):
+                    requests.post(URL_CHOFERES_POST, data={"entry.1304806144": f"{o_prov} ({o_loc})", "entry.1519265625": f"{d_prov} ({d_loc})", "entry.597193898": e_tipo, "entry.1542650763": cu_id, "entry.1574172378": wsp_num})
+                    st.cache_data.clear(); st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
+                else:
+                    st.error("Error: El CUIT ingresado no es válido.")
     with col_r2:
         if not df_ca_raw.empty:
             df_ca_raw['vip'] = df_ca_raw.iloc[:, 5].apply(es_vip)
