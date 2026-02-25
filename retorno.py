@@ -35,9 +35,7 @@ COORDS_PROV = {
 # --- 2. SISTEMA ANTI-PAUSA Y CONTADOR ---
 if "last_heartbeat" not in st.session_state:
     st.session_state.last_heartbeat = time.time()
-
-# Optimizado a 60 seg para mantener la fluidez de datos
-if time.time() - st.session_state.last_heartbeat > 60:
+if time.time() - st.session_state.last_heartbeat > 900:
     st.session_state.last_heartbeat = time.time()
     st.rerun()
 
@@ -73,11 +71,6 @@ def obtener_minutos_desde_publicacion(timestamp_str):
     except:
         return 999
 
-# --- MEJORA: Iconos Dinámicos por Equipo ---
-def get_equipo_icon(equipo):
-    icons = {"Chasis": "🚚", "Semi": "🚛", "Sider": "📦", "Batea": "🏗️", "Térmico": "❄️", "Acoplado": "🚜"}
-    return icons.get(equipo, "🚛")
-
 cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))]) if not df_ch_raw.empty else 0
 cant_cargas = len(df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))]) if not df_ca_raw.empty else 0
 
@@ -98,6 +91,7 @@ st.markdown("""
     .stats-val { font-size: 24px; font-weight: 900; color: #f1c40f; display: block; }
     .stats-label { font-size: 12px; text-transform: uppercase; opacity: 0.8; }
     
+    /* MEJORA 1: COLORES DE VENCIMIENTO */
     .card-hot { background: #fff5f5 !important; border-left: 10px solid #e74c3c !important; color: #333; }
     .card-medium { background: #f0fff4 !important; border-left: 10px solid #2ecc71 !important; color: #333; }
     .card-old { background: #f8f9fa !important; border-left: 10px solid #95a5a6 !important; color: #777; }
@@ -240,8 +234,7 @@ with tab1:
                     cuit, wsp = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
                     link_wsp = f"https://api.whatsapp.com/send?phone={limpiar_wsp(wsp)}&text=Consulta por unidad {r[1]} a {r[2]}"
                     card_class = get_card_style(minutos_pub, r['vip'])
-                    icon = get_equipo_icon(r[3])
-                    st.markdown(f'<div class="{card_class}">{f"<span class=\'dist-badge\'>{distancia}</span>" if distancia else ""}{"<div class=\'vip-label\'>⭐ CHOFER VIP</div>" if r["vip"] else ""}<div class="route-txt">{badge_nuevo}{r[1]} ➔ {r[2]}</div><b>{icon} EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit} | 📱 <b>TEL:</b> {ocultar_telefono(wsp)}<br><a href="{link_wsp}" target="_blank" class="btn-wsp">✉️ ENVIAR PROPUESTA</a></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="{card_class}">{f"<span class=\'dist-badge\'>{distancia}</span>" if distancia else ""}{"<div class=\'vip-label\'>⭐ CHOFER VIP</div>" if r["vip"] else ""}<div class="route-txt">{badge_nuevo}{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit} | 📱 <b>TEL:</b> {ocultar_telefono(wsp)}<br><a href="{link_wsp}" target="_blank" class="btn-wsp">✉️ ENVIAR PROPUESTA</a></div>', unsafe_allow_html=True)
 
 # --- TAB 2: CARGAS ---
 with tab2:
@@ -270,8 +263,11 @@ with tab2:
                     st.markdown(f'<div class="card-bloqueada">🔒 CARGA EXCLUSIVA VIP<br><small>En {int(TIEMPO_EXCLUSIVO_MIN - minutos)} min para todos</small><br><a href="https://api.whatsapp.com/send?phone={WSP_VENTAS_VIP}" target="_blank" style="color:#f1c40f;">⭐ ACTIVAR VIP</a></div>', unsafe_allow_html=True)
                 elif (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (busqueda_libre in str(r).upper()):
                     link_wsp_ca = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text=Consulta carga {r[1]} a {r[2]}"
+                    
+                    # --- MEJORA 2: BOTÓN COMPARTIR CARGA ---
                     texto_difusion = urllib.parse.quote(f"📢 *NUEVA CARGA DISPONIBLE*\n\n📍 *ORIGEN:* {r[1]}\n🏁 *DESTINO:* {r[2]}\n📦 *CARGA:* {r[3]}\n🏢 *EMPRESA:* {r[5]}\n\n✅ _Publicado en Retorno Match VIP_")
                     link_share = f"https://api.whatsapp.com/send?text={texto_difusion}"
+                    
                     card_class = get_card_style(minutos, r['vip'])
                     st.markdown(f'<div class="{card_class}">{f"<span class=\'dist-badge\'>{distancia}</span>" if distancia else ""}{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{badge_nuevo}{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]} | 📱 <b>TEL:</b> {ocultar_telefono(r[4])}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR</a><a href="{link_share}" target="_blank" class="btn-share">📢 DIFUNDIR CARGA</a></div>', unsafe_allow_html=True)
 
