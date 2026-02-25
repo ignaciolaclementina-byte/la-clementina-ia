@@ -55,27 +55,7 @@ df_ch_raw, df_ca_raw, LISTA_VIPS_GLOBAL = cargar_datos_seguros()
 ahora = datetime.now()
 hoy = ahora.date()
 
-# --- FUNCIONES DE MAPA ---
-def mostrar_mapa_logistico(df_ch, df_ca):
-    puntos = []
-    # Camiones (Verde)
-    for loc in df_ch[df_ch.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))].iloc[:, 1].tolist():
-        prov = next((p for p in COORDS_PROV if p in str(loc).upper()), None)
-        if prov: puntos.append({"lat": COORDS_PROV[prov][0], "lon": COORDS_PROV[prov][1], "color": [0, 255, 128, 160]})
-    # Cargas (Rojo)
-    for loc in df_ca[df_ca.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))].iloc[:, 1].tolist():
-        prov = next((p for p in COORDS_PROV if p in str(loc).upper()), None)
-        if prov: puntos.append({"lat": COORDS_PROV[prov][0], "lon": COORDS_PROV[prov][1], "color": [255, 71, 87, 160]})
-    
-    if puntos:
-        df_map = pd.DataFrame(puntos)
-        st.pydeck_chart(pdk.Deck(
-            map_style="mapbox://styles/mapbox/dark-v10",
-            initial_view_state=pdk.ViewState(latitude=-38.41, longitude=-63.61, zoom=3.8, pitch=40),
-            layers=[pdk.Layer("ScatterplotLayer", df_map, get_position='[lon, lat]', get_color='color', get_radius=35000)]
-        ))
-
-# --- FUNCIONES AUXILIARES ORIGINALES ---
+# --- FUNCIONES AUXILIARES ---
 def es_fecha(f, target):
     try: return pd.to_datetime(f, dayfirst=True, errors='coerce').date() == target
     except: return False
@@ -90,16 +70,6 @@ def obtener_minutos_desde_publicacion(timestamp_str):
 def get_card_style(minutos, es_vip_card):
     if es_vip_card: return "card-vip"
     return "card-hot" if minutos < 60 else ("card-medium" if minutos < 180 else "card-old")
-
-def validar_cuit(cuit):
-    cuit = "".join(filter(str.isdigit, str(cuit)))
-    if len(cuit) != 11: return False
-    base, aux = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2], 0
-    for i in range(10): aux += int(cuit[i]) * base[i]
-    aux = 11 - (aux % 11)
-    if aux == 11: aux = 0
-    if aux == 10: aux = 9
-    return aux == int(cuit[10])
 
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num).replace(".0", "")))
@@ -120,6 +90,11 @@ st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide
 st.markdown("""
 <style>
     .stApp { background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important; background-size: cover !important; background-attachment: fixed !important; }
+    
+    /* ESTILO DE TABS GRANDES (Iconos de Camiones/Cargas/Arrime) */
+    button[data-baseweb="tab"] { font-size: 24px !important; font-weight: bold !important; padding: 20px !important; }
+    button[data-baseweb="tab"] p { font-size: 24px !important; }
+
     .radar-container { background: rgba(231, 76, 60, 0.9); color: white; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; border: 1px solid #f1c40f; text-align: center; }
     .stats-card { background: rgba(255,255,255,0.1); border: 1px solid rgba(241, 196, 15, 0.3); border-radius: 10px; padding: 15px; text-align: center; color: white; }
     .stats-val { font-size: 24px; font-weight: 900; color: #f1c40f; display: block; }
@@ -138,7 +113,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
 
-# Panel de Stats y Mapa
+# Panel de Stats
 cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))])
 cant_cargas = len(df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))])
 
@@ -146,13 +121,11 @@ c_st1, c_st2, c_st3, c_st4 = st.columns(4)
 c_st1.markdown(f'<div class="stats-card"><span class="stats-val">{cant_camiones+cant_cargas}</span>Movimientos Hoy</div>', unsafe_allow_html=True)
 c_st2.markdown(f'<div class="stats-card"><span class="stats-val">{len(LISTA_VIPS_GLOBAL)}</span>Miembros VIP</div>', unsafe_allow_html=True)
 c_st3.markdown(f'<div class="stats-card"><span class="stats-val">LIVE</span>Estado Red</div>', unsafe_allow_html=True)
-with c_st4:
-    with st.expander("🗺️ VER MAPA"): mostrar_mapa_logistico(df_ch_raw, df_ca_raw)
+c_st4.markdown(f'<div class="stats-card"><span class="stats-val">IG-D</span>{ahora.strftime("%H:%M")}</div>', unsafe_allow_html=True)
 
 # Filtros y Login
 user_cuit = st.text_input("🔑 CUIT Acceso VIP:", "").strip()
 soy_vip_actual = es_vip(user_cuit)
-if soy_vip_actual: st.success("✅ ACCESO VIP ACTIVO")
 
 PROVINCIAS = ["CUALQUIERA"] + list(COORDS_PROV.keys())
 c_f1, c_f2, c_f3 = st.columns(3)
@@ -161,6 +134,7 @@ b_o, b_d, busqueda = c_f1.selectbox("🔍 ORIGEN:", PROVINCIAS), c_f2.selectbox(
 radar_txt = f"🌾 COSECHA ACTIVA: {cant_camiones} Camiones y {cant_cargas} Cargas -- Creado por Ignacio Diaz."
 st.markdown(f'<div class="radar-container"><marquee scrollamount="8">{radar_txt}</marquee></div>', unsafe_allow_html=True)
 
+# PESTAÑAS GRANDES (MEJORADO)
 tab1, tab2, tab3 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 ARRIME"])
 
 # --- TAB 1: CAMIONES ---
@@ -191,9 +165,8 @@ with tab2:
         with st.form("f_ch", clear_on_submit=True):
             op, dp, et, cid, wnu = st.selectbox("Origen", PROVINCIAS[1:]), st.selectbox("Destino", PROVINCIAS[1:]), st.selectbox("Equipo", ["Chasis", "Semi", "Sider", "Batea"]), st.text_input("CUIT"), st.text_input("WhatsApp")
             if st.form_submit_button("SUBIR"):
-                if validar_cuit(cid):
-                    requests.post(URL_CHOFERES_POST, data={"entry.1304806144": op, "entry.1519265625": dp, "entry.597193898": et, "entry.1542650763": cid, "entry.1574172378": wnu})
-                    st.rerun()
+                requests.post(URL_CHOFERES_POST, data={"entry.1304806144": op, "entry.1519265625": dp, "entry.597193898": et, "entry.1542650763": cid, "entry.1574172378": wnu})
+                st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
             df_ca_raw['vip'] = df_ca_raw.iloc[:, 5].apply(es_vip) if len(df_ca_raw.columns) > 5 else False
@@ -203,8 +176,7 @@ with tab2:
                 if minutos < TIEMPO_EXCLUSIVO_MIN and not soy_vip_actual:
                     st.markdown(f'<div class="card-bloqueada">🔒 EXCLUSIVO VIP ({int(30-minutos)} min rest.)</div>', unsafe_allow_html=True)
                 elif (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (busqueda in str(r).upper()):
-                    txt_w = urllib.parse.quote(f"📢 CARGA: {r[1]} a {r[2]}\n📦 {r[3]}\n✅ Retorno Match VIP")
-                    st.markdown(f'<div class="card-medium"><div class="route-txt">{r[1]} ➔ {r[2]}</div>📦 {r[3]} | 🏢 {r[5]}<br><a href="https://wa.me/{limpiar_wsp(r[4])}" class="btn-wsp">📩 CONSULTAR</a><a href="https://wa.me/?text={txt_w}" class="btn-share">📢 DIFUNDIR</a></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="card-medium"><div class="route-txt">{r[1]} ➔ {r[2]}</div>📦 {r[3]} | 🏢 {r[5]}<br><a href="https://wa.me/{limpiar_wsp(r[4])}" class="btn-wsp">📩 CONSULTAR</a></div>', unsafe_allow_html=True)
 
 # --- TAB 3: ARRIME ---
 with tab3:
