@@ -74,8 +74,18 @@ def obtener_minutos_desde_publicacion(timestamp_str):
     except:
         return 999
 
-# --- 4. ESTILOS VIP PERSONALIZADOS (MEJORADOS POR IGNACIO DIAZ) ---
+cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))]) if not df_ch_raw.empty else 0
+cant_cargas = len(df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))]) if not df_ca_raw.empty else 0
+
+if 'anuncios' not in st.session_state:
+    st.session_state.anuncios = "¡Bienvenido al Sistema VIP!"
+
+PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBUT", "CORDOBA", "CORRIENTES", "ENTRE RIOS", "FORMOSA", "JUJUY", "LA PAMPA", "LA RIOJA", "MENDOZA", "MISIONES", "NEUQUEN", "RIO NEGRO", "SALTA", "SAN JUAN", "SAN LUIS", "SANTA CRUZ", "SANTA FE", "SANTIAGO DEL ESTERO", "TIERRA DEL FUEGO", "TUCUMAN"]
+EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
+
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
+
+# --- 4. ESTILOS VIP PERSONALIZADOS (MEJORADOS POR IGNACIO DIAZ) ---
 st.markdown("""
 <style>
     .stApp { background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important; background-size: cover !important; background-attachment: fixed !important; }
@@ -90,6 +100,7 @@ st.markdown("""
     .vip-label { background: #f1c40f; color: black; padding: 4px 12px; border-radius: 20px; font-weight: 900; font-size: 14px; display: inline-block; margin-bottom: 10px; }
     .route-txt { font-size: 20px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 10px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
+    .btn-wsp:hover { background-color: #128C7E; text-decoration: none; color: white !important; }
     .legal-footer { text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px; }
     .stTabs [data-baseweb="tab"] { flex: 1; height: 60px !important; background-color: #2c3e50 !important; color: white !important; font-size: 16px !important; font-weight: 900 !important; }
     .stTabs [aria-selected="true"] { background-color: #3498db !important; }
@@ -148,22 +159,20 @@ with st.container():
     c_log1, c_log2 = st.columns([2, 1])
     with c_log1:
         user_cuit = st.text_input("🔑 Ingrese su CUIT para acceso completo:", "").strip()
-        soy_vip_actual = es_vip(user_cuit) if user_cuit and validar_cuit(user_cuit) else False
-        if soy_vip_actual: st.success(f"✅ ACCESO VIP ACTIVO")
-
-PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBUT", "CORDOBA", "CORRIENTES", "ENTRE RIOS", "FORMOSA", "JUJUY", "LA PAMPA", "LA RIOJA", "MENDOZA", "MISIONES", "NEUQUEN", "RIO NEGRO", "SALTA", "SAN JUAN", "SAN LUIS", "SANTA CRUZ", "SANTA FE", "SANTIAGO DEL ESTERO", "TIERRA DEL FUEGO", "TUCUMAN"]
-EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
+        if user_cuit and not validar_cuit(user_cuit):
+            st.error("⚠️ El CUIT ingresado no es válido matemáticamente.")
+            soy_vip_actual = False
+        else:
+            soy_vip_actual = es_vip(user_cuit)
+            if soy_vip_actual: st.success(f"✅ ACCESO VIP ACTIVO")
 
 with st.container():
     c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
-    b_fecha = c1.date_input("📅 FECHA VIAJE:", hoy)
-    b_o = c2.selectbox("🔍 ORIGEN:", PROVINCIAS)
-    b_d = c3.selectbox("🏁 DESTINO:", PROVINCIAS)
-    b_e = c4.selectbox("🚛 EQUIPO:", EQUIPOS)
+    with c1: b_fecha = st.date_input("📅 FECHA VIAJE:", hoy)
+    with c2: b_o = st.selectbox("🔍 ORIGEN:", PROVINCIAS)
+    with c3: b_d = st.selectbox("🏁 DESTINO:", PROVINCIAS)
+    with c4: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
     busqueda_libre = st.text_input("🔎 Búsqueda rápida", "").upper()
-
-cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))]) if not df_ch_raw.empty else 0
-cant_cargas = len(df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))]) if not df_ca_raw.empty else 0
 
 radar_txt = f"🌾 COSECHA ACTIVA: {cant_camiones} Camiones y {cant_cargas} Cargas -- Creado por Ignacio Diaz."
 st.markdown(f'<div class="radar-container"><marquee scrollamount="8">{radar_txt}</marquee></div>', unsafe_allow_html=True)
@@ -184,7 +193,8 @@ with tab1:
                 st.cache_data.clear(); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            df_ch_raw['vip'] = df_ch_raw.apply(lambda r: es_vip(r[4]) or es_vip(r[5]) if len(r) > 5 else False, axis=1)
+            # Blindaje: verificamos que las columnas 4 y 5 existan
+            df_ch_raw['vip'] = df_ch_raw.apply(lambda r: (es_vip(r[4]) or es_vip(r[5])) if len(r) > 5 else False, axis=1)
             df_f = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
             for _, r in df_f.iterrows():
                 if len(r) < 6: continue
@@ -253,6 +263,7 @@ st.markdown(f"""
 
 with st.expander("⚙️ ADMIN"):
     if st.text_input("PIN:", type="password") == ADMIN_PIN:
+        st.session_state.anuncios = st.text_area("Texto Radar:", st.session_state.anuncios)
         if st.button("LIMPIAR CACHÉ"):
             st.cache_data.clear()
             st.rerun()
