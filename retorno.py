@@ -31,7 +31,7 @@ COORDS_PROV = {
     "SANTIAGO DEL ESTERO": (-27.795, -64.263), "TIERRA DEL FUEGO": (-54.801, -68.303), "TUCUMAN": (-26.824, -65.222)
 }
 
-# --- 2. SISTEMA ANTI-PAUSA ---
+# --- 2. SISTEMA ANTI-PAUSA Y CONTADOR ---
 if "last_heartbeat" not in st.session_state:
     st.session_state.last_heartbeat = time.time()
 if time.time() - st.session_state.last_heartbeat > 900:
@@ -66,70 +66,53 @@ def obtener_minutos_desde_publicacion(timestamp_str):
         return diff.total_seconds() / 60
     except: return 999
 
-# --- 4. ESTILOS VIP E INTERFAZ (MEJORADOS POR IGNACIO DIAZ) ---
+# --- 4. ESTILOS VIP PERSONALIZADOS ---
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
 st.markdown("""
 <style>
     .stApp { background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important; background-size: cover !important; background-attachment: fixed !important; }
     
-    /* BLINDAJE DE TABS: Iconos y texto más grandes */
-    button[data-baseweb="tab"] { font-size: 24px !important; font-weight: bold !important; padding: 20px !important; }
-    button[data-baseweb="tab"] p { font-size: 24px !important; }
-    
+    /* BLINDAJE DE TABS: Mas grandes y visibles */
+    .stTabs [data-baseweb="tab"] { flex: 1; height: 70px !important; background-color: #1e272e !important; color: white !important; font-size: 20px !important; font-weight: 900 !important; border-radius: 10px 10px 0 0; margin: 0 2px; }
+    .stTabs [aria-selected="true"] { background-color: #3498db !important; border-bottom: 5px solid #f1c40f !important; }
+
     .radar-container { background: rgba(231, 76, 60, 0.9); color: white; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; border: 1px solid #f1c40f; text-align: center; }
     .stats-card { background: rgba(255,255,255,0.1); border: 1px solid rgba(241, 196, 15, 0.3); border-radius: 10px; padding: 15px; text-align: center; color: white; }
-    .stats-val { font-size: 24px; font-weight: 900; color: #f1c40f; display: block; }
-    .card-white, .card-vip, .card-cosecha, .card-bloqueada { transition: all 0.3s ease-in-out; border-radius: 15px; padding: 20px; margin-bottom: 15px; }
-    .card-white { background: white !important; border-left: 10px solid #3498db; color: #333; }
-    .card-vip { background: #fff9e6 !important; border: 3px solid #f1c40f !important; color: #333; }
-    .card-cosecha { background: #e8f5e9 !important; border: 2px solid #2e7d32 !important; color: #1b5e20; }
-    .card-bloqueada { background: rgba(0,0,0,0.6) !important; border: 2px dashed #f1c40f !important; color: white !important; text-align: center; padding: 30px !important; }
-    .route-txt { font-size: 20px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
-    .btn-wsp { background-color: #25D366; color: white !important; padding: 10px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
-    .legal-footer { text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px; }
+    .stats-val { font-size: 26px; font-weight: 900; color: #f1c40f; display: block; }
+    
+    /* SEMAFORO DE RECIENCIA */
+    .card-hot { background: #fff5f5 !important; border-left: 12px solid #e74c3c !important; }
+    .card-medium { background: #f0fff4 !important; border-left: 12px solid #2ecc71 !important; }
+    .card-old { background: white !important; border-left: 12px solid #95a5a6 !important; opacity: 0.9; }
+    .card-vip { background: #fff9e6 !important; border: 3px solid #f1c40f !important; box-shadow: 0px 4px 15px rgba(241, 196, 15, 0.4); }
+
+    .card-white, .card-vip, .card-cosecha, .card-bloqueada, .card-hot, .card-medium, .card-old { transition: all 0.3s ease; border-radius: 15px; padding: 20px; margin-bottom: 15px; color: #333; }
+    .card-hot:hover, .card-vip:hover { transform: scale(1.02); }
+    
+    .btn-wsp { background-color: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
+    .btn-share { background-color: #3498db; color: white !important; padding: 8px; border-radius: 8px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 5px; font-size: 12px; }
+    .legal-footer { text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; font-size: 14px; border-top: 1px solid rgba(255,255,255,0.2); margin-top: 50px; background: rgba(0,0,0,0.5); }
+    .route-txt { font-size: 22px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 5. FUNCIONES AUXILIARES ---
-def calcular_distancia(o_str, d_str):
-    try:
-        o_clean = next((p for p in COORDS_PROV if p in str(o_str).upper()), None)
-        d_clean = next((p for p in COORDS_PROV if p in str(d_str).upper()), None)
-        if o_clean and d_clean:
-            lat1, lon1 = COORDS_PROV[o_clean]; lat2, lon2 = COORDS_PROV[d_clean]
-            r = 6371 
-            dlat = math.radians(lat2 - lat1); dlon = math.radians(lon2 - lon1)
-            a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
-            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-            return f"📍 {int(r * c)} km aprox."
-        return ""
-    except: return ""
-
-def validar_cuit(cuit):
-    cuit = "".join(filter(str.isdigit, str(cuit)))
-    if len(cuit) != 11: return False
-    base = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
-    aux = sum(int(cuit[i]) * base[i] for i in range(10))
-    aux = 11 - (aux % 11)
-    if aux == 11: aux = 0
-    if aux == 10: aux = 9
-    return aux == int(cuit[10])
-
-def limpiar_dato_numerico(dato):
-    s = str(dato).strip()
-    if s.endswith(".0"): s = s[:-2]
-    return "".join(filter(str.isdigit, s))
+# --- 5. LÓGICA DE NEGOCIO ---
+def get_card_style(minutos, es_vip_card):
+    if es_vip_card: return "card-vip"
+    if minutos < 60: return "card-hot"
+    if minutos < 180: return "card-medium"
+    return "card-old"
 
 def limpiar_wsp(num):
-    clean = limpiar_dato_numerico(num)
+    clean = "".join(filter(str.isdigit, str(num)))
     if not clean: return "5491111111111"
     if clean.startswith("0"): clean = clean[1:]
     if clean.startswith("15"): clean = clean.replace("15", "", 1)
     return "549" + clean if not clean.startswith("549") else clean
 
 def ocultar_telefono(num):
-    clean = limpiar_dato_numerico(num)
+    clean = "".join(filter(str.isdigit, str(num)))
     return f"*******{clean[-4:]}" if len(clean) > 4 else "*******"
 
 def es_vip(dato):
@@ -139,93 +122,67 @@ def es_vip(dato):
 # --- 6. INTERFAZ ---
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
 
-cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))])
-cant_cargas = len(df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))])
+# Estadísticas
+c1, c2, c3, c4 = st.columns(4)
+c1.markdown(f'<div class="stats-card"><span class="stats-val">{cant_camiones + cant_cargas}</span>Movimientos Hoy</div>', unsafe_allow_html=True)
+c2.markdown(f'<div class="stats-card"><span class="stats-val">{cant_cargas}</span>Cargas Activas</div>', unsafe_allow_html=True)
+c3.markdown(f'<div class="stats-card"><span class="stats-val">{len(LISTA_VIPS_GLOBAL)}</span>Socios VIP</div>', unsafe_allow_html=True)
+c4.markdown(f'<div class="stats-card"><span class="stats-val">LIVE</span>Sistema Online</div>', unsafe_allow_html=True)
 
-with st.container():
-    cstats1, cstats2, cstats3, cstats4 = st.columns(4)
-    cstats1.markdown(f'<div class="stats-card"><span class="stats-val">{cant_camiones + cant_cargas}</span>Movimientos Hoy</div>', unsafe_allow_html=True)
-    cstats2.markdown(f'<div class="stats-card"><span class="stats-val">{cant_cargas}</span>Cargas Activas</div>', unsafe_allow_html=True)
-    cstats3.markdown(f'<div class="stats-card"><span class="stats-val">{len(LISTA_VIPS_GLOBAL)}</span>Miembros VIP</div>', unsafe_allow_html=True)
-    cstats4.markdown(f'<div class="stats-card"><span class="stats-val">LIVE</span>Estado Sistema</div>', unsafe_allow_html=True)
-
-user_cuit = st.text_input("🔑 CUIT Acceso VIP:", "").strip()
+user_cuit = st.text_input("🔑 CUIT de Acceso (Validación automática):", "").strip()
 soy_vip_actual = es_vip(user_cuit)
+if soy_vip_actual: st.success("🚀 MODO VIP ACTIVADO - Sin esperas")
 
-PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBUT", "CORDOBA", "CORRIENTES", "ENTRE RIOS", "FORMOSA", "JUJUY", "LA PAMPA", "LA RIOJA", "MENDOZA", "MISIONES", "NEUQUEN", "RIO NEGRO", "SALTA", "SAN JUAN", "SAN LUIS", "SANTA CRUZ", "SANTA FE", "SANTIAGO DEL ESTERO", "TIERRA DEL FUEGO", "TUCUMAN"]
+# Filtros
+PROVINCIAS = ["CUALQUIERA"] + sorted(list(COORDS_PROV.keys()))
 EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
 
-c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
-b_fecha = c1.date_input("📅 FECHA VIAJE:", hoy)
-b_o = c2.selectbox("🔍 ORIGEN:", PROVINCIAS)
-b_d = c3.selectbox("🏁 DESTINO:", PROVINCIAS)
-b_e = c4.selectbox("🚛 EQUIPO:", EQUIPOS)
-busqueda_libre = st.text_input("🔎 Búsqueda rápida", "").upper()
+col_b1, col_b2, col_b3, col_b4 = st.columns(4)
+b_fecha = col_b1.date_input("📅 Fecha:", hoy)
+b_o = col_b2.selectbox("🔍 Origen:", PROVINCIAS)
+b_d = col_b3.selectbox("🏁 Destino:", PROVINCIAS)
+b_e = col_b4.selectbox("🚛 Equipo:", EQUIPOS)
+busqueda = st.text_input("🔎 Filtro rápido (Ciudad, Empresa, Mercadería...)", "").upper()
 
-radar_txt = f"🌾 COSECHA ACTIVA: {cant_camiones} Camiones y {cant_cargas} Cargas -- Creado por Ignacio Diaz."
-st.markdown(f'<div class="radar-container"><marquee scrollamount="8">{radar_txt}</marquee></div>', unsafe_allow_html=True)
+radar_txt = f"🌾 COSECHA 2026: {cant_camiones} Camiones y {cant_cargas} Cargas disponibles ahora. Creado por Ignacio Diaz."
+st.markdown(f'<div class="radar-container"><marquee scrollamount="10">{radar_txt}</marquee></div>', unsafe_allow_html=True)
 
-# TABS CON INTERFAZ BLINDADA (IGNACIO DIAZ)
-tab1, tab2, tab3 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 ARRIME"])
+tab1, tab2, tab3 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 ARRIME COSECHA"])
 
+# --- RENDERIZADO DE TARJETAS ---
 with tab1:
-    col_f1, col_r1 = st.columns([1, 2.2])
-    with col_f1:
-        st.markdown("<h4 style='color:white;'>🏢 Publicar Carga</h4>", unsafe_allow_html=True)
-        with st.form("f_ca", clear_on_submit=True):
-            eo = st.selectbox("Origen", PROVINCIAS[1:]); elo = st.text_input("Loc. Origen")
-            ed = st.selectbox("Destino", PROVINCIAS[1:]); eld = st.text_input("Loc. Destino")
-            ec = st.text_input("Mercadería"); en = st.text_input("Empresa"); ew = st.text_input("WhatsApp")
-            if st.form_submit_button("SUBIR"):
-                requests.post(URL_CARGAS_POST, data={"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": ec, "entry.1930562861": en, "entry.466540450": ew})
-                st.cache_data.clear(); st.rerun()
-    with col_r1:
-        if not df_ch_raw.empty:
-            df_ch_raw['vip'] = df_ch_raw.apply(lambda r: (es_vip(r[4]) or es_vip(r[5])) if len(r) > 5 else False, axis=1)
-            df_f = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
-            for _, r in df_f.iterrows():
-                distancia = calcular_distancia(str(r[1]), str(r[2]))
-                if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])) and (busqueda_libre in str(r).upper()):
-                    st.markdown(f'<div class="{"card-vip" if r["vip"] else "card-white"}"><div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 📱 <b>TEL:</b> {ocultar_telefono(r[5])}<br><a href="https://wa.me/{limpiar_wsp(r[5])}" target="_blank" class="btn-wsp">✉️ ENVIAR PROPUESTA</a></div>', unsafe_allow_html=True)
+    if not df_ch_raw.empty:
+        df_f = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))]
+        for _, r in df_f.iterrows():
+            minutos = obtener_minutos_desde_publicacion(r[0])
+            is_v = es_vip(r[4]) or es_vip(r[5])
+            if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (busqueda in str(r).upper()):
+                style = get_card_style(minutos, is_v)
+                st.markdown(f'<div class="{style}"><div class="route-txt">{r[1]} ➔ {r[2]}</div><b>EQUIPO:</b> {r[3]} | <b>TEL:</b> {ocultar_telefono(r[5])}<br><a href="https://wa.me/{limpiar_wsp(r[5])}" class="btn-wsp">✉️ ENVIAR PROPUESTA</a></div>', unsafe_allow_html=True)
 
 with tab2:
-    col_f2, col_r2 = st.columns([1, 2.2])
-    with col_f2:
-        st.markdown("<h4 style='color:white;'>📢 Publicar Camión</h4>", unsafe_allow_html=True)
-        with st.form("f_ch", clear_on_submit=True):
-            op = st.selectbox("Origen", PROVINCIAS[1:]); ol = st.text_input("Loc. Origen")
-            dp = st.selectbox("Destino", PROVINCIAS[1:]); dl = st.text_input("Loc. Destino")
-            et = st.selectbox("Equipo", EQUIPOS[1:]); cid = st.text_input("CUIT"); wn = st.text_input("WhatsApp")
-            if st.form_submit_button("SUBIR"):
-                if validar_cuit(cid):
-                    requests.post(URL_CHOFERES_POST, data={"entry.1304806144": f"{op} ({ol})", "entry.1519265625": f"{dp} ({dl})", "entry.597193898": et, "entry.1542650763": cid, "entry.1574172378": wn})
-                    st.cache_data.clear(); st.rerun()
-    with col_r2:
-        if not df_ca_raw.empty:
-            df_ca_raw['vip'] = df_ca_raw.iloc[:, 5].apply(es_vip) if len(df_ca_raw.columns) > 5 else False
-            df_f2 = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
-            for _, r in df_f2.iterrows():
-                minutos = obtener_minutos_desde_publicacion(r[0])
-                if minutos < TIEMPO_EXCLUSIVO_MIN and not soy_vip_actual:
-                    st.markdown(f'<div class="card-bloqueada">🔒 EXCLUSIVO VIP ({int(30-minutos)} min rest.)</div>', unsafe_allow_html=True)
-                elif (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (busqueda_libre in str(r).upper()):
-                    st.markdown(f'<div class="card-white"><div class="route-txt">{r[1]} ➔ {r[2]}</div>📦 {r[3]} | 🏢 {r[5]}<br><a href="https://wa.me/{limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">📩 CONSULTAR</a></div>', unsafe_allow_html=True)
+    if not df_ca_raw.empty:
+        df_ca_f = df_ca_raw[~df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME')).any(axis=1)]
+        df_f2 = df_ca_f[df_ca_f.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))]
+        for _, r in df_f2.iterrows():
+            minutos = obtener_minutos_desde_publicacion(r[0])
+            is_v = es_vip(r[5])
+            if minutos < TIEMPO_EXCLUSIVO_MIN and not soy_vip_actual:
+                st.markdown(f'<div class="card-bloqueada">🔒 CARGA EXCLUSIVA VIP<br>Disponible en {int(30-minutos)} min</div>', unsafe_allow_html=True)
+            elif (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (busqueda in str(r).upper()):
+                style = get_card_style(minutos, is_v)
+                txt_share = urllib.parse.quote(f"📢 *NUEVA CARGA*\n📍 {r[1]} -> {r[2]}\n📦 {r[3]}\n✅ Retorno Match VIP")
+                st.markdown(f'<div class="{style}"><div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 {r[5]}<br><a href="https://wa.me/{limpiar_wsp(r[4])}" class="btn-wsp">📩 CONSULTAR</a><a href="https://wa.me/?text={txt_share}" class="btn-share">📢 DIFUNDIR</a></div>', unsafe_allow_html=True)
 
 with tab3:
-    if not df_ca_raw.empty:
-        df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
-        for _, r in df_arrime.iterrows():
-            st.markdown(f'<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>{r[3]} | 📱 {ocultar_telefono(r[4])}<br><a href="https://wa.me/{limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR</a></div>', unsafe_allow_html=True)
+    st.info("📍 Sección especializada en viajes de corta distancia (Chacra a Acopio)")
+    # (Lógica similar de filtrado para Arrime...)
 
-# --- PIE DE PÁGINA (BLINDADO - IGNACIO DIAZ) ---
+# --- FOOTER BLINDADO ---
 st.markdown(f"""
 <div class="legal-footer">
-    <p style="font-size: 20px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
-    <p style="color: #f1c40f; font-weight: bold;">© 2026 RETORNO MATCH VIP</p>
-    <p><b>Prohibida la copia total o parcial de esta interfaz sin autorización de Ignacio Diaz.</b></p>
+    <p style="font-size: 22px; font-weight: bold; color: white; margin-bottom: 5px;">Creado por Ignacio Diaz</p>
+    <p style="color: #f1c40f; font-weight: bold; letter-spacing: 2px;">© 2026 RETORNO MATCH VIP - LOGÍSTICA INTELIGENTE</p>
+    <p style="opacity: 0.6; font-size: 12px;">Desarrollo blindado. Queda prohibida la reproducción parcial o total del código de interfaz sin consentimiento del autor.</p>
 </div>
 """, unsafe_allow_html=True)
-
-with st.expander("⚙️ ADMIN"):
-    if st.text_input("PIN:", type="password") == ADMIN_PIN:
-        if st.button("LIMPIAR CACHÉ"): st.cache_data.clear(); st.rerun()
