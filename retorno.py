@@ -47,9 +47,9 @@ def cargar_datos_seguros():
         df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}").fillna("-")
         df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
         
-        # --- FILTRO DE BORRADO (SOLO AGREGADO ESTO) ---
+        # Filtro robusto de BORRADO: busca la palabra en cualquier columna de la fila
         if not df_ca.empty:
-            df_ca = df_ca[~df_ca.apply(lambda row: row.astype(str).str.contains('BORRADO').any(), axis=1)]
+            df_ca = df_ca[~df_ca.apply(lambda row: row.astype(str).str.contains('BORRADO', case=False).any(), axis=1)]
             
         df_v = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VIP}&header=None&t={t}", header=None)
         vips_lista = [str(x).strip().upper().replace(".0", "") for x in df_v[0].dropna().tolist()]
@@ -272,7 +272,7 @@ with tab2:
                     card_class = get_card_style(minutos, r['vip'])
                     st.markdown(f'<div class="{card_class}">{f"<span class=\'dist-badge\'>{distancia}</span>" if distancia else ""}{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{badge_nuevo}{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]} | 📱 <b>TEL:</b> {ocultar_telefono(r[4])}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR</a><a href="{link_share}" target="_blank" class="btn-share">📢 DIFUNDIR CARGA</a></div>', unsafe_allow_html=True)
 
-# --- TAB 3: ARRIME COSECHA (MANTENIDO Y AGREGADO BOTÓN BORRAR) ---
+# --- TAB 3: ARRIME COSECHA (CORREGIDO PARA IGNACIO DIAZ) ---
 with tab3:
     st.markdown("<h3 style='color:#f1c40f; text-align:center;'>🌾 SECCIÓN ESPECIAL: ARRIME DE COSECHA</h3>", unsafe_allow_html=True)
     col_a1, col_a2 = st.columns([1, 2.2])
@@ -290,10 +290,20 @@ with tab3:
                 if len(r) < 5: continue
                 with cols_arr[i % 2]:
                     st.markdown(f'<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>{r[3]} | 📱 {ocultar_telefono(r[4])}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR</a></div>', unsafe_allow_html=True)
-                    # AGREGADO: BOTÓN DE BORRAR PARA ARRIME
-                    if st.button(f"🗑️ BORRAR ARRIME #{i}", key=f"del_arr_{i}"):
-                        requests.post(URL_CARGAS_POST, data={"entry.610070407": "ARRIME ZONA", "entry.170847116": "BORRADO", "entry.576675281": r[3], "entry.1930562861": "COSECHA", "entry.466540450": r[4]})
-                        st.cache_data.clear(); st.rerun()
+                    
+                    # CORRECCIÓN DE SEGURIDAD: Solo Ignacio (VIP Activo) ve el botón
+                    if soy_vip_actual:
+                        # Usamos el timestamp original r[0] como ID único para el borrado
+                        if st.button(f"🗑️ BORRAR #{i}", key=f"del_arr_{i}"):
+                            requests.post(URL_CARGAS_POST, data={
+                                "entry.610070407": "ARRIME ZONA", 
+                                "entry.170847116": "BORRADO", 
+                                "entry.576675281": f"REF:{r[0]}", 
+                                "entry.1930562861": "SISTEMA", 
+                                "entry.466540450": "0"
+                            })
+                            st.cache_data.clear()
+                            st.rerun()
 
 # --- PIE DE PÁGINA (BLINDADO - CREADO POR IGNACIO DIAZ) ---
 st.markdown(f"""
