@@ -295,7 +295,7 @@ with tab3:
                     st.markdown(f'<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>{r[3]} | 📱 {ocultar_telefono(r[4])}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR</a></div>', unsafe_allow_html=True)
                     
                     # FUNCIONALIDAD ADMIN: Solo tú (Ignacio) ves el botón si el PIN en ADMIN es correcto
-                    if st.session_state.admin_mode:
+                    if st.session_state.get('admin_mode', False):
                         if st.button(f"🗑️ BORRAR CONCRETADO #{i}", key=f"del_arr_{idx}"):
                             requests.post(URL_CARGAS_POST, data={
                                 "entry.610070407": "ARRIME ZONA", 
@@ -319,7 +319,11 @@ st.markdown(f"""
 with st.expander("⚙️ ADMIN"):
     pin = st.text_input("PIN:", type="password")
     if pin == ADMIN_PIN:
-        st.session_state.admin_mode = True
+        # Si el PIN es correcto, activamos el modo y RECARGAMOS para que aparezcan los botones
+        if not st.session_state.admin_mode:
+            st.session_state.admin_mode = True
+            st.rerun()
+            
         st.success("MODO ADMIN ACTIVADO (Borrado disponible en Tab 3)")
         st.session_state.anuncios = st.text_area("Texto Radar:", st.session_state.anuncios)
         if st.button("LIMPIAR CACHÉ"):
