@@ -39,9 +39,6 @@ if time.time() - st.session_state.last_heartbeat > 900:
     st.session_state.last_heartbeat = time.time()
     st.rerun()
 
-if "visitas" not in st.session_state:
-    st.session_state.visitas = 1
-
 # --- 3. CARGA DE DATOS SEGUROS ---
 @st.cache_data(ttl=10)
 def cargar_datos_seguros():
@@ -90,6 +87,9 @@ st.markdown("""
 <style>
     .stApp { background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important; background-size: cover !important; background-attachment: fixed !important; }
     .radar-container { background: rgba(231, 76, 60, 0.9); color: white; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; border: 1px solid #f1c40f; text-align: center; }
+    .stats-card { background: rgba(255,255,255,0.1); border: 1px solid rgba(241, 196, 15, 0.3); border-radius: 10px; padding: 15px; text-align: center; color: white; }
+    .stats-val { font-size: 24px; font-weight: 900; color: #f1c40f; display: block; }
+    .stats-label { font-size: 12px; text-transform: uppercase; opacity: 0.8; }
     .card-white, .card-vip, .card-cosecha, .card-bloqueada { transition: all 0.3s ease-in-out; cursor: pointer; border-radius: 15px; padding: 20px; margin-bottom: 15px; }
     .card-white:hover, .card-vip:hover, .card-cosecha:hover { transform: translateY(-5px); box-shadow: 0px 10px 20px rgba(0,0,0,0.4) !important; }
     .card-white { background: white !important; border-left: 10px solid #3498db; color: #333; }
@@ -155,6 +155,22 @@ def es_vip(dato):
 
 # --- 6. INTERFAZ ---
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
+
+# --- MEJORA 4: PANEL DE ESTADÍSTICAS (IGNACIO DIAZ PRO) ---
+with st.container():
+    cstats1, cstats2, cstats3, cstats4 = st.columns(4)
+    with cstats1:
+        st.markdown(f'<div class="stats-card"><span class="stats-val">{cant_camiones + cant_cargas}</span><span class="stats-label">Movimientos Hoy</span></div>', unsafe_allow_html=True)
+    with cstats2:
+        # Cálculo de rutas activas (simplificado por provincias origen)
+        rutas_hoy = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy))].iloc[:, 1].nunique() if not df_ca_raw.empty else 0
+        st.markdown(f'<div class="stats-card"><span class="stats-val">{rutas_hoy}</span><span class="stats-label">Rutas con Carga</span></div>', unsafe_allow_html=True)
+    with cstats3:
+        st.markdown(f'<div class="stats-card"><span class="stats-val">{len(LISTA_VIPS_GLOBAL)}</span><span class="stats-label">Miembros VIP</span></div>', unsafe_allow_html=True)
+    with cstats4:
+        st.markdown(f'<div class="stats-card"><span class="stats-val">LIVE</span><span class="stats-label">Estado Sistema</span></div>', unsafe_allow_html=True)
+
+st.write("") # Espaciador
 
 with st.container():
     c_log1, c_log2 = st.columns([2, 1])
