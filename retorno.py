@@ -39,22 +39,35 @@ if time.time() - st.session_state.last_heartbeat > 900:
     st.session_state.last_heartbeat = time.time()
     st.rerun()
 
-# --- 3. CARGA DE DATOS SEGUROS ---
-@st.cache_data(ttl=10)
+# --- 3. CARGA DE DATOS SEGUROS CON FILTRO DE BORRADO POTENCIADO ---
+@st.cache_data(ttl=5) # Reducido a 5s para que el borrado sea casi instantáneo
 def cargar_datos_seguros():
     try:
         t = int(time.time())
+        # Carga Choferes
         df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}").fillna("-")
+        
+        # Carga Cargas
         df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
         
-        # Filtro robusto de BORRADO: busca la palabra en cualquier columna de la fila
+        # --- BLINDAJE DE BORRADO (Ignacio Diaz) ---
+        # Filtramos cualquier fila que contenga la palabra 'BORRADO' en CUALQUIER columna
         if not df_ca.empty:
-            df_ca = df_ca[~df_ca.apply(lambda row: row.astype(str).str.contains('BORRADO', case=False).any(), axis=1)]
+            mask = df_ca.astype(str).apply(lambda x: x.str.contains('BORRADO', case=False)).any(axis=1)
+            # También filtramos por referencias de borrado (ID de la carga original)
+            refs_borradas = df_ca[mask].astype(str).apply(lambda x: x.str.extract(r'REF:(.*)')[0].dropna(), axis=1).stack().tolist()
             
+            # Aplicamos el filtro: Ni el registro de borrado ni la carga referenciada se muestran
+            df_ca = df_ca[~mask]
+            if refs_borradas:
+                df_ca = df_ca[~df_ca.iloc[:, 0].astype(str).isin(refs_borradas)]
+        
+        # Carga VIPs
         df_v = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VIP}&header=None&t={t}", header=None)
         vips_lista = [str(x).strip().upper().replace(".0", "") for x in df_v[0].dropna().tolist()]
+        
         return df_ch, df_ca, vips_lista
-    except:
+    except Exception as e:
         return pd.DataFrame(), pd.DataFrame(), []
 
 df_ch_raw, df_ca_raw, LISTA_VIPS_GLOBAL = cargar_datos_seguros()
@@ -90,7 +103,7 @@ EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acopla
 
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
-# --- 4. ESTILOS VIP PERSONALIZADOS (MEJORADOS POR IGNACIO DIAZ) ---
+# --- 4. ESTILOS VIP PERSONALIZADOS (IGNACIO DIAZ) ---
 st.markdown("""
 <style>
     .stApp { background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important; background-size: cover !important; background-attachment: fixed !important; }
@@ -122,7 +135,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 5. FUNCIONES AUXILIARES (CON BLINDAJE DE DATOS - IGNACIO DIAZ) ---
+# --- 5. FUNCIONES AUXILIARES ---
 def get_card_style(minutos, es_vip_card):
     if es_vip_card: return "card-vip"
     if minutos < 60: return "card-hot"
@@ -176,7 +189,7 @@ def es_vip(dato):
 # --- 6. INTERFAZ ---
 st.markdown("<h1 style='text-align:center; color:white;'>🚛 RETORNO MATCH VIP</h1>", unsafe_allow_html=True)
 
-# --- PANEL DE ESTADÍSTICAS (IGNACIO DIAZ) ---
+# --- PANEL DE ESTADÍSTICAS ---
 with st.container():
     cstats1, cstats2, cstats3, cstats4 = st.columns(4)
     with cstats1:
@@ -275,7 +288,7 @@ with tab2:
                     card_class = get_card_style(minutos, r['vip'])
                     st.markdown(f'<div class="{card_class}">{f"<span class=\'dist-badge\'>{distancia}</span>" if distancia else ""}{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{badge_nuevo}{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]} | 📱 <b>TEL:</b> {ocultar_telefono(r[4])}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR</a><a href="{link_share}" target="_blank" class="btn-share">📢 DIFUNDIR CARGA</a></div>', unsafe_allow_html=True)
 
-# --- TAB 3: ARRIME COSECHA (CON BORRADO ADMIN - IGNACIO DIAZ) ---
+# --- TAB 3: ARRIME COSECHA (CON BORRADO ADMIN REFORZADO - IGNACIO DIAZ) ---
 with tab3:
     st.markdown("<h3 style='color:#f1c40f; text-align:center;'>🌾 SECCIÓN ESPECIAL: ARRIME DE COSECHA</h3>", unsafe_allow_html=True)
     col_a1, col_a2 = st.columns([1, 2.2])
@@ -294,11 +307,11 @@ with tab3:
                 with cols_arr[i % 2]:
                     st.markdown(f'<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>{r[3]} | 📱 {ocultar_telefono(r[4])}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR</a></div>', unsafe_allow_html=True)
                     
-                    # FUNCIONALIDAD ADMIN: Solo tú (Ignacio) ves el botón si el PIN en ADMIN es correcto
                     if st.session_state.get('admin_mode', False):
-                        if st.button(f"🗑️ BORRAR CONCRETADO #{i}", key=f"del_arr_{idx}"):
+                        if st.button(f"🗑️ BORRAR #{i}", key=f"del_arr_{idx}"):
+                            # Enviamos la señal de borrado referenciando el timestamp exacto (r[0])
                             requests.post(URL_CARGAS_POST, data={
-                                "entry.610070407": "ARRIME ZONA", 
+                                "entry.610070407": "BORRADO", 
                                 "entry.170847116": "BORRADO", 
                                 "entry.576675281": f"REF:{r[0]}", 
                                 "entry.1930562861": "SISTEMA", 
@@ -319,14 +332,12 @@ st.markdown(f"""
 with st.expander("⚙️ ADMIN"):
     pin = st.text_input("PIN:", type="password")
     if pin == ADMIN_PIN:
-        # Si el PIN es correcto, activamos el modo y RECARGAMOS para que aparezcan los botones
         if not st.session_state.admin_mode:
             st.session_state.admin_mode = True
             st.rerun()
-            
-        st.success("MODO ADMIN ACTIVADO (Borrado disponible en Tab 3)")
+        st.success("MODO ADMIN ACTIVADO")
         st.session_state.anuncios = st.text_area("Texto Radar:", st.session_state.anuncios)
-        if st.button("LIMPIAR CACHÉ"):
+        if st.button("LIMPIAR CACHÉ MANUAL"):
             st.cache_data.clear()
             st.rerun()
     else:
