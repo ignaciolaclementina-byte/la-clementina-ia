@@ -193,7 +193,6 @@ with tab1:
                 st.cache_data.clear(); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            # Blindaje: verificamos que las columnas 4 y 5 existan
             df_ch_raw['vip'] = df_ch_raw.apply(lambda r: (es_vip(r[4]) or es_vip(r[5])) if len(r) > 5 else False, axis=1)
             df_f = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
             for _, r in df_f.iterrows():
