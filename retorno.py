@@ -82,6 +82,9 @@ cant_cargas = len(df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha(x, hoy
 if 'anuncios' not in st.session_state:
     st.session_state.anuncios = "¡Bienvenido al Sistema VIP!"
 
+if 'admin_mode' not in st.session_state:
+    st.session_state.admin_mode = False
+
 PROVINCIAS = ["CUALQUIERA", "BUENOS AIRES", "CABA", "CATAMARCA", "CHACO", "CHUBUT", "CORDOBA", "CORRIENTES", "ENTRE RIOS", "FORMOSA", "JUJUY", "LA PAMPA", "LA RIOJA", "MENDOZA", "MISIONES", "NEUQUEN", "RIO NEGRO", "SALTA", "SAN JUAN", "SAN LUIS", "SANTA CRUZ", "SANTA FE", "SANTIAGO DEL ESTERO", "TIERRA DEL FUEGO", "TUCUMAN"]
 EQUIPOS = ["CUALQUIERA", "Chasis", "Semi", "Sider", "Batea", "Térmico", "Acoplado"]
 
@@ -207,7 +210,7 @@ with st.container():
     with c4: b_e = st.selectbox("🚛 EQUIPO:", EQUIPOS)
     busqueda_libre = st.text_input("🔎 Búsqueda rápida", "").upper()
 
-radar_txt = f"🌾 COSECHA ACTIVA: {cant_camiones} Camiones y {cant_cargas} Cargas -- Creado por Ignacio Diaz."
+radar_txt = f"{st.session_state.anuncios} -- Creado por Ignacio Diaz."
 st.markdown(f'<div class="radar-container"><marquee scrollamount="8">{radar_txt}</marquee></div>', unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs(["🚀 CAMIONES DISPONIBLES", "🏢 CARGAS DISPONIBLES", "🌾 ARRIME COSECHA"])
@@ -272,7 +275,7 @@ with tab2:
                     card_class = get_card_style(minutos, r['vip'])
                     st.markdown(f'<div class="{card_class}">{f"<span class=\'dist-badge\'>{distancia}</span>" if distancia else ""}{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{badge_nuevo}{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]} | 📱 <b>TEL:</b> {ocultar_telefono(r[4])}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR</a><a href="{link_share}" target="_blank" class="btn-share">📢 DIFUNDIR CARGA</a></div>', unsafe_allow_html=True)
 
-# --- TAB 3: ARRIME COSECHA (CORREGIDO PARA IGNACIO DIAZ) ---
+# --- TAB 3: ARRIME COSECHA (CON BORRADO ADMIN - IGNACIO DIAZ) ---
 with tab3:
     st.markdown("<h3 style='color:#f1c40f; text-align:center;'>🌾 SECCIÓN ESPECIAL: ARRIME DE COSECHA</h3>", unsafe_allow_html=True)
     col_a1, col_a2 = st.columns([1, 2.2])
@@ -291,10 +294,9 @@ with tab3:
                 with cols_arr[i % 2]:
                     st.markdown(f'<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>{r[3]} | 📱 {ocultar_telefono(r[4])}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR</a></div>', unsafe_allow_html=True)
                     
-                    # CORRECCIÓN DE SEGURIDAD: Solo Ignacio (VIP Activo) ve el botón
-                    if soy_vip_actual:
-                        # Usamos el timestamp original r[0] como ID único para el borrado
-                        if st.button(f"🗑️ BORRAR #{i}", key=f"del_arr_{i}"):
+                    # FUNCIONALIDAD ADMIN: Solo tú (Ignacio) ves el botón si el PIN en ADMIN es correcto
+                    if st.session_state.admin_mode:
+                        if st.button(f"🗑️ BORRAR CONCRETADO #{i}", key=f"del_arr_{idx}"):
                             requests.post(URL_CARGAS_POST, data={
                                 "entry.610070407": "ARRIME ZONA", 
                                 "entry.170847116": "BORRADO", 
@@ -315,8 +317,13 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 with st.expander("⚙️ ADMIN"):
-    if st.text_input("PIN:", type="password") == ADMIN_PIN:
+    pin = st.text_input("PIN:", type="password")
+    if pin == ADMIN_PIN:
+        st.session_state.admin_mode = True
+        st.success("MODO ADMIN ACTIVADO (Borrado disponible en Tab 3)")
         st.session_state.anuncios = st.text_area("Texto Radar:", st.session_state.anuncios)
         if st.button("LIMPIAR CACHÉ"):
             st.cache_data.clear()
             st.rerun()
+    else:
+        st.session_state.admin_mode = False
