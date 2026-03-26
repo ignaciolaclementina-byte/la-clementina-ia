@@ -5,12 +5,18 @@ import requests
 import urllib.parse
 from datetime import datetime
 import math
+# Importamos el componente para autorefresh (debe estar instalado: pip install streamlit-autorefresh)
+from streamlit_autorefresh import st_autorefresh
 
 # --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - CREADO POR IGNACIO DIAZ) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CARGAS = "1267917528"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 ADMIN_PIN = "1323" 
+
+# --- CONFIGURACIÓN DE ACTUALIZACIÓN AUTOMÁTICA ---
+# Se actualiza cada 30 segundos (30000 milisegundos)
+st_autorefresh(interval=30000, key="datarefresh")
 
 # --- 2. SISTEMA ANTI-PAUSA ---
 if "last_heartbeat" not in st.session_state:
@@ -117,10 +123,7 @@ if st.session_state.admin_mode:
                 link_difusion = f"https://api.whatsapp.com/send?text={texto_url}"
                 
                 st.markdown("---")
-                # OPCIÓN A: Botón directo (Ideal para grupos de difusión)
                 st.markdown(f'<a href="{link_difusion}" target="_blank" class="btn-difusion">📲 ENVIAR AL GRUPO</a>', unsafe_allow_html=True)
-                
-                # OPCIÓN B: Cuadro de copiado (Por si falla el link)
                 st.markdown("📋 **O COPIÁ EL TEXTO:**")
                 st.code(mensaje_canal, language="text")
                 
