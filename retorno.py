@@ -67,6 +67,7 @@ st.markdown("""
     .card-cosecha { background: #e8f5e9 !important; border: 2px solid #2e7d32 !important; color: #1b5e20; border-radius: 15px; padding: 20px; margin-bottom: 15px; }
     .route-txt { font-size: 20px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { background-color: #2e7d32; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
+    .btn-difusion { background-color: #25D366; color: white !important; padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 15px; border: 2px solid white; }
     .legal-footer { text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px; }
 </style>
 """, unsafe_allow_html=True)
@@ -87,7 +88,7 @@ if st.session_state.admin_mode:
             t_val = st.text_input("💰 Tarifa")
             w_arr = st.text_input("📱 WhatsApp de contacto")
             
-            submit = st.form_submit_button("✅ PUBLICAR Y GENERAR TEXTO")
+            submit = st.form_submit_button("✅ PUBLICAR Y DIFUNDIR")
             
             if submit:
                 # 1. Guardar en Google Sheets
@@ -100,21 +101,28 @@ if st.session_state.admin_mode:
                 })
                 st.success("¡Guardado en la web!")
                 
-                # 2. Generar el mensaje para COPIAR Y PEGAR
-                texto_canal = (
+                # 2. Generar el mensaje formateado
+                mensaje_canal = (
                     f"🌾 *NUEVO OPERATIVO DE ARRIME*\n"
                     f"━━━━━━━━━━━━━━━━━━\n\n"
                     f"📍 *ZONA:* {z_loc}\n"
                     f"📝 *DETALLE:* {g_det}\n"
                     f"💰 *TARIFA:* {t_val}\n\n"
-                    f"🚛 *ANOTARSE AQUÍ:* \n"
+                    f"🚛 *POSTULATE AQUÍ:* \n"
                     f"https://retorno-match-sanjorge.streamlit.app/\n\n"
                     f"✅ _Gestionado por Ignacio Diaz_"
                 )
                 
+                texto_url = urllib.parse.quote(mensaje_canal)
+                link_difusion = f"https://api.whatsapp.com/send?text={texto_url}"
+                
                 st.markdown("---")
-                st.markdown("📋 **COPIÁ Y PEGÁ EN EL CANAL:**")
-                st.code(texto_canal, language="text")
+                # OPCIÓN A: Botón directo (Ideal para grupos de difusión)
+                st.markdown(f'<a href="{link_difusion}" target="_blank" class="btn-difusion">📲 ENVIAR AL GRUPO</a>', unsafe_allow_html=True)
+                
+                # OPCIÓN B: Cuadro de copiado (Por si falla el link)
+                st.markdown("📋 **O COPIÁ EL TEXTO:**")
+                st.code(mensaje_canal, language="text")
                 
                 st.cache_data.clear()
     main_col = col_a2
