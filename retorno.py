@@ -3,27 +3,16 @@ import pandas as pd
 import time
 import requests
 import urllib.parse
-from datetime import datetime, timedelta
-import re
+from datetime import datetime
 import math
 
 # --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - CREADO POR IGNACIO DIAZ) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
-GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
-GID_VIP = "968995524" 
-
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 ADMIN_PIN = "1323" 
 
-# --- 2. SISTEMA ANTI-PAUSA ---
-if "last_heartbeat" not in st.session_state:
-    st.session_state.last_heartbeat = time.time()
-if time.time() - st.session_state.last_heartbeat > 900:
-    st.session_state.last_heartbeat = time.time()
-    st.rerun()
-
-# --- 3. CARGA DE DATOS SEGUROS ---
+# --- 3. CARGA DE DATOS ---
 @st.cache_data(ttl=5) 
 def cargar_datos_seguros():
     try:
@@ -72,7 +61,6 @@ st.markdown("""
     .route-txt { font-size: 20px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { background-color: #2e7d32; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
     .legal-footer { text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px; }
-    .admin-only-msg { background: rgba(241, 196, 15, 0.1); border: 1px dashed #f1c40f; color: #f1c40f; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,31 +70,58 @@ radar_txt = f"{st.session_state.anuncios} -- Creado por Ignacio Diaz."
 st.markdown(f'<div class="radar-container"><marquee scrollamount="8">{radar_txt}</marquee></div>', unsafe_allow_html=True)
 
 # --- SECCIÓN ARRIME ---
-# Cambiamos la disposición si es Admin o Usuario
 if st.session_state.admin_mode:
     col_a1, col_a2 = st.columns([1, 2.2])
     with col_a1:
-        st.markdown("<h4 style='color:white;'>📢 Panel de Publicación (Solo Ignacio)</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:white;'>📢 Panel de Publicación</h4>", unsafe_allow_html=True)
         with st.form("f_arr", clear_on_submit=True):
-            z_loc = st.text_input("📍 Zona"); g_det = st.text_input("🌾 Detalle"); t_val = st.text_input("💰 Tarifa"); w_arr = st.text_input("📱 WhatsApp")
-            if st.form_submit_button("PUBLICAR ARRIME"):
-                requests.post(URL_CARGAS_POST, data={"entry.610070407": "ARRIME ZONA", "entry.170847116": z_loc, "entry.576675281": f"ARRIME|{g_det}|{t_val}", "entry.1930562861": "COSECHA", "entry.466540450": w_arr})
-                st.cache_data.clear(); st.rerun()
+            z_loc = st.text_input("📍 Zona (Ej: San Jorge)")
+            g_det = st.text_input("🌾 Detalle (Ej: Maíz a Planta)")
+            t_val = st.text_input("💰 Tarifa")
+            w_arr = st.text_input("📱 WhatsApp de contacto")
+            
+            if st.form_submit_button("🚀 PUBLICAR Y DIFUNDIR"):
+                # 1. Guardar en Google Sheets
+                requests.post(URL_CARGAS_POST, data={
+                    "entry.610070407": "ARRIME ZONA", 
+                    "entry.170847116": z_loc, 
+                    "entry.576675281": f"ARRIME|{g_det}|{t_val}", 
+                    "entry.1930562861": "COSECHA", 
+                    "entry.466540450": w_arr
+                })
+                
+                # 2. Generar link de Difusión Automática
+                texto_difundir = urllib.parse.quote(
+                    f"📢 *NUEVA OPORTUNIDAD DE ARRIME*\n"
+                    f"━━━━━━━━━━━━━━━━━━\n\n"
+                    f"📍 *ZONA:* {z_loc}\n"
+                    f"🌾 *TRABAJO:* {g_det}\n"
+                    f"💰 *TARIFA:* {t_val}\n\n"
+                    f"📲 *ANOTARSE AQUÍ:* https://retorno-match-sanjorge.streamlit.app/\n\n"
+                    f"✅ _Publicado por Ignacio Diaz_"
+                )
+                link_difusion = f"https://api.whatsapp.com/send?text={texto_difundir}"
+                
+                # JavaScript para abrir WhatsApp en una pestaña nueva automáticamente
+                st.markdown(f'<p><a href="{link_difusion}" id="wsp_link" target="_blank">Cargando difusión...</a></p>', unsafe_allow_html=True)
+                st.components.v1.html(f"<script>window.open('{link_difusion}', '_blank');</script>", height=0)
+                
+                st.success("Publicado con éxito. Se abrió WhatsApp para difundir.")
+                st.cache_data.clear()
+                time.sleep(1)
+                st.rerun()
     main_col = col_a2
 else:
-    # Si no es admin, usamos todo el ancho para los arrimes
-    st.markdown('<div class="admin-only-msg">Modo Visualización - Contactar vía WhatsApp para publicar</div>', unsafe_allow_html=True)
+    st.markdown('<div style="background: rgba(241, 196, 15, 0.1); border: 1px dashed #f1c40f; color: #f1c40f; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 10px;">Modo Visualización - Los choferes ven los arrimes aquí</div>', unsafe_allow_html=True)
     main_col = st.container()
 
 with main_col:
     if not df_ca_raw.empty:
         df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
-        
         cols_arr = st.columns(2)
         for i, (idx, r) in enumerate(df_arrime.iterrows()):
             if len(r) < 5: continue
             texto_cosecha = urllib.parse.quote(f"🌾 *OPERATIVO COSECHA*\n\nHola, me contacto por el arrime en:\n📍 *ZONA:* {r[2]}\n📝 *DETALLE:* {r[3]}\n\nMe gustaría coordinar unidades.")
-            
             with cols_arr[i % 2]:
                 st.markdown(f'''
                     <div class="card-cosecha">
@@ -116,7 +131,6 @@ with main_col:
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={texto_cosecha}" target="_blank" class="btn-wsp">🚜 CONTACTAR</a>
                     </div>
                 ''', unsafe_allow_html=True)
-                
                 if st.session_state.admin_mode:
                     if st.button(f"🗑️ BORRAR #{i}", key=f"del_arr_{idx}"):
                         requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.170847116": "BORRADO", "entry.576675281": f"REF:{r[0]}", "entry.1930562861": "SISTEMA", "entry.466540450": "0"})
@@ -134,8 +148,7 @@ with st.expander("⚙️ ACCESO EXCLUSIVO"):
     pin = st.text_input("PIN de Seguridad:", type="password")
     if pin == ADMIN_PIN:
         st.session_state.admin_mode = True
-        st.success("Acceso concedido, Ignacio. Ahora podés publicar y borrar.")
-        st.session_state.anuncios = st.text_area("Mensaje del Radar:", st.session_state.anuncios)
+        st.success("Acceso concedido.")
         if st.button("ACTUALIZAR DATOS"): st.cache_data.clear(); st.rerun()
     else:
         st.session_state.admin_mode = False
