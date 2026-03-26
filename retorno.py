@@ -5,8 +5,6 @@ import requests
 import urllib.parse
 from datetime import datetime
 import math
-# Importamos el componente para autorefresh (debe estar instalado: pip install streamlit-autorefresh)
-from streamlit_autorefresh import st_autorefresh
 
 # --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - CREADO POR IGNACIO DIAZ) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
@@ -14,9 +12,17 @@ GID_CARGAS = "1267917528"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 ADMIN_PIN = "1323" 
 
-# --- CONFIGURACIÓN DE ACTUALIZACIÓN AUTOMÁTICA ---
-# Se actualiza cada 30 segundos (30000 milisegundos)
-st_autorefresh(interval=30000, key="datarefresh")
+# --- MEJORA: AUTO-ACTUALIZACIÓN NATIVA (Cada 30 seg) ---
+# Esto reemplaza la librería que tiraba error y mantiene la estructura
+if "refresh_count" not in st.session_state:
+    st.session_state.refresh_count = 0
+
+# Fragmento que se ejecuta solo para recargar datos sin afectar el formulario
+@st.fragment(run_every="30s")
+def fragmento_actualizacion():
+    st.session_state.refresh_count += 1
+
+fragmento_actualizacion()
 
 # --- 2. SISTEMA ANTI-PAUSA ---
 if "last_heartbeat" not in st.session_state:
@@ -27,7 +33,7 @@ if time.time() - st.session_state.last_heartbeat > 900:
 
 # --- 3. CARGA DE DATOS SEGUROS ---
 @st.cache_data(ttl=5) 
-def cargar_datos_seguros():
+def cargar_datos_seguros(count):
     try:
         t = int(time.time())
         df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
@@ -41,7 +47,8 @@ def cargar_datos_seguros():
     except:
         return pd.DataFrame()
 
-df_ca_raw = cargar_datos_seguros()
+# Pasamos el refresh_count para forzar la recarga de la cache
+df_ca_raw = cargar_datos_seguros(st.session_state.refresh_count)
 
 # --- 4. FUNCIONES AUXILIARES ---
 def limpiar_dato_numerico(dato):
@@ -97,7 +104,6 @@ if st.session_state.admin_mode:
             submit = st.form_submit_button("✅ PUBLICAR Y DIFUNDIR")
             
             if submit:
-                # 1. Guardar en Google Sheets
                 requests.post(URL_CARGAS_POST, data={
                     "entry.610070407": "ARRIME ZONA", 
                     "entry.170847116": z_loc, 
@@ -105,54 +111,33 @@ if st.session_state.admin_mode:
                     "entry.1930562861": "COSECHA", 
                     "entry.466540450": w_arr
                 })
-                st.success("¡Guardado en la web!")
-                
-                # 2. Generar el mensaje formateado
-                mensaje_canal = (
-                    f"🌾 *NUEVO OPERATIVO DE ARRIME*\n"
-                    f"━━━━━━━━━━━━━━━━━━\n\n"
-                    f"📍 *ZONA:* {z_loc}\n"
-                    f"📝 *DETALLE:* {g_det}\n"
-                    f"💰 *TARIFA:* {t_val}\n\n"
-                    f"🚛 *POSTULATE AQUÍ:* \n"
-                    f"https://retorno-match-sanjorge.streamlit.app/\n\n"
-                    f"✅ _Gestionado por Ignacio Diaz_"
-                )
-                
-                texto_url = urllib.parse.quote(mensaje_canal)
-                link_difusion = f"https://api.whatsapp.com/send?text={texto_url}"
-                
-                st.markdown("---")
-                st.markdown(f'<a href="{link_difusion}" target="_blank" class="btn-difusion">📲 ENVIAR AL GRUPO</a>', unsafe_allow_html=True)
-                st.markdown("📋 **O COPIÁ EL TEXTO:**")
+                st.success("¡Guardado!")
+                mensaje_canal = f"🌾 *NUEVO ARRIME*\n📍 ZONA: {z_loc}\n📝 DETALLE: {g_det}\n💰 TARIFA: {t_val}\n🚛 POSTULATE: https://retorno-match-sanjorge.streamlit.app/\n✅ _Ignacio Diaz_"
                 st.code(mensaje_canal, language="text")
-                
                 st.cache_data.clear()
     main_col = col_a2
 else:
-    st.markdown('<div style="background: rgba(241, 196, 15, 0.1); border: 1px dashed #f1c40f; color: #f1c40f; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 20px;">Modo Visualización - Contactar para coordinar unidades</div>', unsafe_allow_html=True)
     main_col = st.container()
 
-# --- 7. VISUALIZACIÓN DE CARDS (PÚBLICO) ---
+# --- 7. VISUALIZACIÓN DE CARDS ---
 with main_col:
     if not df_ca_raw.empty:
         df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
         cols_arr = st.columns(2)
         for i, (idx, r) in enumerate(df_arrime.iterrows()):
             if len(r) < 5: continue
-            texto_cosecha = urllib.parse.quote(f"🌾 *OPERATIVO COSECHA*\n\nHola, me contacto por el arrime en:\n📍 *ZONA:* {r[2]}\n📝 *DETALLE:* {r[3]}\n\nMe gustaría coordinar unidades.")
             with cols_arr[i % 2]:
                 st.markdown(f'''
                     <div class="card-cosecha">
                         <div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>
                         <b>DETALLE:</b> {r[3]}<br>
                         <b>TEL:</b> {ocultar_telefono(r[4])}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={texto_cosecha}" target="_blank" class="btn-wsp">🚜 CONTACTAR</a>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">🚜 CONTACTAR</a>
                     </div>
                 ''', unsafe_allow_html=True)
                 if st.session_state.admin_mode:
-                    if st.button(f"🗑️ BORRAR #{i}", key=f"del_arr_{idx}"):
-                        requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.170847116": "BORRADO", "entry.576675281": f"REF:{r[0]}", "entry.1930562861": "SISTEMA", "entry.466540450": "0"})
+                    if st.button(f"🗑️ BORRAR #{i}", key=f"del_{idx}"):
+                        requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.576675281": f"REF:{r[0]}"})
                         st.cache_data.clear(); st.rerun()
 
 # --- 8. PIE DE PÁGINA (AUTORÍA) ---
@@ -163,11 +148,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-with st.expander("⚙️ ACCESO EXCLUSIVO"):
-    pin = st.text_input("PIN de Seguridad:", type="password")
-    if pin == ADMIN_PIN:
+with st.expander("⚙️ ACCESO"):
+    if st.text_input("PIN:", type="password") == ADMIN_PIN:
         st.session_state.admin_mode = True
-        st.success("Acceso concedido.")
-        if st.button("ACTUALIZAR WEB"): st.cache_data.clear(); st.rerun()
-    else:
-        st.session_state.admin_mode = False
