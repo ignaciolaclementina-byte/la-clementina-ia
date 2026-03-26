@@ -68,7 +68,8 @@ st.markdown("""
     .route-txt { font-size: 20px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { background-color: #2e7d32; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
     .legal-footer { text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px; }
-    .btn-canal { background-color: #25D366; color: white !important; padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-bottom: 20px; font-size: 18px; border: 2px solid white; }
+    .btn-canal { background-color: #25D366; color: white !important; padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-bottom: 20px; font-size: 18px; border: 3px solid white; animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -91,7 +92,7 @@ if st.session_state.admin_mode:
             submit = st.form_submit_button("✅ GUARDAR EN WEB")
             
             if submit:
-                # 1. Guardar en Google Sheets
+                # Guardar en Google Sheets
                 requests.post(URL_CARGAS_POST, data={
                     "entry.610070407": "ARRIME ZONA", 
                     "entry.170847116": z_loc, 
@@ -101,7 +102,7 @@ if st.session_state.admin_mode:
                 })
                 st.success("¡Guardado en la web!")
                 
-                # 2. Generar el mensaje para el CANAL
+                # Mensaje formateado
                 mensaje_canal = (
                     f"🌾 *NUEVO OPERATIVO DE ARRIME*\n"
                     f"━━━━━━━━━━━━━━━━━━\n\n"
@@ -114,30 +115,26 @@ if st.session_state.admin_mode:
                 )
                 
                 texto_url = urllib.parse.quote(mensaje_canal)
-                link_canal = f"https://api.whatsapp.com/send?text={texto_url}"
                 
-                # Botón para enviar al canal
-                st.markdown(f'<a href="{link_canal}" target="_blank" class="btn-canal">📲 TOCÁ AQUÍ PARA ENVIAR AL CANAL</a>', unsafe_allow_html=True)
+                # LINK MEJORADO PARA WEB Y CANALES:
+                # Usamos send?text para que WhatsApp Web fuerce la apertura del selector completo
+                link_canal = f"https://web.whatsapp.com/send?text={texto_url}"
+                
+                st.markdown(f'<a href="{link_canal}" target="_blank" class="btn-canal">📲 DIFUNDIR EN CANAL / GRUPO</a>', unsafe_allow_html=True)
                 st.cache_data.clear()
     main_col = col_a2
 else:
     st.markdown('<div style="background: rgba(241, 196, 15, 0.1); border: 1px dashed #f1c40f; color: #f1c40f; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 20px;">Modo Visualización - Contactar para coordinar unidades</div>', unsafe_allow_html=True)
     main_col = st.container()
 
-# --- 7. VISUALIZACIÓN DE CARDS (PÚBLICO) ---
+# --- 7. VISUALIZACIÓN DE CARDS ---
 with main_col:
     if not df_ca_raw.empty:
         df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
-        
-        if df_arrime.empty:
-            st.info("No hay operativos de arrime cargados actualmente.")
-        
         cols_arr = st.columns(2)
         for i, (idx, r) in enumerate(df_arrime.iterrows()):
             if len(r) < 5: continue
-            
             texto_cosecha = urllib.parse.quote(f"🌾 *OPERATIVO COSECHA*\n\nHola, me contacto por el arrime en:\n📍 *ZONA:* {r[2]}\n📝 *DETALLE:* {r[3]}\n\nMe gustaría coordinar unidades.")
-            
             with cols_arr[i % 2]:
                 st.markdown(f'''
                     <div class="card-cosecha">
@@ -147,18 +144,16 @@ with main_col:
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={texto_cosecha}" target="_blank" class="btn-wsp">🚜 CONTACTAR</a>
                     </div>
                 ''', unsafe_allow_html=True)
-                
                 if st.session_state.admin_mode:
                     if st.button(f"🗑️ BORRAR #{i}", key=f"del_arr_{idx}"):
                         requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.170847116": "BORRADO", "entry.576675281": f"REF:{r[0]}", "entry.1930562861": "SISTEMA", "entry.466540450": "0"})
                         st.cache_data.clear(); st.rerun()
 
-# --- 8. PIE DE PÁGINA (AUTORÍA) ---
+# --- 8. PIE DE PÁGINA ---
 st.markdown(f"""
 <div class="legal-footer">
     <p style="font-size: 20px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
     <p style="color: #f1c40f; font-weight: bold;">© 2026 RETORNO MATCH VIP</p>
-    <p>Prohibida la copia total o parcial de esta interfaz.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -166,7 +161,7 @@ with st.expander("⚙️ ACCESO EXCLUSIVO"):
     pin = st.text_input("PIN de Seguridad:", type="password")
     if pin == ADMIN_PIN:
         st.session_state.admin_mode = True
-        st.success("Acceso concedido, Ignacio.")
+        st.success("Acceso concedido.")
         if st.button("ACTUALIZAR WEB"): st.cache_data.clear(); st.rerun()
     else:
         st.session_state.admin_mode = False
