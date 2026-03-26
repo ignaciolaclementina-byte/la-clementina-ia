@@ -45,14 +45,12 @@ def cargar_datos_seguros():
         t = int(time.time())
         df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}").fillna("-")
         df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
-        
         if not df_ca.empty:
             mask = df_ca.astype(str).apply(lambda x: x.str.contains('BORRADO', case=False)).any(axis=1)
             refs_borradas = df_ca[mask].astype(str).apply(lambda x: x.str.extract(r'REF:(.*)')[0].dropna(), axis=1).stack().tolist()
             df_ca = df_ca[~mask]
             if refs_borradas:
                 df_ca = df_ca[~df_ca.iloc[:, 0].astype(str).isin(refs_borradas)]
-        
         df_v = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VIP}&header=None&t={t}", header=None)
         vips_lista = [str(x).strip().upper().replace(".0", "") for x in df_v[0].dropna().tolist()]
         return df_ch, df_ca, vips_lista
@@ -192,7 +190,7 @@ st.markdown(f'<div class="radar-container"><marquee scrollamount="8">{radar_txt}
 
 tab1, tab2, tab3 = st.tabs(["🚀 CAMIONES DISPONIBLES", "🏢 CARGAS DISPONIBLES", "🌾 ARRIME COSECHA"])
 
-# --- TAB 1: CAMIONES (CON LÓGICA DE BORRADO RESTAURADA) ---
+# --- TAB 1: CAMIONES ---
 with tab1:
     col_f1, col_r1 = st.columns([1, 2.2])
     with col_f1:
@@ -215,7 +213,17 @@ with tab1:
                 if (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e=="CUALQUIERA" or b_e==str(r[3])) and (busqueda_libre in str(r).upper()):
                     val_a, val_b = limpiar_dato_numerico(r[4]), limpiar_dato_numerico(r[5])
                     cuit, wsp = (val_a, val_b) if len(val_a) == 11 else (val_b, val_a)
-                    link_wsp = f"https://api.whatsapp.com/send?phone={limpiar_wsp(wsp)}&text=" + urllib.parse.quote(f"🤝 *CONTACTO COMERCIAL*\n\nConsulta por unidad:\n📍 {r[1]} ➔ {r[2]}\n🚛 EQUIPO: {r[3]}")
+                    
+                    # --- MENSAJE PROFESIONAL RESTAURADO ---
+                    texto_propuesta = urllib.parse.quote(
+                        f"🤝 *CONTACTO COMERCIAL - RETORNO MATCH VIP*\n\n"
+                        f"Hola, me contacto para consultar por su unidad disponible:\n"
+                        f"📍 *RUTA:* {r[1]} ➔ {r[2]}\n"
+                        f"🚛 *EQUIPO:* {r[3]}\n\n"
+                        f"¿Podría brindarme más información? Muchas gracias."
+                    )
+                    link_wsp = f"https://api.whatsapp.com/send?phone={limpiar_wsp(wsp)}&text={texto_propuesta}"
+                    
                     card_class = get_card_style(minutos_pub, r['vip'])
                     st.markdown(f'<div class="{card_class}">{f"<span class=\'dist-badge\'>{distancia}</span>" if distancia else ""}{"<div class=\'vip-label\'>⭐ CHOFER VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit} | 📱 <b>TEL:</b> {ocultar_telefono(wsp)}<br><a href="{link_wsp}" target="_blank" class="btn-wsp">✉️ ENVIAR PROPUESTA</a></div>', unsafe_allow_html=True)
                     if st.session_state.admin_mode:
@@ -223,7 +231,7 @@ with tab1:
                             requests.post(URL_CHOFERES_POST, data={"entry.1304806144": "BORRADO", "entry.1519265625": "BORRADO", "entry.597193898": f"REF:{r[0]}", "entry.1542650763": "0", "entry.1574172378": "0"})
                             st.cache_data.clear(); st.rerun()
 
-# --- TAB 2: CARGAS (CON LÓGICA DE BORRADO RESTAURADA) ---
+# --- TAB 2: CARGAS ---
 with tab2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -248,15 +256,22 @@ with tab2:
                 if minutos < TIEMPO_EXCLUSIVO_MIN and not soy_vip_actual:
                     st.markdown(f'<div class="card-bloqueada">🔒 CARGA EXCLUSIVA VIP<br><small>En {int(TIEMPO_EXCLUSIVO_MIN - minutos)} min para todos</small><br><a href="https://api.whatsapp.com/send?phone={WSP_VENTAS_VIP}" target="_blank" style="color:#f1c40f;">⭐ ACTIVAR VIP</a></div>', unsafe_allow_html=True)
                 elif (b_o=="CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d=="CUALQUIERA" or b_d in str(r[2]).upper()) and (busqueda_libre in str(r).upper()):
-                    link_wsp_ca = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text=" + urllib.parse.quote(f"🚛 *CONSULTA DE CARGA*\n📍 ORIGEN: {r[1]}\n🏁 DESTINO: {r[2]}")
+                    
+                    # --- MENSAJES DE CARGA Y DIFUSIÓN RESTAURADOS ---
+                    texto_consulta_carga = urllib.parse.quote(f"🚛 *CONSULTA DE CARGA - RETORNO MATCH VIP*\n\nBuen día, estoy interesado en la carga:\n📍 *ORIGEN:* {r[1]}\n🏁 *DESTINO:* {r[2]}\n📦 *CARGA:* {r[3]}\n\n¿Podemos coordinar?")
+                    link_wsp_ca = f"https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={texto_consulta_carga}"
+                    
+                    texto_difusion = urllib.parse.quote(f"📢 *NUEVA CARGA DISPONIBLE*\n━━━━━━━━━━━━━━━━━━\n\n📍 *ORIGEN:* {r[1]}\n🏁 *DESTINO:* {r[2]}\n📦 *CARGA:* {r[3]}\n🏢 *EMPRESA:* {r[5]}\n\n✅ _Gestionado vía Retorno Match VIP_\n⭐ *Sistema Exclusivo de Ignacio Diaz*")
+                    link_share = f"https://api.whatsapp.com/send?text={texto_difusion}"
+                    
                     card_class = get_card_style(minutos, r['vip'])
-                    st.markdown(f'<div class="{card_class}">{f"<span class=\'dist-badge\'>{distancia}</span>" if distancia else ""}{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]} | 📱 <b>TEL:</b> {ocultar_telefono(r[4])}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR</a></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="{card_class}">{f"<span class=\'dist-badge\'>{distancia}</span>" if distancia else ""}{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]} | 📱 <b>TEL:</b> {ocultar_telefono(r[4])}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR</a><a href="{link_share}" target="_blank" class="btn-share">📢 DIFUNDIR CARGA</a></div>', unsafe_allow_html=True)
                     if st.session_state.admin_mode:
                         if st.button(f"🗑️ BORRAR #{idx}", key=f"del_ca_{idx}"):
                             requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.170847116": "BORRADO", "entry.576675281": f"REF:{r[0]}", "entry.1930562861": "SISTEMA", "entry.466540450": "0"})
                             st.cache_data.clear(); st.rerun()
 
-# --- TAB 3: ARRIME COSECHA (CON LÓGICA DE BORRADO RESTAURADA) ---
+# --- TAB 3: ARRIME COSECHA ---
 with tab3:
     st.markdown("<h3 style='color:#f1c40f; text-align:center;'>🌾 ARRIME DE COSECHA</h3>", unsafe_allow_html=True)
     col_a1, col_a2 = st.columns([1, 2.2])
@@ -272,8 +287,12 @@ with tab3:
             cols_arr = st.columns(2)
             for i, (idx, r) in enumerate(df_arrime.iterrows()):
                 if len(r) < 5: continue
+                
+                # --- MENSAJE COSECHA RESTAURADO ---
+                texto_cosecha = urllib.parse.quote(f"🌾 *OPERATIVO COSECHA*\n\nHola, me contacto por el arrime en:\n📍 *ZONA:* {r[2]}\n📝 *DETALLE:* {r[3]}\n\nMe gustaría coordinar unidades.")
+                
                 with cols_arr[i % 2]:
-                    st.markdown(f'<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>{r[3]} | 📱 {ocultar_telefono(r[4])}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR</a></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>{r[3]} | 📱 {ocultar_telefono(r[4])}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={texto_cosecha}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR</a></div>', unsafe_allow_html=True)
                     if st.session_state.admin_mode:
                         if st.button(f"🗑️ BORRAR #{i}", key=f"del_arr_{idx}"):
                             requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.170847116": "BORRADO", "entry.576675281": f"REF:{r[0]}", "entry.1930562861": "SISTEMA", "entry.466540450": "0"})
