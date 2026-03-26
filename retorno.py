@@ -12,12 +12,12 @@ GID_CARGAS = "1267917528"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 ADMIN_PIN = "1323" 
 
-# --- AUTO-REFRESH NATIVO (SIN LIBRERÍAS EXTERNAS) ---
-# Esto hace que la página se refresque cada 30 segundos automáticamente
+# --- AUTO-REFRESH NATIVO RÁPIDO (Cada 10 segundos) ---
+# Optimizado para que los cambios de Ignacio se vean de inmediato
 if "last_refresh" not in st.session_state:
     st.session_state.last_refresh = time.time()
 
-if time.time() - st.session_state.last_refresh > 30:
+if time.time() - st.session_state.last_refresh > 10:
     st.session_state.last_refresh = time.time()
     st.cache_data.clear()
     st.rerun()
@@ -84,6 +84,7 @@ st.markdown("""
 
 st.markdown("<h1 style='text-align:center; color:white;'>🌾 OPERATIVO ARRIME COSECHA</h1>", unsafe_allow_html=True)
 
+# Créditos según la instrucción de Ignacio
 radar_txt = f"{st.session_state.anuncios} -- Creado por Ignacio Diaz."
 st.markdown(f'<div class="radar-container"><marquee scrollamount="8">{radar_txt}</marquee></div>', unsafe_allow_html=True)
 
