@@ -13,11 +13,11 @@ URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7c
 ADMIN_PIN = "1323" 
 
 # --- AUTO-REFRESH NATIVO (SIN LIBRERÍAS EXTERNAS) ---
-# Configurado a 5 segundos para actualización rápida tras borrar
+# Esto hace que la página se refresque cada 30 segundos automáticamente
 if "last_refresh" not in st.session_state:
     st.session_state.last_refresh = time.time()
 
-if time.time() - st.session_state.last_refresh > 5:
+if time.time() - st.session_state.last_refresh > 30:
     st.session_state.last_refresh = time.time()
     st.cache_data.clear()
     st.rerun()
