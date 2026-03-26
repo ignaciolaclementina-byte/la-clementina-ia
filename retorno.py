@@ -92,7 +92,7 @@ if st.session_state.admin_mode:
             submit = st.form_submit_button("✅ GUARDAR EN WEB")
             
             if submit:
-                # Guardar en Google Sheets
+                # 1. Guardar en Google Sheets
                 requests.post(URL_CARGAS_POST, data={
                     "entry.610070407": "ARRIME ZONA", 
                     "entry.170847116": z_loc, 
@@ -102,7 +102,7 @@ if st.session_state.admin_mode:
                 })
                 st.success("¡Guardado en la web!")
                 
-                # Mensaje formateado
+                # 2. Generar el mensaje formateado
                 mensaje_canal = (
                     f"🌾 *NUEVO OPERATIVO DE ARRIME*\n"
                     f"━━━━━━━━━━━━━━━━━━\n\n"
@@ -116,10 +116,10 @@ if st.session_state.admin_mode:
                 
                 texto_url = urllib.parse.quote(mensaje_canal)
                 
-                # LINK MEJORADO PARA WEB Y CANALES:
-                # Usamos send?text para que WhatsApp Web fuerce la apertura del selector completo
+                # LINK OPTIMIZADO PARA FORZAR BÚSQUEDA EN WHATSAPP WEB
                 link_canal = f"https://web.whatsapp.com/send?text={texto_url}"
                 
+                # Botón de Difusión
                 st.markdown(f'<a href="{link_canal}" target="_blank" class="btn-canal">📲 DIFUNDIR EN CANAL / GRUPO</a>', unsafe_allow_html=True)
                 st.cache_data.clear()
     main_col = col_a2
