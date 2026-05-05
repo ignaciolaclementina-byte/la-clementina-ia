@@ -13,6 +13,7 @@ URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7c
 ADMIN_PIN = "1323" 
 
 # --- AUTO-REFRESH NATIVO (SIN LIBRERÍAS EXTERNAS) ---
+# Esto hace que la página se refresque cada 30 segundos automáticamente
 if "last_refresh" not in st.session_state:
     st.session_state.last_refresh = time.time()
 
@@ -33,19 +34,10 @@ if time.time() - st.session_state.last_heartbeat > 900:
 def cargar_datos_seguros():
     try:
         t = int(time.time())
-        # BLINDAJE: Se usa header=None para asegurar que r[2] siempre sea la columna C
-        df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}", header=None).fillna("-")
+        df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
         if not df_ca.empty:
-            # Filtro de borrado lógico
             mask = df_ca.astype(str).apply(lambda x: x.str.contains('BORRADO', case=False)).any(axis=1)
-            # Extracción de referencias de borrado
-            df_borrados = df_ca[mask]
-            refs_borradas = []
-            if not df_borrados.empty:
-                for col in df_borrados.columns:
-                    extraidos = df_borrados[col].astype(str).str.extract(r'REF:(.*)')[0].dropna().tolist()
-                    refs_borradas.extend(extraidos)
-            
+            refs_borradas = df_ca[mask].astype(str).apply(lambda x: x.str.extract(r'REF:(.*)')[0].dropna(), axis=1).stack().tolist()
             df_ca = df_ca[~mask]
             if refs_borradas:
                 df_ca = df_ca[~df_ca.iloc[:, 0].astype(str).isin(refs_borradas)]
@@ -145,31 +137,24 @@ else:
 # --- 7. VISUALIZACIÓN DE CARDS (PÚBLICO) ---
 with main_col:
     if not df_ca_raw.empty:
-        # Filtramos filas que contienen "ARRIME" de forma segura
         df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
         cols_arr = st.columns(2)
         for i, (idx, r) in enumerate(df_arrime.iterrows()):
-            # BLINDAJE CRÍTICO: Verificamos longitud de la fila antes de acceder
-            if len(r) >= 5:
-                zona_val = r[2]
-                detalle_val = r[3]
-                telefono_val = r[4]
-                
-                texto_cosecha = urllib.parse.quote(f"🌾 *OPERATIVO COSECHA*\n\nHola, me contacto por el arrime en:\n📍 *ZONA:* {zona_val}\n📝 *DETALLE:* {detalle_val}\n\nMe gustaría coordinar unidades.")
-                
-                with cols_arr[i % 2]:
-                    st.markdown(f'''
-                        <div class="card-cosecha">
-                            <div class="route-txt" style="color:#2e7d32;">📍 {zona_val}</div>
-                            <b>DETALLE:</b> {detalle_val}<br>
-                            <b>TEL:</b> {ocultar_telefono(telefono_val)}<br>
-                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(telefono_val)}&text={texto_cosecha}" target="_blank" class="btn-wsp">🚜 CONTACTAR</a>
-                        </div>
-                    ''', unsafe_allow_html=True)
-                    if st.session_state.admin_mode:
-                        if st.button(f"🗑️ BORRAR #{i}", key=f"del_arr_{idx}"):
-                            requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.170847116": "BORRADO", "entry.576675281": f"REF:{r[0]}", "entry.1930562861": "SISTEMA", "entry.466540450": "0"})
-                            st.cache_data.clear(); st.rerun()
+            if len(r) < 5: continue
+            texto_cosecha = urllib.parse.quote(f"🌾 *OPERATIVO COSECHA*\n\nHola, me contacto por el arrime en:\n📍 *ZONA:* {r[2]}\n📝 *DETALLE:* {r[3]}\n\nMe gustaría coordinar unidades.")
+            with cols_arr[i % 2]:
+                st.markdown(f'''
+                    <div class="card-cosecha">
+                        <div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>
+                        <b>DETALLE:</b> {r[3]}<br>
+                        <b>TEL:</b> {ocultar_telefono(r[4])}<br>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={texto_cosecha}" target="_blank" class="btn-wsp">🚜 CONTACTAR</a>
+                    </div>
+                ''', unsafe_allow_html=True)
+                if st.session_state.admin_mode:
+                    if st.button(f"🗑️ BORRAR #{i}", key=f"del_arr_{idx}"):
+                        requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.170847116": "BORRADO", "entry.576675281": f"REF:{r[0]}", "entry.1930562861": "SISTEMA", "entry.466540450": "0"})
+                        st.cache_data.clear(); st.rerun()
 
 # --- 8. PIE DE PÁGINA (AUTORÍA) ---
 st.markdown(f"""
