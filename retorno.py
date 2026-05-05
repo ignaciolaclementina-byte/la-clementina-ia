@@ -81,13 +81,15 @@ def limpiar_dato_numerico(dato):
 
 def limpiar_wsp(num):
     clean = limpiar_dato_numerico(num)
+    if not clean: return "549"
     if clean.startswith("0"): clean = clean[1:]
     if clean.startswith("15"): clean = clean.replace("15", "", 1)
     return "549" + clean if not clean.startswith("549") else clean
 
 def es_fecha_seleccionada(f, fecha_target):
     try:
-        fecha_planilla = pd.to_datetime(f, dayfirst=True).date()
+        # Intenta parsear la fecha de la planilla de forma segura
+        fecha_planilla = pd.to_datetime(f, dayfirst=True, errors='coerce').date()
         return fecha_planilla == fecha_target
     except:
         return False
@@ -110,14 +112,24 @@ with c5:
     if st.button("🔄 ACTUALIZAR", use_container_width=True):
         st.cache_data.clear(); st.rerun()
 
-# Carga de datos
-try:
-    df_ch_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}").fillna("-")
-    df_ca_raw = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}").fillna("-")
+# Carga de datos con Blindaje de KeyError
+@st.cache_data(ttl=5)
+def cargar_datos():
+    try:
+        t = int(time.time())
+        # Cargamos sin encabezado para evitar el KeyError con nombres de columnas
+        df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}", header=None).fillna("-")
+        df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}", header=None).fillna("-")
+        return df_ch, df_ca
+    except:
+        return pd.DataFrame(), pd.DataFrame()
+
+df_ch_raw, df_ca_raw = cargar_datos()
+
+# Conteo de camiones activos para el radar
+cant_camiones = 0
+if not df_ch_raw.empty:
     cant_camiones = len(df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))])
-except:
-    df_ch_raw, df_ca_raw = pd.DataFrame(), pd.DataFrame()
-    cant_camiones = 0
 
 # --- 7. RADAR AUTOMATIZADO ---
 st.markdown(f"""
@@ -143,26 +155,31 @@ with t1:
             if st.form_submit_button("SUBIR CARGA"):
                 data_carga = {"entry.610070407": f"{eo} ({elo})", "entry.170847116": f"{ed} ({eld})", "entry.576675281": ec, "entry.1930562861": en, "entry.466540450": ew}
                 requests.post(URL_CARGAS_POST, data=data_carga)
-                st.success("¡Carga Publicada!"); time.sleep(1); st.rerun()
+                st.success("¡Carga Publicada!"); time.sleep(1); st.cache_data.clear(); st.rerun()
     with col_r1:
         if not df_ch_raw.empty:
-            df_ch_raw['es_vip'] = df_ch_raw.apply(lambda r: es_vip(r[4]) or es_vip(r[5]), axis=1)
+            # Usamos iloc para evitar KeyError: 4 o 5
+            df_ch_raw['es_vip'] = df_ch_raw.apply(lambda r: es_vip(r.iloc[4]) or es_vip(r.iloc[5]), axis=1)
             df_final_ch = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             
             for _, r in df_final_ch.iterrows():
-                if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()) and (b_e == "CUALQUIERA" or b_e == str(r[3])):
+                # Filtros de búsqueda por posición
+                if (b_o == "CUALQUIERA" or b_o in str(r.iloc[1]).upper()) and \
+                   (b_d == "CUALQUIERA" or b_d in str(r.iloc[2]).upper()) and \
+                   (b_e == "CUALQUIERA" or b_e == str(r.iloc[3])):
+                    
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ CHOFER VIP</div>' if r['es_vip'] else ""
                     
-                    v4 = limpiar_dato_numerico(r[4])
-                    v5 = limpiar_dato_numerico(r[5])
+                    v4 = limpiar_dato_numerico(r.iloc[4])
+                    v5 = limpiar_dato_numerico(r.iloc[5])
                     cuit_final = v5 if len(v5) == 11 else v4
                     wsp_final = v4 if cuit_final == v5 else v5
                     
-                    msg = urllib.parse.quote(f"Hola! Te contacto desde *RETORNO MATCH VIP* 🚛. Vi tu camión *{r[3]}* disponible para la ruta *{r[1]} -> {r[2]}*. ¿Sigue disponible?")
+                    msg = urllib.parse.quote(f"Hola! Te contacto desde *RETORNO MATCH VIP* 🚛. Vi tu camión *{r.iloc[3]}* disponible para la ruta *{r.iloc[1]} -> {r.iloc[2]}*. ¿Sigue disponible?")
                     
-                    st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit_final}<br>
+                    st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</div>
+                        <b>🚛 EQUIPO:</b> {r.iloc[3]} | 🆔 <b>CUIT:</b> {cuit_final}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_final)}&text={msg}" target="_blank" class="btn-wsp">💬 CONTACTAR POR WHATSAPP</a></div>''', unsafe_allow_html=True)
 
 # PESTAÑA: SOY CHOFER
@@ -178,24 +195,24 @@ with t2:
             if st.form_submit_button("SUBIR CAMIÓN"):
                 data_camion = {"entry.1304806144": f"{o} ({lo})", "entry.1519265625": f"{d} ({ld})", "entry.597193898": e, "entry.1542650763": cu, "entry.1574172378": w}
                 requests.post(URL_CHOFERES_POST, data=data_camion)
-                st.success("¡Camión Publicado!"); time.sleep(1); st.rerun()
+                st.success("¡Camión Publicado!"); time.sleep(1); st.cache_data.clear(); st.rerun()
     with col_r2:
         if not df_ca_raw.empty:
             df_ca_raw['es_vip'] = df_ca_raw.iloc[:, 5].apply(es_vip) 
             df_final_ca = df_ca_raw[df_ca_raw.iloc[:, 0].apply(lambda x: es_fecha_seleccionada(x, b_fecha))].sort_values(by='es_vip', ascending=False)
             
             for _, r in df_final_ca.iterrows():
-                if (b_o == "CUALQUIERA" or b_o in str(r[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r[2]).upper()):
+                if (b_o == "CUALQUIERA" or b_o in str(r.iloc[1]).upper()) and (b_d == "CUALQUIERA" or b_d in str(r.iloc[2]).upper()):
                     clase = "card-vip" if r['es_vip'] else "card-white"
                     label = '<div class="vip-label">⭐ EMPRESA VIP</div>' if r['es_vip'] else ""
                     
-                    empresa_visual = str(r[5]).replace(".0", "").strip()
-                    wsp_de_carga = str(r[4])
+                    empresa_visual = str(r.iloc[5]).replace(".0", "").strip()
+                    wsp_de_carga = str(r.iloc[4])
                     
-                    msg_carga = urllib.parse.quote(f"Hola! Vi tu carga de *{r[1]}* a *{r[2]}* en *RETORNO MATCH VIP*. ¿Sigue disponible?")
+                    msg_carga = urllib.parse.quote(f"Hola! Vi tu carga de *{r.iloc[1]}* a *{r.iloc[2]}* en *RETORNO MATCH VIP*. ¿Sigue disponible?")
                     
-                    st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r[1]} ➔ {r[2]}</div>
-                        <b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {empresa_visual}<br>
+                    st.markdown(f'''<div class="{clase}">{label}<div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</div>
+                        <b>📦 CARGA:</b> {r.iloc[3]} | 🏢 <b>EMPRESA:</b> {empresa_visual}<br>
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_de_carga)}&text={msg_carga}" target="_blank" class="btn-wsp">💬 CONSULTAR CARGA</a></div>''', unsafe_allow_html=True)
 
 # --- 8. PANEL DE CONTROL (CON GESTIÓN RÁPIDA VIP) ---
