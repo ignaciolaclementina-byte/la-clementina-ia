@@ -12,13 +12,14 @@ GID_CARGAS = "1267917528"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 ADMIN_PIN = "1323" 
 
-# --- AUTO-REFRESH NATIVO (FORZADO CADA 5 SEGUNDOS) ---
+# --- AUTO-REFRESH NATIVO (SIN LIBRERÍAS EXTERNAS) ---
+# Configurado a 5 segundos para actualización rápida tras borrar
 if "last_refresh" not in st.session_state:
     st.session_state.last_refresh = time.time()
 
 if time.time() - st.session_state.last_refresh > 5:
     st.session_state.last_refresh = time.time()
-    st.cache_data.clear() # Limpia toda la caché de datos
+    st.cache_data.clear()
     st.rerun()
 
 # --- 2. SISTEMA ANTI-PAUSA ---
@@ -28,13 +29,12 @@ if time.time() - st.session_state.last_heartbeat > 900:
     st.session_state.last_heartbeat = time.time()
     st.rerun()
 
-# --- 3. CARGA DE DATOS SIN CACHÉ ETERNA ---
-@st.cache_data(ttl=1) # TTL de 1 segundo para máxima frescura
-def cargar_datos_seguros(timestamp):
+# --- 3. CARGA DE DATOS SEGUROS ---
+@st.cache_data(ttl=5) 
+def cargar_datos_seguros():
     try:
-        # Usamos el timestamp en la URL para engañar a Google y que no nos de datos viejos
-        url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&cache_buster={timestamp}"
-        df_ca = pd.read_csv(url).fillna("-")
+        t = int(time.time())
+        df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
         if not df_ca.empty:
             mask = df_ca.astype(str).apply(lambda x: x.str.contains('BORRADO', case=False)).any(axis=1)
             refs_borradas = df_ca[mask].astype(str).apply(lambda x: x.str.extract(r'REF:(.*)')[0].dropna(), axis=1).stack().tolist()
@@ -45,8 +45,7 @@ def cargar_datos_seguros(timestamp):
     except:
         return pd.DataFrame()
 
-# Pasamos el tiempo actual como argumento para invalidar la caché en cada ejecución
-df_ca_raw = cargar_datos_seguros(int(time.time()))
+df_ca_raw = cargar_datos_seguros()
 
 # --- 4. FUNCIONES AUXILIARES ---
 def limpiar_dato_numerico(dato):
@@ -93,11 +92,12 @@ if st.session_state.admin_mode:
     col_a1, col_a2 = st.columns([1, 2.2])
     with col_a1:
         st.markdown("<h4 style='color:white;'>📢 Cargar Nuevo Arrime</h4>", unsafe_allow_html=True)
-        with st.form("f_arr", clear_on_submit=True):
+        with st.form("f_arr", clear_on_submit=False):
             z_loc = st.text_input("📍 Zona")
             g_det = st.text_input("🌾 Detalle")
             t_val = st.text_input("💰 Tarifa")
             w_arr = st.text_input("📱 WhatsApp de contacto")
+            
             submit = st.form_submit_button("✅ PUBLICAR Y DIFUNDIR")
             
             if submit:
@@ -108,8 +108,27 @@ if st.session_state.admin_mode:
                     "entry.1930562861": "COSECHA", 
                     "entry.466540450": w_arr
                 })
+                st.success("¡Guardado en la web!")
+                
+                mensaje_canal = (
+                    f"🌾 *NUEVO OPERATIVO DE ARRIME*\n"
+                    f"━━━━━━━━━━━━━━━━━━\n\n"
+                    f"📍 *ZONA:* {z_loc}\n"
+                    f"📝 *DETALLE:* {g_det}\n"
+                    f"💰 *TARIFA:* {t_val}\n\n"
+                    f"🚛 *POSTULATE AQUÍ:* \n"
+                    f"https://retorno-match-sanjorge.streamlit.app/\n\n"
+                    f"✅ _Gestionado por Ignacio Diaz_"
+                )
+                
+                texto_url = urllib.parse.quote(mensaje_canal)
+                link_difusion = f"https://api.whatsapp.com/send?text={texto_url}"
+                
+                st.markdown("---")
+                st.markdown(f'<a href="{link_difusion}" target="_blank" class="btn-difusion">📲 ENVIAR AL GRUPO</a>', unsafe_allow_html=True)
+                st.markdown("📋 **O COPIÁ EL TEXTO:**")
+                st.code(mensaje_canal, language="text")
                 st.cache_data.clear()
-                st.rerun()
     main_col = col_a2
 else:
     st.markdown('<div style="background: rgba(241, 196, 15, 0.1); border: 1px dashed #f1c40f; color: #f1c40f; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 20px;">Modo Visualización - Contactar para coordinar unidades</div>', unsafe_allow_html=True)
@@ -135,8 +154,7 @@ with main_col:
                 if st.session_state.admin_mode:
                     if st.button(f"🗑️ BORRAR #{i}", key=f"del_arr_{idx}"):
                         requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.170847116": "BORRADO", "entry.576675281": f"REF:{r[0]}", "entry.1930562861": "SISTEMA", "entry.466540450": "0"})
-                        st.cache_data.clear()
-                        st.rerun()
+                        st.cache_data.clear(); st.rerun()
 
 # --- 8. PIE DE PÁGINA (AUTORÍA) ---
 st.markdown(f"""
@@ -151,8 +169,6 @@ with st.expander("⚙️ ACCESO EXCLUSIVO"):
     if pin == ADMIN_PIN:
         st.session_state.admin_mode = True
         st.success("Acceso concedido.")
-        if st.button("LIMPIAR CACHÉ MANUAL"):
-            st.cache_data.clear()
-            st.rerun()
+        if st.button("ACTUALIZAR WEB"): st.cache_data.clear(); st.rerun()
     else:
         st.session_state.admin_mode = False
