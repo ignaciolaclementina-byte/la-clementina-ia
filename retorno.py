@@ -12,8 +12,7 @@ GID_CARGAS = "1267917528"
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 ADMIN_PIN = "1323" 
 
-# --- AUTO-REFRESH NATIVO (SIN LIBRERÍAS EXTERNAS) ---
-# Configurado a 5 segundos para actualización rápida tras borrar
+# --- AUTO-REFRESH NATIVO ---
 if "last_refresh" not in st.session_state:
     st.session_state.last_refresh = time.time()
 
@@ -29,18 +28,21 @@ if time.time() - st.session_state.last_heartbeat > 900:
     st.session_state.last_heartbeat = time.time()
     st.rerun()
 
-# --- 3. CARGA DE DATOS SEGUROS ---
+# --- 3. CARGA DE DATOS SEGUROS (CORRECCIÓN DE KEYERROR) ---
 @st.cache_data(ttl=5) 
 def cargar_datos_seguros():
     try:
         t = int(time.time())
-        df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
+        url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}"
+        df_ca = pd.read_csv(url).fillna("-")
+        
         if not df_ca.empty:
+            # Filtrado de borrados
             mask = df_ca.astype(str).apply(lambda x: x.str.contains('BORRADO', case=False)).any(axis=1)
             refs_borradas = df_ca[mask].astype(str).apply(lambda x: x.str.extract(r'REF:(.*)')[0].dropna(), axis=1).stack().tolist()
             df_ca = df_ca[~mask]
             if refs_borradas:
-                df_ca = df_ca[~df_ca.iloc[:, 0].astype(str).isin(refs_borradas)]
+                df_ca = df_ca[~df_ca.iloc[:, 0].astype(str).isin([str(r) for r in refs_borradas])]
         return df_ca
     except:
         return pd.DataFrame()
@@ -87,7 +89,7 @@ st.markdown("<h1 style='text-align:center; color:white;'>🌾 OPERATIVO ARRIME C
 radar_txt = f"{st.session_state.anuncios} -- Creado por Ignacio Diaz."
 st.markdown(f'<div class="radar-container"><marquee scrollamount="8">{radar_txt}</marquee></div>', unsafe_allow_html=True)
 
-# --- 6. SECCIÓN DE PUBLICACIÓN (SÓLO ADMINISTRADOR) ---
+# --- 6. SECCIÓN DE PUBLICACIÓN ---
 if st.session_state.admin_mode:
     col_a1, col_a2 = st.columns([1, 2.2])
     with col_a1:
@@ -108,55 +110,47 @@ if st.session_state.admin_mode:
                     "entry.1930562861": "COSECHA", 
                     "entry.466540450": w_arr
                 })
-                st.success("¡Guardado en la web!")
-                
-                mensaje_canal = (
-                    f"🌾 *NUEVO OPERATIVO DE ARRIME*\n"
-                    f"━━━━━━━━━━━━━━━━━━\n\n"
-                    f"📍 *ZONA:* {z_loc}\n"
-                    f"📝 *DETALLE:* {g_det}\n"
-                    f"💰 *TARIFA:* {t_val}\n\n"
-                    f"🚛 *POSTULATE AQUÍ:* \n"
-                    f"https://retorno-match-sanjorge.streamlit.app/\n\n"
-                    f"✅ _Gestionado por Ignacio Diaz_"
-                )
-                
-                texto_url = urllib.parse.quote(mensaje_canal)
-                link_difusion = f"https://api.whatsapp.com/send?text={texto_url}"
-                
-                st.markdown("---")
-                st.markdown(f'<a href="{link_difusion}" target="_blank" class="btn-difusion">📲 ENVIAR AL GRUPO</a>', unsafe_allow_html=True)
-                st.markdown("📋 **O COPIÁ EL TEXTO:**")
-                st.code(mensaje_canal, language="text")
+                st.success("¡Guardado!")
                 st.cache_data.clear()
+                st.rerun()
     main_col = col_a2
 else:
     st.markdown('<div style="background: rgba(241, 196, 15, 0.1); border: 1px dashed #f1c40f; color: #f1c40f; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 20px;">Modo Visualización - Contactar para coordinar unidades</div>', unsafe_allow_html=True)
     main_col = st.container()
 
-# --- 7. VISUALIZACIÓN DE CARDS (PÚBLICO) ---
+# --- 7. VISUALIZACIÓN DE CARDS (SEGURO CONTRA KEYERROR) ---
 with main_col:
     if not df_ca_raw.empty:
+        # Filtramos filas que contengan 'ARRIME'
         df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
         cols_arr = st.columns(2)
+        
         for i, (idx, r) in enumerate(df_arrime.iterrows()):
-            if len(r) < 5: continue
-            texto_cosecha = urllib.parse.quote(f"🌾 *OPERATIVO COSECHA*\n\nHola, me contacto por el arrime en:\n📍 *ZONA:* {r[2]}\n📝 *DETALLE:* {r[3]}\n\nMe gustaría coordinar unidades.")
+            # Validación de columnas dinámica para evitar el error de la imagen
+            zona = r[2] if len(r) > 2 else "-"
+            detalle = r[3] if len(r) > 3 else "-"
+            telefono = r[4] if len(r) > 4 else "0"
+            
+            texto_wsp = f"🌾 *OPERATIVO COSECHA*\n\nHola, me contacto por el arrime en:\n📍 *ZONA:* {zona}\n📝 *DETALLE:* {detalle}\n\nMe gustaría coordinar unidades."
+            texto_cosecha = urllib.parse.quote(texto_wsp)
+            
             with cols_arr[i % 2]:
                 st.markdown(f'''
                     <div class="card-cosecha">
-                        <div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>
-                        <b>DETALLE:</b> {r[3]}<br>
-                        <b>TEL:</b> {ocultar_telefono(r[4])}<br>
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}&text={texto_cosecha}" target="_blank" class="btn-wsp">🚜 CONTACTAR</a>
+                        <div class="route-txt" style="color:#2e7d32;">📍 {zona}</div>
+                        <b>DETALLE:</b> {detalle}<br>
+                        <b>TEL:</b> {ocultar_telefono(telefono)}<br>
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(telefono)}&text={texto_cosecha}" target="_blank" class="btn-wsp">🚜 CONTACTAR</a>
                     </div>
                 ''', unsafe_allow_html=True)
+                
                 if st.session_state.admin_mode:
                     if st.button(f"🗑️ BORRAR #{i}", key=f"del_arr_{idx}"):
                         requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.170847116": "BORRADO", "entry.576675281": f"REF:{r[0]}", "entry.1930562861": "SISTEMA", "entry.466540450": "0"})
-                        st.cache_data.clear(); st.rerun()
+                        st.cache_data.clear()
+                        st.rerun()
 
-# --- 8. PIE DE PÁGINA (AUTORÍA) ---
+# --- 8. PIE DE PÁGINA ---
 st.markdown(f"""
 <div class="legal-footer">
     <p style="font-size: 20px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
@@ -168,7 +162,6 @@ with st.expander("⚙️ ACCESO EXCLUSIVO"):
     pin = st.text_input("PIN de Seguridad:", type="password")
     if pin == ADMIN_PIN:
         st.session_state.admin_mode = True
-        st.success("Acceso concedido.")
         if st.button("ACTUALIZAR WEB"): st.cache_data.clear(); st.rerun()
     else:
         st.session_state.admin_mode = False
