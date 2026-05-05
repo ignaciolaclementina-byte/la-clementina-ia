@@ -4,6 +4,7 @@ import time
 import requests
 import urllib.parse
 from datetime import datetime
+import math
 
 # --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - CREADO POR IGNACIO DIAZ) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
@@ -15,32 +16,44 @@ ADMIN_PIN = "1323"
 if "last_refresh" not in st.session_state:
     st.session_state.last_refresh = time.time()
 
-if time.time() - st.session_state.last_refresh > 10:
+if time.time() - st.session_state.last_refresh > 5:
     st.session_state.last_refresh = time.time()
     st.cache_data.clear()
     st.rerun()
 
-# --- 2. CARGA DE DATOS ULTRA-SEGURA ---
+# --- 2. SISTEMA ANTI-PAUSA ---
+if "last_heartbeat" not in st.session_state:
+    st.session_state.last_heartbeat = time.time()
+if time.time() - st.session_state.last_heartbeat > 900:
+    st.session_state.last_heartbeat = time.time()
+    st.rerun()
+
+# --- 3. CARGA DE DATOS SEGUROS ---
 @st.cache_data(ttl=5) 
 def cargar_datos_seguros():
     try:
         t = int(time.time())
-        # Forzamos a que no haya cabeceras para manejar índices fijos
-        url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}"
-        df = pd.read_csv(url, header=None).fillna("-")
-        
-        if df.empty:
-            return pd.DataFrame()
-            
-        # Filtrado de borrados y limpieza de basura
-        mask_borrado = df.astype(str).apply(lambda x: x.str.contains('BORRADO', case=False)).any(axis=1)
-        df = df[~mask_borrado]
-        
-        return df
-    except Exception as e:
+        # CORRECCIÓN CLAVE: header=None para que r[2] coincida siempre con la columna C
+        df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}", header=None).fillna("-")
+        if not df_ca.empty:
+            mask = df_ca.astype(str).apply(lambda x: x.str.contains('BORRADO', case=False)).any(axis=1)
+            # Extracción segura de referencias para el borrado lógico
+            df_borrados = df_ca[mask]
+            if not df_borrados.empty:
+                refs_borradas = df_borrados.astype(str).apply(lambda x: x.str.extract(r'REF:(.*)')[0].dropna(), axis=1)
+                if not refs_borradas.empty:
+                    lista_refs = refs_borradas.stack().tolist()
+                    df_ca = df_ca[~mask]
+                    df_ca = df_ca[~df_ca.iloc[:, 0].astype(str).isin(lista_refs)]
+                else:
+                    df_ca = df_ca[~mask]
+        return df_ca
+    except:
         return pd.DataFrame()
 
-# --- 3. FUNCIONES DE LIMPIEZA ---
+df_ca_raw = cargar_datos_seguros()
+
+# --- 4. FUNCIONES AUXILIARES ---
 def limpiar_dato_numerico(dato):
     s = str(dato).strip()
     if s.endswith(".0"): s = s[:-2]
@@ -57,70 +70,86 @@ def ocultar_telefono(num):
     clean = limpiar_dato_numerico(num)
     return f"*******{clean[-4:]}" if len(clean) > 4 else "*******"
 
-# --- 4. INTERFAZ ---
-st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="🌾", layout="wide")
+# --- 5. INTERFAZ Y ESTILOS ---
+st.set_page_config(page_title="RETORNO MATCH VIP - COSECHA", page_icon="🌾", layout="wide")
+
+if 'admin_mode' not in st.session_state: st.session_state.admin_mode = False
+if 'anuncios' not in st.session_state: st.session_state.anuncios = "¡Bienvenido al Operativo Cosecha!"
 
 st.markdown("""
 <style>
-    .stApp { background-color: #0e1117; }
-    .radar-container { background: #e74c3c; color: white; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 20px; font-weight: bold; }
-    .card-cosecha { background: #ffffff !important; border-left: 8px solid #2e7d32 !important; color: #1b5e20; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-    .btn-wsp { background-color: #2e7d32; color: white !important; padding: 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
-    .legal-footer { text-align: center; color: white; padding: 30px; font-size: 14px; opacity: 0.8; }
+    .stApp { background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075') !important; background-size: cover !important; background-attachment: fixed !important; }
+    .radar-container { background: rgba(231, 76, 60, 0.9); color: white; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; border: 1px solid #f1c40f; text-align: center; }
+    .card-cosecha { background: #e8f5e9 !important; border: 2px solid #2e7d32 !important; color: #1b5e20; border-radius: 15px; padding: 20px; margin-bottom: 15px; }
+    .route-txt { font-size: 20px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
+    .btn-wsp { background-color: #2e7d32; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
+    .btn-difusion { background-color: #25D366; color: white !important; padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 15px; border: 2px solid white; }
+    .legal-footer { text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center; color:white;'>🌾 OPERATIVO ARRIME COSECHA</h1>", unsafe_allow_html=True)
 
-if 'anuncios' not in st.session_state: st.session_state.anuncios = "¡Bienvenido al sistema!"
-st.markdown(f'<div class="radar-container"><marquee>{st.session_state.anuncios} -- Creado por Ignacio Diaz</marquee></div>', unsafe_allow_html=True)
+radar_txt = f"{st.session_state.anuncios} -- Creado por Ignacio Diaz."
+st.markdown(f'<div class="radar-container"><marquee scrollamount="8">{radar_txt}</marquee></div>', unsafe_allow_html=True)
 
-df_raw = cargar_datos_seguros()
+# --- 6. SECCIÓN DE PUBLICACIÓN (ADMIN) ---
+if st.session_state.admin_mode:
+    col_a1, col_a2 = st.columns([1, 2.2])
+    with col_a1:
+        st.markdown("<h4 style='color:white;'>📢 Cargar Nuevo Arrime</h4>", unsafe_allow_html=True)
+        with st.form("f_arr", clear_on_submit=True):
+            z_loc = st.text_input("📍 Zona")
+            g_det = st.text_input("🌾 Detalle")
+            t_val = st.text_input("💰 Tarifa")
+            w_arr = st.text_input("📱 WhatsApp")
+            if st.form_submit_button("✅ PUBLICAR"):
+                requests.post(URL_CARGAS_POST, data={"entry.610070407":"ARRIME", "entry.170847116":z_loc, "entry.576675281":f"{g_det}|{t_val}", "entry.1930562861":"COSECHA", "entry.466540450":w_arr})
+                st.cache_data.clear(); st.rerun()
+    main_col = col_a2
+else:
+    st.markdown('<div style="background: rgba(241, 196, 15, 0.1); border: 1px dashed #f1c40f; color: #f1c40f; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 20px;">Modo Visualización - Contactar para coordinar unidades</div>', unsafe_allow_html=True)
+    main_col = st.container()
 
-# --- 5. LÓGICA DE VISUALIZACIÓN BLINDADA ---
-if not df_raw.empty:
-    # Filtramos filas que tengan la palabra "ARRIME" en cualquier parte
-    df_arrime = df_raw[df_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
-    
-    col1, col2 = st.columns(2)
-    
-    for i, (idx, r) in enumerate(df_arrime.iterrows()):
-        try:
-            # USAMOS LÓGICA DE SEGURIDAD PARA ACCEDER A COLUMNAS
-            # Si r tiene menos de 5 elementos, este bloque fallará y saltará al 'except'
+# --- 7. VISUALIZACIÓN DE CARDS (CORREGIDO Y BLINDADO) ---
+with main_col:
+    if not df_ca_raw.empty:
+        # Filtramos filas que contienen "ARRIME"
+        df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
+        cols_arr = st.columns(2)
+        for i, (idx, r) in enumerate(df_arrime.iterrows()):
+            # BLINDAJE: Verificamos que la fila tenga suficientes columnas antes de acceder
             if len(r) >= 5:
-                # Mapeo manual basado en la estructura de tu Google Form:
-                # 0:MarcaTemporal, 1:Tipo, 2:Zona, 3:Detalle, 4:WhatsApp
-                zona = str(r[2]).upper()
-                detalle = str(r[3])
-                telefono = str(r[4])
+                zona = r[2]
+                detalle = r[3]
+                telefono = r[4]
+                texto_cosecha = urllib.parse.quote(f"🌾 *OPERATIVO COSECHA*\n📍 ZONA: {zona}\n📝 DETALLE: {detalle}")
                 
-                texto_wsp = urllib.parse.quote(f"🌾 *OPERATIVO COSECHA*\nHola, me contacto por el arrime en {zona}.\nDetalle: {detalle}")
-                
-                with col1 if i % 2 == 0 else col2:
+                with cols_arr[i % 2]:
                     st.markdown(f'''
                         <div class="card-cosecha">
-                            <div style="font-size: 18px; font-weight: bold; color: #1e3799;">📍 {zona}</div>
-                            <div style="margin: 8px 0; color: #333;">{detalle}</div>
-                            <div style="font-size: 12px; color: #666;">📞 {ocultar_telefono(telefono)}</div>
-                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(telefono)}&text={texto_wsp}" target="_blank" class="btn-wsp">🚜 CONTACTAR</a>
+                            <div class="route-txt" style="color:#2e7d32;">📍 {zona}</div>
+                            <b>DETALLE:</b> {detalle}<br>
+                            <b>TEL:</b> {ocultar_telefono(telefono)}<br>
+                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(telefono)}&text={texto_cosecha}" target="_blank" class="btn-wsp">🚜 CONTACTAR</a>
                         </div>
                     ''', unsafe_allow_html=True)
-        except Exception:
-            continue # Si una fila está rota, la salta y sigue con la siguiente
+                    if st.session_state.admin_mode:
+                        if st.button(f"🗑️ BORRAR #{i}", key=f"del_arr_{idx}"):
+                            requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.170847116": "BORRADO", "entry.576675281": f"REF:{r[0]}", "entry.1930562861": "SISTEMA", "entry.466540450": "0"})
+                            st.cache_data.clear(); st.rerun()
 
-# --- 6. PIE DE PÁGINA ---
+# --- 8. PIE DE PÁGINA (IGNACIO DIAZ) ---
 st.markdown(f"""
 <div class="legal-footer">
-    <hr style="border-color: rgba(255,255,255,0.1);">
-    <p><b>Creado por Ignacio Diaz</b></p>
-    <p>© 2026 RETORNO MATCH VIP - San Jorge, Santa Fe</p>
+    <p style="font-size: 20px; font-weight: bold; color: white;">Creado por Ignacio Diaz</p>
+    <p style="color: #f1c40f; font-weight: bold;">© 2026 RETORNO MATCH VIP</p>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 7. PANEL DE CONTROL ---
-with st.expander("⚙️"):
+with st.expander("⚙️ ACCESO"):
     pin = st.text_input("PIN:", type="password")
     if pin == ADMIN_PIN:
-        st.write("Modo Administrador Activo")
-        # Aquí puedes agregar el formulario de carga si lo necesitas de nuevo
+        st.session_state.admin_mode = True
+        st.success("Admin Activo")
+    else: st.session_state.admin_mode = False
