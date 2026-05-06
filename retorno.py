@@ -125,7 +125,6 @@ st.markdown("""
     .route-txt { font-size: 20px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { background-color: #25D366; color: white !important; padding: 10px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 10px; }
     .btn-share { background-color: #3498db; color: white !important; padding: 10px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; text-align: center; margin-top: 5px; font-size: 13px; }
-    .btn-del-mini { background-color: #c0392b !important; color: white !important; font-size: 11px !important; padding: 5px !important; margin-top: 5px !important; width: 100%; border-radius: 8px; border: none; cursor: pointer; }
     .btn-wsp:hover { background-color: #128C7E; text-decoration: none; color: white !important; }
     .legal-footer { text-align: center; color: rgba(255,255,255,0.7); padding: 50px 20px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px; }
     .stTabs [data-baseweb="tab"] { flex: 1; height: 60px !important; background-color: #2c3e50 !important; color: white !important; font-size: 16px !important; font-weight: 900 !important; }
@@ -242,7 +241,7 @@ with tab1:
         if not df_ch_raw.empty:
             df_ch_raw['vip'] = df_ch_raw.apply(lambda r: (es_vip(r[4]) or es_vip(r[5])) if len(r) > 5 else False, axis=1)
             df_f = df_ch_raw[df_ch_raw.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
-            for idx, r in df_f.iterrows():
+            for _, r in df_f.iterrows():
                 if len(r) < 6: continue
                 minutos_pub = obtener_minutos_desde_publicacion(r[0])
                 badge_nuevo = f'<span class="new-badge">🔥 HACE {int(minutos_pub)} MIN</span>' if minutos_pub < 60 else ""
@@ -254,7 +253,7 @@ with tab1:
                     card_class = get_card_style(minutos_pub, r['vip'])
                     st.markdown(f'<div class="{card_class}">{f"<span class=\'dist-badge\'>{distancia}</span>" if distancia else ""}{"<div class=\'vip-label\'>⭐ CHOFER VIP</div>" if r["vip"] else ""}<div class="route-txt">{badge_nuevo}{r[1]} ➔ {r[2]}</div><b>🚛 EQUIPO:</b> {r[3]} | 🆔 <b>CUIT:</b> {cuit} | 📱 <b>TEL:</b> {ocultar_telefono(wsp)}<br><a href="{link_wsp}" target="_blank" class="btn-wsp">✉️ ENVIAR PROPUESTA</a></div>', unsafe_allow_html=True)
 
-# --- TAB 2: CARGAS (CON BORRADO ADMIN REFORZADO - IGNACIO DIAZ) ---
+# --- TAB 2: CARGAS ---
 with tab2:
     col_f2, col_r2 = st.columns([1, 2.2])
     with col_f2:
@@ -272,7 +271,7 @@ with tab2:
             df_ca_raw['vip'] = df_ca_raw.iloc[:, 5].apply(es_vip) if len(df_ca_raw.columns) > 5 else False
             df_ca_filtered = df_ca_raw[~df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
             df_f2 = df_ca_filtered[df_ca_filtered.iloc[:, 0].apply(lambda x: es_fecha(x, b_fecha))].sort_values(by='vip', ascending=False)
-            for idx, r in df_f2.iterrows():
+            for _, r in df_f2.iterrows():
                 if len(r) < 6: continue
                 minutos = obtener_minutos_desde_publicacion(r[0])
                 badge_nuevo = f'<span class="new-badge">🔥 NUEVA ({int(minutos)} min)</span>' if minutos < 60 else ""
@@ -285,50 +284,71 @@ with tab2:
                     link_share = f"https://api.whatsapp.com/send?text={texto_difusion}"
                     card_class = get_card_style(minutos, r['vip'])
                     st.markdown(f'<div class="{card_class}">{f"<span class=\'dist-badge\'>{distancia}</span>" if distancia else ""}{"<div class=\'vip-label\'>⭐ EMPRESA VIP</div>" if r["vip"] else ""}<div class="route-txt">{badge_nuevo}{r[1]} ➔ {r[2]}</div><b>📦 CARGA:</b> {r[3]} | 🏢 <b>EMPRESA:</b> {r[5]} | 📱 <b>TEL:</b> {ocultar_telefono(r[4])}<br><a href="{link_wsp_ca}" target="_blank" class="btn-wsp">📩 CONSULTAR</a><a href="{link_share}" target="_blank" class="btn-share">📢 DIFUNDIR CARGA</a></div>', unsafe_allow_html=True)
-                    
-                    # BOTÓN BORRAR CARGA PARA ADMIN (Ignacio Diaz)
-                    if st.session_state.get('admin_mode', False):
-                        if st.button(f"🗑️ BORRAR CARGA #{idx}", key=f"del_ca_btn_{idx}"):
-                            requests.post(URL_CARGAS_POST, data={
-                                "entry.610070407": "BORRADO", 
-                                "entry.170847116": "BORRADO", 
-                                "entry.576675281": f"REF:{r[0]}", 
-                                "entry.1930562861": "SISTEMA", 
-                                "entry.466540450": "0"
-                            })
-                            st.cache_data.clear()
-                            st.rerun()
 
-# --- TAB 3: ARRIME COSECHA (CON BORRADO ADMIN REFORZADO - IGNACIO DIAZ) ---
+# --- TAB 3: ARRIME COSECHA (CORREGIDA POR IGNACIO DIAZ PARA EVITAR KEYERROR) ---
 with tab3:
     st.markdown("<h3 style='color:#f1c40f; text-align:center;'>🌾 SECCIÓN ESPECIAL: ARRIME DE COSECHA</h3>", unsafe_allow_html=True)
     col_a1, col_a2 = st.columns([1, 2.2])
     with col_a1:
         with st.form("f_arr", clear_on_submit=True):
-            z_loc = st.text_input("📍 Zona"); g_det = st.text_input("🌾 Detalle"); t_val = st.text_input("💰 Tarifa"); w_arr = st.text_input("📱 WhatsApp")
+            z_loc = st.text_input("📍 Zona")
+            g_det = st.text_input("🌾 Detalle")
+            t_val = st.text_input("💰 Tarifa")
+            w_arr = st.text_input("📱 WhatsApp")
             if st.form_submit_button("PUBLICAR ARRIME"):
-                requests.post(URL_CARGAS_POST, data={"entry.610070407": "ARRIME ZONA", "entry.170847116": z_loc, "entry.576675281": f"ARRIME|{g_det}|{t_val}", "entry.1930562861": "COSECHA", "entry.466540450": w_arr})
-                st.cache_data.clear(); st.rerun()
+                requests.post(URL_CARGAS_POST, data={
+                    "entry.610070407": "ARRIME ZONA", 
+                    "entry.170847116": z_loc, 
+                    "entry.576675281": f"ARRIME|{g_det}|{t_val}", 
+                    "entry.1930562861": "COSECHA", 
+                    "entry.466540450": w_arr
+                })
+                st.cache_data.clear()
+                st.rerun()
     with col_a2:
         if not df_ca_raw.empty:
+            # Filtro reforzado para arrimes
             df_arrime = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
-            cols_arr = st.columns(2)
-            for i, (idx, r) in enumerate(df_arrime.iterrows()):
-                if len(r) < 5: continue
-                with cols_arr[i % 2]:
-                    st.markdown(f'<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r[2]}</div>{r[3]} | 📱 {ocultar_telefono(r[4])}<br><a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r[4])}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR</a></div>', unsafe_allow_html=True)
+            
+            if df_arrime.empty:
+                st.info("No hay arrimes publicados actualmente.")
+            else:
+                cols_arr = st.columns(2)
+                for i, (idx, r) in enumerate(df_arrime.iterrows()):
+                    # VALIDACIÓN DE SEGURIDAD PARA EVITAR EL KEYERROR (image_841f79.jpg)
+                    if len(r) < 5: 
+                        continue
                     
-                    if st.session_state.get('admin_mode', False):
-                        if st.button(f"🗑️ BORRAR ARRIME #{i}", key=f"del_arr_{idx}"):
-                            requests.post(URL_CARGAS_POST, data={
-                                "entry.610070407": "BORRADO", 
-                                "entry.170847116": "BORRADO", 
-                                "entry.576675281": f"REF:{r[0]}", 
-                                "entry.1930562861": "SISTEMA", 
-                                "entry.466540450": "0"
-                            })
-                            st.cache_data.clear()
-                            st.rerun()
+                    try:
+                        with cols_arr[i % 2]:
+                            # Asignación segura de variables
+                            zona_disp = str(r[2]) if r[2] != "-" else "Zona s/d"
+                            detalle_disp = str(r[3]) if r[3] != "-" else "Cosecha activa"
+                            tel_disp = str(r[4])
+                            
+                            st.markdown(f"""
+                            <div class="card-cosecha">
+                                <div class="route-txt" style="color:#2e7d32;">📍 {zona_disp}</div>
+                                <div>{detalle_disp}</div>
+                                <b>📱 TEL:</b> {ocultar_telefono(tel_disp)}
+                                <br>
+                                <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(tel_disp)}" target="_blank" class="btn-wsp" style="background-color:#2e7d32;">🚜 CONTACTAR</a>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            if st.session_state.get('admin_mode', False):
+                                if st.button(f"🗑️ BORRAR", key=f"del_arr_{idx}"):
+                                    requests.post(URL_CARGAS_POST, data={
+                                        "entry.610070407": "BORRADO", 
+                                        "entry.170847116": "BORRADO", 
+                                        "entry.576675281": f"REF:{r[0]}", 
+                                        "entry.1930562861": "SISTEMA", 
+                                        "entry.466540450": "0"
+                                    })
+                                    st.cache_data.clear()
+                                    st.rerun()
+                    except:
+                        continue
 
 # --- PIE DE PÁGINA (BLINDADO - CREADO POR IGNACIO DIAZ) ---
 st.markdown(f"""
