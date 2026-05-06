@@ -1,229 +1,156 @@
 import streamlit as st
 import pandas as pd
+import time
 import urllib.parse
 from datetime import datetime
 import pytz
 
-# --- CONFIGURACIÓN Y BLINDAJE ---
-# Creado por Ignacio Diaz
+# --- CONFIGURACIÓN DE IDENTIDAD (IGNACIO DIAZ) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
 
-st.set_page_config(page_title="Retorno Match VIP", page_icon="🚛", layout="wide")
+st.set_page_config(page_title="Retorno Match - Ignacio Diaz", page_icon="🚛", layout="wide")
 
-# --- ESTILOS CSS PROFESIONALES (BASADO EN LA INTERFAZ ORIGINAL) ---
+# --- DISEÑO DE INTERFAZ EXCLUSIVA ---
 st.markdown("""
 <style>
-    /* Fondo principal y tipografía */
-    .stApp { background-color: #0e1117; color: #ffffff; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
     
-    /* Estructura de la tarjeta principal */
-    .match-card {
-        background-color: #1a1e24;
-        border-radius: 8px;
-        border-left: 5px solid #f1c40f;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        transition: transform 0.2s ease;
-    }
-    .match-card:hover { transform: translateY(-2px); border-left: 5px solid #e6b800; }
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; background-color: #0b0e14; }
     
-    /* Etiquetas y textos */
-    .badge-disponible {
-        background-color: #f1c40f; color: #000000; font-weight: 800; font-size: 11px;
-        padding: 4px 10px; border-radius: 4px; display: inline-block; margin-bottom: 12px;
-    }
-    .badge-tiempo {
-        background-color: #2d3748; color: #a0aec0; font-size: 11px;
-        padding: 4px 8px; border-radius: 4px; float: right; font-weight: bold;
-    }
-    .ruta-texto { font-size: 24px; font-weight: 800; color: #ffffff; margin-bottom: 15px; letter-spacing: 0.5px; }
-    .info-texto { font-size: 15px; color: #cbd5e0; margin-bottom: 8px; display: flex; align-items: center; }
-    .info-icon { width: 20px; text-align: center; margin-right: 10px; display: inline-block; }
+    .stApp { background: #0b0e14; }
     
-    /* Botón WhatsApp */
-    .btn-whatsapp {
-        display: block; width: 100%; background-color: transparent; color: #ffffff !important;
-        text-align: center; padding: 12px; border: 1px solid #374151; border-radius: 6px;
-        text-decoration: none; font-weight: 600; margin-top: 20px; transition: all 0.3s ease;
+    /* Dashboard Metrics */
+    .metric-card {
+        background: #161b22; border: 1px solid #30363d; border-radius: 12px;
+        padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
-    .btn-whatsapp:hover { background-color: #25D366; border-color: #25D366; color: #ffffff !important; }
     
+    /* Logística Card Premium */
+    .log-card {
+        background: #161b22; border-radius: 12px; border-left: 6px solid #f1c40f;
+        padding: 24px; margin-bottom: 20px; border-top: 1px solid #30363d;
+        border-right: 1px solid #30363d; border-bottom: 1px solid #30363d;
+        transition: all 0.3s ease;
+    }
+    .log-card:hover { transform: scale(1.01); border-left-width: 10px; background: #1c2128; }
+    
+    .status-new { background: #238636; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 900; }
+    .route-text { font-size: 26px; font-weight: 900; color: #f0f6fc; margin: 10px 0; letter-spacing: -0.5px; }
+    .data-label { color: #8b949e; font-size: 14px; text-transform: uppercase; font-weight: 700; }
+    .data-value { color: #f1c40f; font-size: 18px; font-weight: 600; }
+    
+    /* Botón Acción */
+    .btn-action {
+        display: block; width: 100%; background: #f1c40f; color: #000 !important;
+        text-align: center; padding: 14px; border-radius: 8px; font-weight: 800;
+        text-decoration: none; margin-top: 20px; font-size: 16px;
+    }
+    .btn-action:hover { background: #d4ac0d; }
+
     /* Footer */
-    .footer-legal {
-        text-align: center; margin-top: 60px; padding-top: 20px; border-top: 1px solid #2d3748;
-        color: #718096; font-size: 13px; font-weight: 500;
-    }
-    .creator-name { color: #f1c40f; font-weight: 800; letter-spacing: 1px; }
+    .footer { text-align: center; padding: 40px; border-top: 1px solid #30363d; margin-top: 50px; }
+    .creator { color: #f1c40f; font-weight: 900; font-size: 18px; letter-spacing: 2px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- FUNCIONES DE PROCESAMIENTO ---
-@st.cache_data(ttl=30)
-def cargar_datos():
-    """Lee los datos directamente ignorando nombres de columnas para evitar el error N/A"""
+# --- FUNCIONES DE ALTA EFICIENCIA ---
+@st.cache_data(ttl=15)
+def get_logistics_data():
     try:
-        url_ca = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}"
-        url_ch = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}"
-        df_ca = pd.read_csv(url_ca).fillna("")
-        df_ch = pd.read_csv(url_ch).fillna("")
-        return df_ca, df_ch
-    except Exception:
-        return pd.DataFrame(), pd.DataFrame()
+        t = int(time.time())
+        u_ca = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}"
+        u_ch = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}"
+        return pd.read_csv(u_ca).fillna("-"), pd.read_csv(u_ch).fillna("-")
+    except: return pd.DataFrame(), pd.DataFrame()
 
-def limpiar_telefono(num_str):
-    """Limpia caracteres y asegura el formato internacional para Argentina"""
-    limpio = str(num_str).split('.')[0].replace(',', '').replace(' ', '').replace('-', '').replace('+', '')
-    limpio = "".join(filter(str.isdigit, limpio))
-    if not limpio: return ""
-    if limpio.startswith("15") and len(limpio) == 10: limpio = limpio[2:]
-    if not limpio.startswith("549"): limpio = "549" + limpio[-10:]
-    return limpio
+def format_wsp(num):
+    clean = "".join(filter(str.isdigit, str(num).split('.')[0]))
+    if not clean: return ""
+    return "549" + clean[-10:] if not clean.startswith("549") else clean
 
-def calcular_tiempo_transcurrido(fecha_str):
-    """Calcula hace cuánto se publicó el registro"""
+def time_ago(ts):
     try:
         tz = pytz.timezone('America/Argentina/Buenos_Aires')
-        # Asumiendo formato DD/MM/YYYY HH:MM:SS de Google Forms
-        fecha_obj = datetime.strptime(str(fecha_str), "%d/%m/%Y %H:%M:%S")
-        fecha_obj = tz.localize(fecha_obj)
-        ahora = datetime.now(tz)
-        diff = ahora - fecha_obj
-        
-        minutos = int(diff.total_seconds() / 60)
-        if minutos < 60: return f"Hace {minutos} min"
-        horas = int(minutos / 60)
-        if horas < 24: return f"Hace {horas} hs"
-        return f"Hace {int(horas/24)} días"
-    except:
-        return "Reciente"
+        dt = datetime.strptime(str(ts), "%d/%m/%Y %H:%M:%S").replace(tzinfo=tz)
+        diff = datetime.now(tz) - dt
+        mins = int(diff.total_seconds() / 60)
+        return f"Hace {mins} min" if mins < 60 else f"Hace {int(mins/60)} hs", mins < 30
+    except: return "Reciente", False
 
-# --- ESTRUCTURA DE LA APLICACIÓN ---
+# --- UI PRINCIPAL ---
+st.markdown("<h1>🚛 RETORNO MATCH <span style='color:#f1c40f'>VIP</span></h1>", unsafe_allow_html=True)
+st.markdown("<p style='color:#8b949e; font-size:1.2rem;'>Centro de Gestión Logística - Ignacio Diaz</p>", unsafe_allow_html=True)
 
-# Título Principal
-st.markdown("<h1 style='display: flex; align-items: center;'><span style='font-size: 1.2em; margin-right: 15px;'>🚛</span> Retorno Match VIP</h1>", unsafe_allow_html=True)
-st.markdown("<h3>Gestión Logística Profesional</h3>", unsafe_allow_html=True)
+df_c, df_h = get_logistics_data()
 
-df_cargas, df_choferes = cargar_datos()
+# Stats Bar
+m1, m2, m3 = st.columns(3)
+with m1: st.markdown(f'<div class="metric-card"><div class="data-label">Cargas Hoy</div><div style="font-size:32px; font-weight:900;">{len(df_c)}</div></div>', unsafe_allow_html=True)
+with m2: st.markdown(f'<div class="metric-card"><div class="data-label">Camiones</div><div style="font-size:32px; font-weight:900;">{len(df_h)}</div></div>', unsafe_allow_html=True)
+with m3: st.markdown(f'<div class="metric-card"><div class="data-label">Status</div><div style="color:#238636; font-size:32px; font-weight:900;">LIVE</div></div>', unsafe_allow_html=True)
 
-# Generar listas únicas para filtros
-opciones_origen = ["TODOS"]
-opciones_equipos = []
-if not df_cargas.empty and len(df_cargas.columns) > 1:
-    opciones_origen += sorted(list(set([str(x).upper().strip() for x in df_cargas.iloc[:, 1] if str(x).strip()])))
-if not df_choferes.empty and len(df_choferes.columns) > 3:
-    opciones_equipos = sorted(list(set([str(x).title().strip() for x in df_choferes.iloc[:, 3] if str(x).strip()])))
+# Filtros Inteligentes
+st.markdown("### 🔎 Filtrar Operación")
+c1, c2 = st.columns(2)
+with c1: f_origen = st.text_input("📍 Punto de Carga", "").upper()
+with c2: f_equipo = st.multiselect("🚛 Tipo de Unidad", ["Sider", "Batea", "Chasis", "Acoplado", "Semi"])
 
-# --- BARRA LATERAL (SIDEBAR) ---
-with st.sidebar:
-    st.markdown("### Filtros de Búsqueda")
-    
-    st.markdown("<p style='font-size: 14px; margin-bottom: 5px; color: #a0aec0;'>Origen</p>", unsafe_allow_html=True)
-    filtro_origen = st.selectbox("", opciones_origen, label_visibility="collapsed")
-    
-    st.markdown("<p style='font-size: 14px; margin-bottom: 5px; margin-top: 15px; color: #a0aec0;'>Tipo de Equipo</p>", unsafe_allow_html=True)
-    filtro_equipo = st.multiselect("", opciones_equipos, label_visibility="collapsed", placeholder="Choose options")
-    
-    st.markdown("---")
-    st.markdown("### 🔧 Panel de Control")
-    if st.button("🔄 Actualizar Datos", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
+t1, t2 = st.tabs(["🔥 CARGAS DISPONIBLES", "🚚 RADAR DE CHOFERES"])
 
-# --- ÁREA PRINCIPAL DE TARJETAS ---
-tabs = st.tabs(["📦 Cargas Disponibles", "🚚 Camiones Disponibles"])
-
-# PESTAÑA 1: CARGAS
-with tabs[0]:
-    if df_cargas.empty:
-        st.info("No hay datos cargados en la base de datos de Cargas.")
+with t1:
+    if df_c.empty: st.warning("Esperando nuevas cargas...")
     else:
-        # Invertir para ver lo más nuevo primero
-        for idx in range(len(df_cargas) - 1, -1, -1):
-            row = df_cargas.iloc[idx]
-            if len(row) < 5: continue
+        for i, row in df_c.iloc[::-1].iterrows(): # Lo último primero
+            if f_origen and f_origen not in str(row.iloc[1]).upper(): continue
             
-            # Mapeo por índice (0:Marca temporal, 1:Origen, 2:Destino, 3:Mercaderia, 4:Contacto/Wsp)
-            timestamp = str(row.iloc[0])
-            origen = str(row.iloc[1]).upper().strip()
-            destino = str(row.iloc[2]).upper().strip()
-            mercaderia = str(row.iloc[3]).title().strip()
-            contacto = str(row.iloc[4]).strip()
-            empresa = str(row.iloc[5]).title().strip() if len(row) > 5 else "A Confirmar"
+            tiempo, es_nuevo = time_ago(row.iloc[0])
+            wsp = format_wsp(row.iloc[4])
+            msg = urllib.parse.quote(f"Hola! Me interesa la carga de {row.iloc[3]} desde {row.iloc[1]} a {row.iloc[2]}. Sigue disponible?")
             
-            if not origen or origen == "NAN": continue
-            if filtro_origen != "TODOS" and filtro_origen not in origen: continue
-            
-            tiempo_str = calcular_tiempo_transcurrido(timestamp)
-            wsp_limpio = limpiar_telefono(contacto)
-            
-            msg = urllib.parse.quote(f"Hola, te escribo desde el sistema Retorno Match. Me interesa la carga de {mercaderia} que publicaste de {origen} hacia {destino}. ¿Sigue disponible?")
-            enlace_wsp = f"https://wa.me/{wsp_limpio}?text={msg}" if wsp_limpio else "#"
-
             st.markdown(f"""
-            <div class="match-card">
-                <div>
-                    <span class="badge-disponible">DISPONIBLE</span>
-                    <span class="badge-tiempo">🕒 {tiempo_str}</span>
+            <div class="log-card">
+                <div style="display:flex; justify-content:space-between;">
+                    <span class="badge-disponible">CARGA DISPONIBLE</span>
+                    <span class="status-new" style="display:{'inline' if es_nuevo else 'none'}">NUEVA</span>
+                    <span style="color:#8b949e; font-size:12px;">{tiempo}</span>
                 </div>
-                <div class="ruta-texto">{origen} ➔ {destino}</div>
-                <div class="info-texto"><span class="info-icon">📦</span> <b>Carga:&nbsp;</b> {mercaderia}</div>
-                <div class="info-texto"><span class="info-icon">🏢</span> <b>Empresa:&nbsp;</b> {empresa}</div>
-                <div class="info-texto"><span class="info-icon">📱</span> <b>Contacto:&nbsp;</b> {contacto}</div>
-                <a href="{enlace_wsp}" target="_blank" class="btn-whatsapp">
-                    <span style="color: #25D366; font-size: 1.2em; vertical-align: middle;">📞</span> Contactar por WhatsApp
-                </a>
+                <div class="route-text">{row.iloc[1]} ➔ {row.iloc[2]}</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div><span class="data-label">Producto:</span><br><span class="data-value">{row.iloc[3]}</span></div>
+                    <div><span class="data-label">Empresa:</span><br><span class="data-value">{row.iloc[5] if len(row)>5 else 'Directo'}</span></div>
+                </div>
+                <a href="https://wa.me/{wsp}?text={msg}" target="_blank" class="btn-action">SOLICITAR CARGA</a>
             </div>
             """, unsafe_allow_html=True)
 
-# PESTAÑA 2: CAMIONES
-with tabs[1]:
-    if df_choferes.empty:
-        st.info("No hay datos cargados en la base de datos de Camiones.")
+with t2:
+    if df_h.empty: st.warning("No hay camiones en radar...")
     else:
-        for idx in range(len(df_choferes) - 1, -1, -1):
-            row = df_choferes.iloc[idx]
-            if len(row) < 5: continue
+        for i, row in df_h.iloc[::-1].iterrows():
+            if f_origen and f_origen not in str(row.iloc[1]).upper(): continue
+            if f_equipo and str(row.iloc[3]).title() not in f_equipo: continue
             
-            # Mapeo por índice (0:Marca temporal, 1:Origen, 2:Destino, 3:Equipo, 4:ID/CUIT, 5:Wsp)
-            timestamp = str(row.iloc[0])
-            origen = str(row.iloc[1]).upper().strip()
-            destino = str(row.iloc[2]).upper().strip()
-            equipo = str(row.iloc[3]).title().strip()
+            tiempo, _ = time_ago(row.iloc[0])
+            wsp = format_wsp(row.iloc[5] if len(row)>5 else row.iloc[4])
+            msg = urllib.parse.quote(f"Hola! Tengo una carga para tu unidad {row.iloc[3]} que está en {row.iloc[1]}. Te interesa?")
             
-            if not origen or origen == "NAN": continue
-            if filtro_origen != "TODOS" and filtro_origen not in origen: continue
-            if filtro_equipo and equipo not in filtro_equipo: continue
-            
-            wsp_raw = str(row.iloc[5]) if len(row) > 5 else str(row.iloc[4])
-            wsp_limpio = limpiar_telefono(wsp_raw)
-            tiempo_str = calcular_tiempo_transcurrido(timestamp)
-            
-            msg = urllib.parse.quote(f"Hola, te contacto por tu camión ({equipo}) publicado en Retorno Match desde {origen} a {destino}. Tengo un viaje para ofrecerte.")
-            enlace_wsp = f"https://wa.me/{wsp_limpio}?text={msg}" if wsp_limpio else "#"
-
             st.markdown(f"""
-            <div class="match-card" style="border-left-color: #3498db;">
-                <div>
-                    <span class="badge-disponible" style="background-color: #3498db; color: white;">CAMIÓN LIBRE</span>
-                    <span class="badge-tiempo">🕒 {tiempo_str}</span>
-                </div>
-                <div class="ruta-texto">{origen} ➔ {destino}</div>
-                <div class="info-texto"><span class="info-icon">🚛</span> <b>Equipo:&nbsp;</b> {equipo}</div>
-                <div class="info-texto"><span class="info-icon">📱</span> <b>Contacto:&nbsp;</b> {wsp_raw}</div>
-                <a href="{enlace_wsp}" target="_blank" class="btn-whatsapp">
-                    <span style="color: #25D366; font-size: 1.2em; vertical-align: middle;">📞</span> Ofrecer Viaje
-                </a>
+            <div class="log-card" style="border-left-color: #3498db;">
+                <span class="badge-disponible" style="background:#3498db; color:white;">CHOFER LIBRE</span>
+                <span style="color:#8b949e; font-size:12px; float:right;">{tiempo}</span>
+                <div class="route-text">{row.iloc[1]} ➔ {row.iloc[2]}</div>
+                <div><span class="data-label">Equipo:</span> <span class="data-value">{row.iloc[3]}</span></div>
+                <a href="https://wa.me/{wsp}?text={msg}" target="_blank" class="btn-action" style="background:#3498db; color:white !important;">ASIGNAR VIAJE</a>
             </div>
             """, unsafe_allow_html=True)
 
-# --- PIE DE PÁGINA BLINDADO ---
-st.markdown("""
-<div class="footer-legal">
-    <span class="creator-name">CREADO POR IGNACIO DIAZ</span><br>
-    Sistema de Gestión de Acopio y Logística<br>
-    © 2026 Todos los derechos reservados.
+# --- FOOTER AUTORÍA (BLINDADO) ---
+st.markdown(f"""
+<div class="footer">
+    <p style="color:#8b949e; margin-bottom:0;">Desarrollado bajo estándares VIP para</p>
+    <p class="creator">IGNACIO DIAZ</p>
+    <p style="color:#30363d; font-size:10px;">Versión 2026.5.1 - Estructura Nacho Blindada</p>
 </div>
 """, unsafe_allow_html=True)
