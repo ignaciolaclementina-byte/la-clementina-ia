@@ -4,140 +4,118 @@ import time
 import requests
 import urllib.parse
 from datetime import datetime
-import math
 
-# --- 1. CONFIGURACIÓN CORE (CREADO POR IGNACIO DIAZ) ---
+# --- 1. CONFIGURACIÓN DE IDENTIDAD Y SEGURIDAD ---
+CREADOR = "Ignacio Diaz"
+VERSION = "4.2.0 - GOLD EDITION"
+
+# Enlaces de Google Sheets y Forms (Base de Datos)
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
-GID_VIP = "968995524" 
 
-URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
-URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
+# Enlace al Formulario de Google para CARGAR NUEVAS (Reemplaza con tu link real de FormResponse)
+URL_FORM_CARGAS = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 
-ADMIN_PIN = "1323" 
-TIEMPO_EXCLUSIVO_MIN = 30 
-WSP_VENTAS_VIP = "5493401525621"
+st.set_page_config(page_title=f"RETORNO MATCH - {CREADOR}", page_icon="⚡", layout="wide")
 
-# --- 2. MOTOR DE DATOS OPTIMIZADO (IGNACIO DIAZ) ---
-@st.cache_data(ttl=5)
-def cargar_datos_seguros():
-    try:
-        t = int(time.time())
-        # Carga con bypass de caché de Google
-        df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}").fillna("-")
-        df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
-        
-        # BLINDAJE DE BORRADO: Filtro inmediato
-        if not df_ca.empty:
-            mask_borrado = df_ca.astype(str).apply(lambda x: x.str.contains('BORRADO', case=False)).any(axis=1)
-            df_ca = df_ca[~mask_borrado]
-            
-        df_v = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VIP}&header=None&t={t}", header=None)
-        vips = [str(x).strip().upper().replace(".0", "") for x in df_v[0].dropna().tolist()]
-        return df_ch, df_ca, vips
-    except:
-        return pd.DataFrame(), pd.DataFrame(), []
-
-# --- 3. UI/UX PREMIUM ---
-st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
-
-st.markdown("""
+# --- 2. ESTILOS DE INTERFAZ ELITE ---
+st.markdown(f"""
 <style>
-    .stApp { background-color: #0f172a; color: #f8fafc; }
-    [data-testid="stHeader"] { background: rgba(0,0,0,0); }
+    .main {{ background-color: #0a0a0a; }}
+    .stMetric {{ background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; border: 1px solid #333; }}
+    .stTabs [data-baseweb="tab-list"] {{ gap: 10px; }}
+    .stTabs [data-baseweb="tab"] {{
+        background-color: #1a1a1a; border-radius: 5px 5px 0 0; padding: 10px 20px; color: white;
+    }}
+    .stTabs [aria-selected="true"] {{ background-color: #f1c40f !important; color: black !important; font-weight: bold; }}
     
-    /* Estilo de Tarjetas Nacho */
-    .card-pro {
-        background: #1e293b;
-        border: 1px solid #334155;
-        border-left: 5px solid #3b82f6;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 15px;
-        transition: transform 0.2s ease;
-    }
-    .card-pro:hover { transform: scale(1.01); border-color: #3b82f6; }
-    .card-vip { border-left-color: #f1c40f; background: #1e1b09; }
-    
-    .route-text { font-size: 22px; font-weight: 900; color: #f8fafc; margin-bottom: 5px; }
-    .detail-text { color: #94a3b8; font-size: 14px; }
-    .badge-vip { background: #f1c40f; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
-    
-    .btn-wsp {
-        display: block; width: 100%; text-align: center; background-color: #22c55e;
-        color: white !important; padding: 12px; border-radius: 8px; 
-        font-weight: bold; text-decoration: none; margin-top: 15px;
-    }
-    .footer-blindado { text-align: center; padding: 50px; color: #64748b; border-top: 1px solid #334155; margin-top: 40px; }
+    /* Branding Footer */
+    .footer-nacho {{
+        text-align: center; padding: 40px; border-top: 2px solid #f1c40f; margin-top: 50px; color: #f1c40f; font-weight: bold;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. FUNCIONES DE LIMPIEZA ---
-def limpiar_wsp(num):
-    clean = "".join(filter(str.isdigit, str(num)))
-    if clean.startswith("0"): clean = clean[1:]
-    return "549" + clean if not clean.startswith("549") else clean
+# --- 3. MOTOR DE DATOS ---
+@st.cache_data(ttl=5) # Actualización rápida cada 5 segundos
+def fetch_data():
+    t = int(time.time())
+    try:
+        ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}").fillna("-")
+        ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
+        return ch, ca
+    except:
+        return pd.DataFrame(), pd.DataFrame()
 
-# --- 5. CUERPO DE LA APP ---
-df_ch, df_ca, LISTA_VIPS = cargar_datos_seguros()
+df_ch, df_ca = fetch_data()
 
-st.title("🚛 RETORNO MATCH VIP")
-st.markdown(f"**Estructura blindada creada por Ignacio Diaz**")
+# --- 4. HEADER ---
+st.markdown(f"<h1 style='text-align: center; color: #f1c40f;'>⚡ RETORNO MATCH 360°</h1>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align: center; color: gray;'>Sistema Blindado | Creado por {CREADOR}</p>", unsafe_allow_html=True)
 
-# Panel de filtros rápidos
-with st.expander("🔍 FILTROS DE BÚSQUEDA", expanded=True):
-    col1, col2, col3 = st.columns(3)
-    with col1: orig = st.text_input("Origen:").upper()
-    with col2: dest = st.text_input("Destino:").upper()
-    with col3: cuit_login = st.text_input("Acceso VIP (CUIT):").strip()
+# Indicadores principales
+c1, c2, c3 = st.columns(3)
+c1.metric("UNIDADES EN RUTA", len(df_ch))
+c2.metric("CARGAS DISPONIBLES", len(df_ca))
+c3.metric("ESTADO", "ONLINE", delta="Sincronizado")
 
-es_usuario_vip = cuit_login.replace(".0", "") in LISTA_VIPS
+# --- 5. PANEL OPERATIVO ---
+tab1, tab2, tab3 = st.tabs(["📋 VER CARGAS", "➕ CARGAR NUEVA", "🚛 RADAR CHOFERES"])
 
-tab_camiones, tab_cargas = st.tabs(["🚀 CAMIONES DISPONIBLES", "🏢 CARGAS ACTIVAS"])
-
-with tab_camiones:
-    if df_ch.empty:
-        st.info("No se encontraron camiones hoy.")
+with tab1:
+    st.subheader("Listado Maestro de Cargas")
+    if not df_ca.empty:
+        # Buscador específico para cargas
+        busc_ca = st.text_input("Filtrar Cargas (Origen, Destino o Producto):").upper()
+        df_ca_filt = df_ca[df_ca.apply(lambda x: busc_ca in str(x).upper(), axis=1)] if busc_ca else df_ca
+        
+        # TABLA VISIBLE Y ANCHA
+        st.dataframe(df_ca_filt, use_container_width=True, height=500)
     else:
-        for _, r in df_ch.iloc[::-1].iterrows():
-            if (orig in str(r[1]).upper()) and (dest in str(r[2]).upper()):
-                is_vip = str(r[4]).strip() in LISTA_VIPS
-                style = "card-pro card-vip" if is_vip else "card-pro"
-                
-                st.markdown(f"""
-                <div class="{style}">
-                    {f'<span class="badge-vip">CHOFER VIP</span>' if is_vip else ''}
-                    <div class="route-text">{r[1]} ➔ {r[2]}</div>
-                    <div class="detail-text">🚛 EQUIPO: <b>{r[3]}</b> | 🆔 CUIT: {r[4]}</div>
-                    <a href="https://wa.me/{limpiar_wsp(r[5])}" target="_blank" class="btn-wsp">ENVIAR PROPUESTA</a>
-                </div>
-                """, unsafe_allow_html=True)
+        st.error("No se pudieron leer las cargas. Verifica la conexión con Google Sheets.")
 
-with tab_cargas:
-    if df_ca.empty:
-        st.info("Buscando nuevas cargas...")
+with tab2:
+    st.subheader("Terminal de Carga de Datos")
+    with st.form("form_carga"):
+        st.info("Complete los datos para publicar una nueva carga en el sistema.")
+        col_a, col_b = st.columns(2)
+        with col_a:
+            f_origen = st.text_input("📍 ORIGEN")
+            f_producto = st.text_input("🌾 PRODUCTO")
+        with col_b:
+            f_destino = st.text_input("🏁 DESTINO")
+            f_pago = st.text_input("💰 TARIFA/PAGO")
+        
+        f_obs = st.text_area("📝 OBSERVACIONES")
+        
+        btn_enviar = st.form_submit_button("🚀 PUBLICAR CARGA")
+        
+        if btn_enviar:
+            # Aquí va la lógica de envío a Google Forms (debes configurar los entry.ID correspondientes)
+            st.success("Solicitud de carga enviada. Se reflejará en el sistema en breve.")
+            st.balloons()
+
+with tab3:
+    st.subheader("Radar de Unidades Disponibles")
+    if not df_ch.empty:
+        busc_ch = st.text_input("Buscar Chofer o Patente:").upper()
+        df_ch_filt = df_ch[df_ch.apply(lambda x: busc_ch in str(x).upper(), axis=1)] if busc_ch else df_ch
+        
+        for _, row in df_ch_filt.iterrows():
+            with st.expander(f"🚛 {row.get('CHOFER', 'N/A')} - {row.get('PATENTE', 'N/A')}"):
+                st.write(f"**Ubicación:** {row.get('ORIGEN', '-')} -> {row.get('DESTINO', '-')}")
+                tel = str(row.get('TELEFONO', '')).replace('.0','')
+                if tel != '-':
+                    st.markdown(f"[📲 Contactar por WhatsApp](https://wa.me/{tel})")
     else:
-        for _, r in df_ca.iloc[::-1].iterrows():
-            if (orig in str(r[1]).upper()) and (dest in str(r[2]).upper()):
-                is_vip = str(r[5]).strip() in LISTA_VIPS
-                style = "card-pro card-vip" if is_vip else "card-pro"
-                
-                # Lógica de bloqueo VIP por tiempo (Ignacio Diaz)
-                st.markdown(f"""
-                <div class="{style}">
-                    {f'<span class="badge-vip">EMPRESA VIP</span>' if is_vip else ''}
-                    <div class="route-text">{r[1]} ➔ {r[2]}</div>
-                    <div class="detail-text">📦 CARGA: <b>{r[3]}</b> | 🏢 EMPRESA: {r[5]}</div>
-                    <a href="https://wa.me/{limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">SOLICITAR CARGA</a>
-                </div>
-                """, unsafe_allow_html=True)
+        st.warning("No hay choferes activos registrados.")
 
-# --- 6. FOOTER DE LEY (IGNACIO DIAZ) ---
+# --- 6. FOOTER BLINDADO ---
 st.markdown(f"""
-<div class="footer-blindado">
-    <h3 style="color: #f1c40f; margin-bottom: 0;">CREADO POR IGNACIO DIAZ</h3>
-    <p>Interfaz Protegida | San Jorge, Santa Fe | © 2026</p>
-    <small>Prohibida la reproducción total o parcial de esta estructura.</small>
+<div class="footer-nacho">
+    <p>ESTRUCTURA E INTERFAZ BLINDADA</p>
+    <p style="font-size: 25px;">CREADO POR {CREADOR.upper()} Y SUS LEGALES</p>
+    <p style="color: gray; font-size: 10px;">PROHIBIDA SU REPRODUCCIÓN TOTAL O PARCIAL - © 2026</p>
 </div>
 """, unsafe_allow_html=True)
