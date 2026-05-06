@@ -1,181 +1,143 @@
 import streamlit as st
 import pandas as pd
 import time
+import requests
 import urllib.parse
 from datetime import datetime
+import math
 
-# --- 1. CONFIGURACIÓN DE IDENTIDAD Y BLINDAJE ---
-# "creado por Ignacio Diaz" - Requerimiento de seguridad y autoría
-CREADOR = "Ignacio Diaz"
-ESTRUCTURA = "Nacho"
-VERSION = "4.0.0 - BLACK EDITION"
-
-# IDs de Base de Datos (Google Sheets)
+# --- 1. CONFIGURACIÓN CORE (CREADO POR IGNACIO DIAZ) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
-GID_VIP = "968995524"
+GID_VIP = "968995524" 
 
-st.set_page_config(page_title=f"{ESTRUCTURA} VIP - {CREADOR}", page_icon="📈", layout="wide")
+URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
+URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 
-# --- 2. INTERFAZ DE ALTO IMPACTO (CSS CUSTOM) ---
-st.markdown(f"""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-    
-    * {{ font-family: 'Inter', sans-serif; }}
-    
-    .main {{ background-color: #050505; }}
-    
-    /* Contenedor Pro */
-    .st-emotion-cache-12w0qpk {{ border-radius: 20px; }}
-    
-    /* Card de Camión Estilo Apple */
-    .truck-card {{
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 15px;
-        transition: all 0.3s ease;
-    }}
-    .truck-card:hover {{
-        border-color: #f1c40f;
-        transform: translateY(-3px);
-        background: rgba(241, 196, 15, 0.05);
-    }}
-    
-    /* Branding */
-    .badge-vip {{
-        background: linear-gradient(45deg, #f1c40f, #f39c12);
-        color: black;
-        padding: 2px 10px;
-        border-radius: 10px;
-        font-weight: 900;
-        font-size: 0.7em;
-    }}
+ADMIN_PIN = "1323" 
+TIEMPO_EXCLUSIVO_MIN = 30 
+WSP_VENTAS_VIP = "5493401525621"
 
-    /* Footer Blindado */
-    .footer-blindado {{
-        text-align: center;
-        padding: 50px;
-        margin-top: 50px;
-        background: #000;
-        border-top: 4px solid #f1c40f;
-        color: #fff;
-    }}
-</style>
-""", unsafe_allow_html=True)
-
-# --- 3. PROCESAMIENTO DE DATOS (NÚCLEO NACHO) ---
-@st.cache_data(ttl=10)
+# --- 2. MOTOR DE DATOS OPTIMIZADO (IGNACIO DIAZ) ---
+@st.cache_data(ttl=5)
 def cargar_datos_seguros():
-    t = int(time.time())
     try:
-        # Carga optimizada
+        t = int(time.time())
+        # Carga con bypass de caché de Google
         df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}").fillna("-")
         df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
         
-        # Formateo de Códigos (Sin comas ni decimales según requerimiento)
-        for df in [df_ch, df_ca]:
-            if 'CODIGO' in df.columns:
-                df['CODIGO'] = df['CODIGO'].apply(lambda x: str(x).split('.')[0].replace(',',''))
-        
-        return df_ch, df_ca
+        # BLINDAJE DE BORRADO: Filtro inmediato
+        if not df_ca.empty:
+            mask_borrado = df_ca.astype(str).apply(lambda x: x.str.contains('BORRADO', case=False)).any(axis=1)
+            df_ca = df_ca[~mask_borrado]
+            
+        df_v = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VIP}&header=None&t={t}", header=None)
+        vips = [str(x).strip().upper().replace(".0", "") for x in df_v[0].dropna().tolist()]
+        return df_ch, df_ca, vips
     except:
-        return pd.DataFrame(), pd.DataFrame()
+        return pd.DataFrame(), pd.DataFrame(), []
 
-df_ch, df_ca = cargar_datos_seguros()
+# --- 3. UI/UX PREMIUM ---
+st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
-# --- 4. ENCABEZADO ESTRATÉGICO ---
-c_head1, c_head2 = st.columns([2, 1])
-with c_head1:
-    st.markdown(f"<h1 style='margin:0; letter-spacing:-1px;'>RETORNO MATCH <span style='color:#f1c40f;'>360°</span></h1>", unsafe_allow_html=True)
-    st.markdown(f"<p style='color:gray; margin-bottom:20px;'>Infraestructura de Datos: <b>{CREADOR}</b></p>", unsafe_allow_html=True)
-
-with c_head2:
-    st.markdown(f"""
-    <div style="text-align:right; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px;">
-        <small style="color:gray;">ESTADO DEL SERVIDOR</small><br>
-        <b style="color:#2ecc71;">● SISTEMA OPERATIVO</b><br>
-        <small style="color:white; opacity:0.5;">v{VERSION}</small>
-    </div>
-    """, unsafe_allow_html=True)
-
-# --- 5. PANEL DE CONTROL (DASHBOARD) ---
-m1, m2, m3, m4 = st.columns(4)
-with m1:
-    st.metric("FLOTA ACTIVA", len(df_ch), "🚚")
-with m2:
-    st.metric("CARGAS DISPONIBLES", len(df_ca), "📦")
-with m3:
-    st.metric("HUB LOGÍSTICO", "San Jorge", "📍")
-with m4:
-    st.metric("TENDENCIA", "+12%", "📈")
-
-# --- 6. MÓDULO DE OPERACIONES ---
-tab_radar, tab_market, tab_maps = st.tabs(["⚡ RADAR DE UNIDADES", "🏦 MERCADO DE CARGAS", "🌍 MAPA DE FLUJO"])
-
-with tab_radar:
-    col_search1, col_search2 = st.columns([3, 1])
-    with col_search1:
-        busqueda = st.text_input("🔍 Buscar por destino, chofer o patente...", placeholder="Ej: Rosario, Scania, AC123...").upper()
+st.markdown("""
+<style>
+    .stApp { background-color: #0f172a; color: #f8fafc; }
+    [data-testid="stHeader"] { background: rgba(0,0,0,0); }
     
-    if not df_ch.empty:
-        # Filtrado inteligente
-        mask = df_ch.apply(lambda x: busqueda in str(x).upper(), axis=1)
-        df_final = df_ch[mask] if busqueda else df_ch
-        
-        for _, row in df_final.iterrows():
-            with st.container():
+    /* Estilo de Tarjetas Nacho */
+    .card-pro {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-left: 5px solid #3b82f6;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: transform 0.2s ease;
+    }
+    .card-pro:hover { transform: scale(1.01); border-color: #3b82f6; }
+    .card-vip { border-left-color: #f1c40f; background: #1e1b09; }
+    
+    .route-text { font-size: 22px; font-weight: 900; color: #f8fafc; margin-bottom: 5px; }
+    .detail-text { color: #94a3b8; font-size: 14px; }
+    .badge-vip { background: #f1c40f; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+    
+    .btn-wsp {
+        display: block; width: 100%; text-align: center; background-color: #22c55e;
+        color: white !important; padding: 12px; border-radius: 8px; 
+        font-weight: bold; text-decoration: none; margin-top: 15px;
+    }
+    .footer-blindado { text-align: center; padding: 50px; color: #64748b; border-top: 1px solid #334155; margin-top: 40px; }
+</style>
+""", unsafe_allow_html=True)
+
+# --- 4. FUNCIONES DE LIMPIEZA ---
+def limpiar_wsp(num):
+    clean = "".join(filter(str.isdigit, str(num)))
+    if clean.startswith("0"): clean = clean[1:]
+    return "549" + clean if not clean.startswith("549") else clean
+
+# --- 5. CUERPO DE LA APP ---
+df_ch, df_ca, LISTA_VIPS = cargar_datos_seguros()
+
+st.title("🚛 RETORNO MATCH VIP")
+st.markdown(f"**Estructura blindada creada por Ignacio Diaz**")
+
+# Panel de filtros rápidos
+with st.expander("🔍 FILTROS DE BÚSQUEDA", expanded=True):
+    col1, col2, col3 = st.columns(3)
+    with col1: orig = st.text_input("Origen:").upper()
+    with col2: dest = st.text_input("Destino:").upper()
+    with col3: cuit_login = st.text_input("Acceso VIP (CUIT):").strip()
+
+es_usuario_vip = cuit_login.replace(".0", "") in LISTA_VIPS
+
+tab_camiones, tab_cargas = st.tabs(["🚀 CAMIONES DISPONIBLES", "🏢 CARGAS ACTIVAS"])
+
+with tab_camiones:
+    if df_ch.empty:
+        st.info("No se encontraron camiones hoy.")
+    else:
+        for _, r in df_ch.iloc[::-1].iterrows():
+            if (orig in str(r[1]).upper()) and (dest in str(r[2]).upper()):
+                is_vip = str(r[4]).strip() in LISTA_VIPS
+                style = "card-pro card-vip" if is_vip else "card-pro"
+                
                 st.markdown(f"""
-                <div class="truck-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span class="badge-vip">CHOFER VIP</span>
-                        <span style="color:gray; font-size:0.8em;">ID: {row.get('PATENTE', '-')}</span>
-                    </div>
-                    <h2 style="margin:10px 0; color:white;">{row.get('CHOFER', 'SIN NOMBRE')}</h2>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
-                        <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;">
-                            <small style="color:#f1c40f;">ORIGEN</small><br><b>{row.get('ORIGEN', '-')}</b>
-                        </div>
-                        <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;">
-                            <small style="color:#f1c40f;">DESTINO</small><br><b>{row.get('DESTINO', '-')}</b>
-                        </div>
-                    </div>
+                <div class="{style}">
+                    {f'<span class="badge-vip">CHOFER VIP</span>' if is_vip else ''}
+                    <div class="route-text">{r[1]} ➔ {r[2]}</div>
+                    <div class="detail-text">🚛 EQUIPO: <b>{r[3]}</b> | 🆔 CUIT: {r[4]}</div>
+                    <a href="https://wa.me/{limpiar_wsp(r[5])}" target="_blank" class="btn-wsp">ENVIAR PROPUESTA</a>
                 </div>
                 """, unsafe_allow_html=True)
+
+with tab_cargas:
+    if df_ca.empty:
+        st.info("Buscando nuevas cargas...")
+    else:
+        for _, r in df_ca.iloc[::-1].iterrows():
+            if (orig in str(r[1]).upper()) and (dest in str(r[2]).upper()):
+                is_vip = str(r[5]).strip() in LISTA_VIPS
+                style = "card-pro card-vip" if is_vip else "card-pro"
                 
-                # Botón de acción mejorado
-                tel = str(row.get('TELEFONO', '')).replace('.0','')
-                if tel != '-' and len(tel) > 5:
-                    wsp_link = f"https://wa.me/{tel}?text=Hola%20{row.get('CHOFER')},%20vimos%20tu%20unidad%20en%20el%20sistema%20de%20Ignacio%20Diaz."
-                    st.markdown(f"""<a href="{wsp_link}" target="_blank" style="text-decoration:none;">
-                        <div style="background:#25D366; color:black; text-align:center; padding:12px; border-radius:10px; font-weight:bold; margin-top:-25px; margin-bottom:20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-                            ENVIAR PROPUESTA WHATSAPP
-                        </div></a>""", unsafe_allow_html=True)
+                # Lógica de bloqueo VIP por tiempo (Ignacio Diaz)
+                st.markdown(f"""
+                <div class="{style}">
+                    {f'<span class="badge-vip">EMPRESA VIP</span>' if is_vip else ''}
+                    <div class="route-text">{r[1]} ➔ {r[2]}</div>
+                    <div class="detail-text">📦 CARGA: <b>{r[3]}</b> | 🏢 EMPRESA: {r[5]}</div>
+                    <a href="https://wa.me/{limpiar_wsp(r[4])}" target="_blank" class="btn-wsp">SOLICITAR CARGA</a>
+                </div>
+                """, unsafe_allow_html=True)
 
-with tab_market:
-    st.markdown("### 📦 Cargas en Oferta")
-    st.dataframe(df_ca, use_container_width=True, hide_index=True)
-
-with tab_maps:
-    st.info("Visualización de rutas estratégicas optimizada para la zona de San Jorge.")
-    # Mapa simplificado para evitar errores de librerías externas
-    st.map(df_ch) if 'lat' in df_ch.columns else st.warning("Coordenadas GPS en proceso de sincronización.")
-
-# --- 7. FOOTER DEFINITIVO (BLINDAJE IGNACIO DIAZ) ---
+# --- 6. FOOTER DE LEY (IGNACIO DIAZ) ---
 st.markdown(f"""
 <div class="footer-blindado">
-    <p style="letter-spacing:5px; margin-bottom:10px; opacity:0.6;">SOFTWARE DE GESTIÓN LOGÍSTICA</p>
-    <h1 style="margin:0; font-weight:900; color:#f1c40f;">{CREADOR.upper()}</h1>
-    <p style="font-size:1.2em; margin:15px 0;">"La estructura e interfaz que está funcionando debe ser blindada"</p>
-    <div style="margin-top:30px; border:1px solid #333; display:inline-block; padding:10px 30px; border-radius:50px;">
-        Creado por <b>{CREADOR}</b> y sus legales • © 2026
-    </div>
-    <div style="margin-top:20px;">
-        <a href="#" style="color:gray; text-decoration:none; font-size:0.8em;">TÉRMINOS DE USO</a> | 
-        <a href="#" style="color:gray; text-decoration:none; font-size:0.8em;">PROTECCIÓN DE DATOS</a>
-    </div>
+    <h3 style="color: #f1c40f; margin-bottom: 0;">CREADO POR IGNACIO DIAZ</h3>
+    <p>Interfaz Protegida | San Jorge, Santa Fe | © 2026</p>
+    <small>Prohibida la reproducción total o parcial de esta estructura.</small>
 </div>
 """, unsafe_allow_html=True)
