@@ -144,7 +144,7 @@ with tab2:
 # --- 6. PIE DE PÁGINA (ESTRUCTURA NACHO) ---
 st.markdown(f"""
 <div class="footer">
-    <h2 style="color:white;">CREADO POR IGNACIO DIAZ</h2>
+    <h2 style="color:white;">CREADO POR I.S.D</h2>
     <p>ESTRUCTURA NACHO 360° | © 2026</p>
 </div>
 """, unsafe_allow_html=True)
