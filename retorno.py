@@ -20,15 +20,23 @@ ADMIN_PIN = "1323"
 TIEMPO_EXCLUSIVO_MIN = 30  
 WSP_VENTAS_VIP = "5493401525621"
 
-COORDS_PROV = {
-    "TODAS": (0,0), "BUENOS AIRES": (-34.921, -57.954), "CABA": (-34.603, -58.381), "CATAMARCA": (-28.469, -65.785),
-    "CHACO": (-27.451, -58.986), "CHUBUT": (-43.300, -65.102), "CORDOBA": (-31.413, -64.181),
-    "CORRIENTES": (-27.469, -58.830), "ENTRE RIOS": (-31.733, -60.529), "FORMOSA": (-26.177, -58.178),
-    "JUJUY": (-24.185, -65.299), "LA PAMPA": (-36.616, -64.283), "LA RIOJA": (-29.411, -66.850),
-    "MENDOZA": (-32.889, -68.845), "MISIONES": (-27.367, -55.896), "NEUQUEN": (-38.951, -68.059),
-    "RIO NEGRO": (-40.813, -62.996), "SALTA": (-24.785, -65.411), "SAN JUAN": (-31.537, -68.536),
-    "SAN LUIS": (-33.295, -66.335), "SANTA CRUZ": (-51.622, -69.218), "SANTA FE": (-31.633, -60.700),
-    "SANTIAGO DEL ESTERO": (-27.795, -64.263), "TIERRA DEL FUEGO": (-54.801, -68.303), "TUCUMAN": (-26.824, -65.222)
+# --- BASE DE DATOS DE PUEBLOS Y CIUDADES ---
+COORDS_CIUDADES = {
+    "TODAS": (0,0),
+    # Santa Fe
+    "SAN JORGE (SF)": (-31.896, -61.859), "ROSARIO (SF)": (-32.946, -60.639), "SANTA FE (SF)": (-31.633, -60.700),
+    "RAFAELA (SF)": (-31.250, -61.486), "CAÑADA DE GOMEZ (SF)": (-32.816, -61.395), "VENADO TUERTO (SF)": (-33.745, -61.968),
+    "SAN CRISTOBAL (SF)": (-30.310, -61.237), "AVELLANEDA (SF)": (-29.117, -59.658), "CRISPI (SF)": (-31.721, -61.916),
+    "SASTRE (SF)": (-31.766, -61.828), "CARLOS PELLEGRINI (SF)": (-32.052, -61.789),
+    # Córdoba
+    "CORDOBA (CBA)": (-31.413, -64.181), "SAN FRANCISCO (CBA)": (-31.427, -62.082), "RIO CUARTO (CBA)": (-33.123, -64.348),
+    "VILLA MARIA (CBA)": (-32.407, -63.240), "JESUS MARIA (CBA)": (-30.981, -64.093), "MARCOS JUAREZ (CBA)": (-32.697, -62.106),
+    # Buenos Aires / Puertos
+    "BAHIA BLANCA (BA)": (-38.718, -62.266), "QUEQUEN (BA)": (-38.541, -58.713), "CAMPANA (BA)": (-34.163, -58.959),
+    "ZARATE (BA)": (-34.096, -59.024), "RAMALLO (BA)": (-33.483, -60.000), "PERGAMINO (BA)": (-33.891, -60.573),
+    # Otras Regiones
+    "PARANA (ER)": (-31.733, -60.529), "VICTORIA (ER)": (-32.624, -60.155), "SGO DEL ESTERO": (-27.795, -64.263),
+    "TUCUMAN": (-26.824, -65.222), "SALTA": (-24.785, -65.411), "RESISTENCIA (CH)": (-27.451, -58.986)
 }
 
 # --- 2. GESTIÓN DE SESIÓN ---
@@ -73,8 +81,8 @@ def ocultar_telefono(num):
     return f"*******{clean[-4:]}" if len(clean) > 4 else "*******"
 
 def calcular_distancia(origen, destino):
-    lat1, lon1 = COORDS_PROV.get(origen, (0,0))
-    lat2, lon2 = COORDS_PROV.get(destino, (0,0))
+    lat1, lon1 = COORDS_CIUDADES.get(origen, (0,0))
+    lat2, lon2 = COORDS_CIUDADES.get(destino, (0,0))
     if lat1 == 0 or lat2 == 0: return 0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
@@ -96,7 +104,6 @@ st.markdown("""
     .route-txt { font-size: 20px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { background: #25D366; color: white !important; padding: 12px; border-radius: 10px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; transition: 0.3s; }
     .btn-wsp:hover { background: #128C7E; transform: scale(1.02); }
-    .metric-box { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.2); }
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(255, 75, 75, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); } }
 </style>
 """, unsafe_allow_html=True)
@@ -105,7 +112,7 @@ st.markdown("""
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=80)
     st.title("🛡️ Gestión Central")
-    pin_input = st.text_input("PIN de Administrador:", type="password", help="Solo para personal autorizado")
+    pin_input = st.text_input("PIN de Administrador:", type="password")
     
     if pin_input == ADMIN_PIN:
         st.session_state.admin_mode = True
@@ -116,39 +123,24 @@ with st.sidebar:
             st.rerun()
     else:
         st.session_state.admin_mode = False
-        if pin_input: st.error("PIN Incorrecto")
 
     st.divider()
     user_cuit = st.text_input("🔑 CUIT de Acceso VIP:", placeholder="Ingrese su CUIT").strip()
     es_user_vip = user_cuit in LISTA_VIPS_GLOBAL
-    
-    if es_user_vip:
-        st.warning("✨ ACCESO VIP HABILITADO")
-    elif user_cuit:
-        st.info("💡 Acceso Estándar")
 
-# --- CABECERA PROFESIONAL ---
-col_t1, col_t2 = st.columns([3, 1])
-with col_t1:
-    st.title("🚛 RETORNO MATCH VIP")
-    st.caption("Logística Inteligente | Panel de Control Real-Time")
-with col_t2:
-    if not df_ca_raw.empty:
-        total_ca = len(df_ca_raw)
-        st.metric("Cargas Activas", total_ca, delta=f"+{total_ca//2} hoy")
+# --- CABECERA ---
+st.title("🚛 RETORNO MATCH VIP")
+st.markdown(f'<div style="background:#e74c3c; padding:12px; border-radius:12px; text-align:center;"><marquee scrollamount="8"><b>{st.session_state.anuncios} -- I.S.D</b></marquee></div>', unsafe_allow_html=True)
 
-# Radar de Anuncios
-st.markdown(f'<div style="background:#e74c3c; padding:12px; border-radius:12px; text-align:center; box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);"><marquee scrollamount="8"><b>{st.session_state.anuncios} -- I.S.D</b></marquee></div>', unsafe_allow_html=True)
-
-# Filtros Inteligentes
+# Filtros
 st.write("")
 c_f1, c_f2 = st.columns([2, 1])
 with c_f1:
-    busqueda_libre = st.text_input("🔎 Buscar por Ciudad, Empresa o Mercadería:", placeholder="Ej: ROSARIO, MAIZ, ACERIAS...").upper()
+    busqueda_libre = st.text_input("🔎 Buscar Localidad o Empresa:", placeholder="Ej: SAN JORGE, ROSARIO...").upper()
 with c_f2:
-    filtro_prov = st.selectbox("📍 Filtrar por Provincia:", list(COORDS_PROV.keys()))
+    filtro_loc = st.selectbox("📍 Filtrar por Ciudad Base:", list(COORDS_CIUDADES.keys()))
 
-tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES DISPONIBLES", "🏢 CARGAS DISPONIBLES", "🌾 COSECHA / ARRIME", "📊 CALCULADOR"])
+tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 CALCULADOR"])
 
 # --- TAB 1: CAMIONES ---
 with tab1:
@@ -157,33 +149,27 @@ with tab1:
         if st.session_state.admin_mode:
             st.markdown("### 📝 Registrar Camión")
             with st.form("f_ch", clear_on_submit=True):
-                o_p = st.selectbox("Origen", list(COORDS_PROV.keys()), key="o2")
-                d_p = st.selectbox("Destino", list(COORDS_PROV.keys()), key="d2")
-                eq = st.text_input("Tipo de Equipo (Ej: Batea, Sider)")
-                cu = st.text_input("CUIT Dueño/Chofer")
-                ws = st.text_input("WhatsApp de Contacto")
-                if st.form_submit_button("🚀 PUBLICAR DISPONIBILIDAD"):
-                    if eq and ws:
-                        requests.post(URL_CHOFERES_POST, data={"entry.1304806144": o_p, "entry.1519265625": d_p, "entry.597193898": eq, "entry.1542650763": cu, "entry.1574172378": ws})
-                        st.cache_data.clear(); st.success("Publicado!"); time.sleep(1); st.rerun()
-                    else: st.error("Faltan datos")
+                o_p = st.selectbox("Origen", list(COORDS_CIUDADES.keys()), key="o2")
+                d_p = st.selectbox("Destino", list(COORDS_CIUDADES.keys()), key="d2")
+                eq = st.text_input("Tipo de Equipo")
+                cu = st.text_input("CUIT Dueño")
+                ws = st.text_input("WhatsApp")
+                if st.form_submit_button("🚀 PUBLICAR"):
+                    requests.post(URL_CHOFERES_POST, data={"entry.1304806144": o_p, "entry.1519265625": d_p, "entry.597193898": eq, "entry.1542650763": cu, "entry.1574172378": ws})
+                    st.cache_data.clear(); st.rerun()
         else:
-            st.info("ℹ️ Para publicar tu camión aquí, contacta a Ignacio Diaz.")
+            st.info("ℹ️ Para publicar, contacta a Ignacio Diaz.")
     
     with c2:
         if not df_ch_raw.empty:
             for idx, r in df_ch_raw.iterrows():
-                match_prov = (filtro_prov == "TODAS" or filtro_prov in str(r.iloc[1]).upper() or filtro_prov in str(r.iloc[2]).upper())
-                if busqueda_libre in str(r).upper() and match_prov:
+                match_loc = (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[1]).upper() or filtro_loc in str(r.iloc[2]).upper())
+                if busqueda_libre in str(r).upper() and match_loc:
                     is_v = str(r.iloc[4]) in LISTA_VIPS_GLOBAL
                     st.markdown(f"""<div class="{'card-vip' if is_v else 'card-white'}">
-                    <div style="display:flex; justify-content:space-between;">
-                        <span class="route-txt">📍 {r.iloc[1]} ➔ {r.iloc[2]}</span>
-                        <span style="background:#3498db; color:white; padding:2px 10px; border-radius:20px; font-size:12px;">CHOFER DISPONIBLE</span>
-                    </div>
-                    <hr style="margin:10px 0; opacity:0.2;">
+                    <span class="route-txt">📍 {r.iloc[1]} ➔ {r.iloc[2]}</span><br>
                     <b>EQUIPO:</b> {r.iloc[3]} | 📱 <b>TEL:</b> {ocultar_telefono(r.iloc[5])}
-                    <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[5])}&text=Hola,%20vi%20tu%20camion%20disponible%20en%20RetornoMatch" class="btn-wsp">OFERTAR CARGA AL CHOFER</a>
+                    <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[5])}&text=Hola,%20vi%20tu%20camion%20en%20RetornoMatch" class="btn-wsp">OFERTAR CARGA</a>
                     </div>""", unsafe_allow_html=True)
                     if st.session_state.admin_mode:
                         if st.button(f"🗑️ Borrar #{idx}", key=f"d_ch_{idx}"):
@@ -197,115 +183,52 @@ with tab2:
         if st.session_state.admin_mode:
             st.markdown("### 📝 Nueva Carga")
             with st.form("f_ca", clear_on_submit=True):
-                o = st.selectbox("Origen", list(COORDS_PROV.keys()), key="o1")
-                d = st.selectbox("Destino", list(COORDS_PROV.keys()), key="d1")
+                o = st.selectbox("Origen", list(COORDS_CIUDADES.keys()), key="o1")
+                d = st.selectbox("Destino", list(COORDS_CIUDADES.keys()), key="d1")
                 m = st.text_input("Mercadería")
-                en = st.text_input("Empresa Solicitante")
-                w = st.text_input("WhatsApp de la Empresa")
-                urg = st.checkbox("🚨 MARCAR COMO URGENTE")
-                if st.form_submit_button("💼 PUBLICAR CARGA"):
+                en = st.text_input("Empresa")
+                w = st.text_input("WhatsApp")
+                urg = st.checkbox("🚨 URGENTE")
+                if st.form_submit_button("💼 PUBLICAR"):
                     m_final = f"⚠️URGENTE: {m}" if urg else m
                     requests.post(URL_CARGAS_POST, data={"entry.610070407": o, "entry.170847116": d, "entry.576675281": m_final, "entry.1930562861": en, "entry.466540450": w})
-                    st.cache_data.clear(); st.success("Carga Publicada"); time.sleep(1); st.rerun()
-        else:
-            st.warning("🔒 El formulario de carga está reservado para Administradores.")
+                    st.cache_data.clear(); st.rerun()
 
     with c2:
         if not df_ca_raw.empty:
             df_ca_f = df_ca_raw[~df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
             for idx, r in df_ca_f.iterrows():
-                try:
-                    match_prov = (filtro_prov == "TODAS" or filtro_prov in str(r.iloc[1]).upper() or filtro_prov in str(r.iloc[2]).upper())
-                    if busqueda_libre in str(r).upper() and match_prov:
-                        es_u = "URGENTE" in str(r.iloc[3]).upper()
-                        minutos = (datetime.now() - pd.to_datetime(r.iloc[0], dayfirst=True)).total_seconds() / 60
-                        if minutos < TIEMPO_EXCLUSIVO_MIN and not es_user_vip:
-                            st.markdown(f'''<div class="card-bloqueada">
-                                <h3 style="margin:0;">🔒 CONTENIDO EXCLUSIVO VIP</h3>
-                                <p>Disponible para todos en {int(TIEMPO_EXCLUSIVO_MIN-minutos)} minutos</p>
-                            </div>''', unsafe_allow_html=True)
-                        else:
-                            clase = "card-urgente" if es_u else "card-white"
-                            st.markdown(f"""<div class="{clase}">
-                            <div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</div>
-                            <hr style="margin:10px 0; opacity:0.1;">
-                            <div style="font-size:16px;">
-                                📦 <b>MERCADERÍA:</b> {r.iloc[3]}<br>
-                                🏢 <b>EMPRESA:</b> {r.iloc[5]}<br>
-                                📱 <b>TEL:</b> {ocultar_telefono(r.iloc[4])}
-                            </div>
-                            <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}&text=Hola,%20consulto%20por%20la%20carga%20de%20{r.iloc[1]}%20a%20{r.iloc[2]}" class="btn-wsp">SOLICITAR VIAJE</a>
-                            </div>""", unsafe_allow_html=True)
-                            if st.session_state.admin_mode:
-                                if st.button(f"🗑️ Eliminar Carga #{idx}", key=f"d_ca_{idx}"):
-                                    requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.576675281": f"REF:{r.iloc[0]}"})
-                                    st.cache_data.clear(); st.rerun()
-                except: continue
-
-# --- TAB 3: COSECHA ---
-with tab3:
-    st.write("### 🌾 Logística de Cosecha (Arrimes de Campo)")
-    c1, c2 = st.columns([1, 2.2])
-    with c1:
-        if st.session_state.admin_mode:
-            with st.form("f_arr", clear_on_submit=True):
-                z = st.text_input("📍 Zona/Localidad")
-                g = st.text_input("Detalle (Ej: Soja a Planta, 20km)")
-                w_a = st.text_input("WhatsApp")
-                urg_a = st.checkbox("🚨 ALTA PRIORIDAD")
-                if st.form_submit_button("🌾 SUBIR ARRIME"):
-                    g_final = f"⚠️URGENTE: {g}" if urg_a else g
-                    requests.post(URL_CARGAS_POST, data={"entry.610070407": "ARRIME ZONA", "entry.170847116": z, "entry.576675281": g_final, "entry.1930562861": "COSECHA", "entry.466540450": w_a})
-                    st.cache_data.clear(); st.rerun()
-    with c2:
-        if not df_ca_raw.empty:
-            df_a = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
-            for idx, r in df_a.iterrows():
                 if busqueda_libre in str(r).upper():
-                    es_u_a = "URGENTE" in str(r.iloc[3]).upper()
-                    estilo = "border: 4px solid #ff4b4b; background: #fff5f5;" if es_u_a else ""
-                    st.markdown(f"""<div class="card-cosecha" style="{estilo}">
-                    <div style="font-weight:900; color:#2e7d32; font-size:1.2rem;">📍 ZONA: {r.iloc[2]}</div>
-                    <hr style="margin:10px 0; border-color:#2e7d32; opacity:0.2;">
-                    <b>INFO:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[4])}
-                    <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" class="btn-wsp" style="background:#2e7d32;">CONTACTAR POR ARRIME</a>
-                    </div>""", unsafe_allow_html=True)
-                    if st.session_state.admin_mode:
-                        if st.button(f"🗑️ Quitar #{idx}", key=f"d_ar_{idx}"):
-                            requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.576675281": f"REF:{r.iloc[0]}"})
-                            st.cache_data.clear(); st.rerun()
+                    minutos = (datetime.now() - pd.to_datetime(r.iloc[0], dayfirst=True)).total_seconds() / 60
+                    if minutos < TIEMPO_EXCLUSIVO_MIN and not es_user_vip:
+                        st.markdown('<div class="card-bloqueada">🔒 EXCLUSIVO VIP</div>', unsafe_allow_html=True)
+                    else:
+                        es_u = "URGENTE" in str(r.iloc[3]).upper()
+                        st.markdown(f"""<div class="{'card-urgente' if es_u else 'card-white'}">
+                        <div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</div>
+                        📦 {r.iloc[3]} | 🏢 {r.iloc[5]}<br>
+                        📱 {ocultar_telefono(r.iloc[4])}
+                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" class="btn-wsp">SOLICITAR VIAJE</a>
+                        </div>""", unsafe_allow_html=True)
 
-# --- TAB 4: CALCULADOR DE COSTOS ---
+# --- TAB 4: CALCULADOR ---
 with tab4:
-    st.subheader("📊 Estimador de Fletes (Ruta en Línea Recta)")
+    st.subheader("📊 Estimador de Fletes (Pueblos y Ciudades)")
     c1, c2 = st.columns([1, 1])
     with c1:
-        loc_o = st.selectbox("📍 Punto A (Origen)", list(COORDS_PROV.keys()), key="calc_o")
-        loc_d = st.selectbox("🏁 Punto B (Destino)", list(COORDS_PROV.keys()), key="calc_d")
-        tarifa_km = st.number_input("💰 Tarifa por KM ($)", value=1200, step=50)
+        loc_o = st.selectbox("📍 Origen", list(COORDS_CIUDADES.keys()), key="calc_o")
+        loc_d = st.selectbox("🏁 Destino", list(COORDS_CIUDADES.keys()), key="calc_d")
+        tarifa_km = st.number_input("💰 Tarifa por KM ($)", value=1200)
     with c2:
         dist = calcular_distancia(loc_o, loc_d)
         if dist > 0:
-            dist_ajustada = dist * 1.25 # Factor de corrección vial 25%
+            dist_ajustada = dist * 1.25 # Factor real vial
             total = dist_ajustada * tarifa_km
-            st.markdown(f"""
-            <div style="background:rgba(255,255,255,0.1); padding:25px; border-radius:15px; border-left:10px solid #f1c40f;">
-                <h4 style="margin:0; color:#f1c40f;">RESULTADO DEL CÁLCULO</h4>
-                <p style="font-size:35px; font-weight:bold; margin:10px 0;">{dist_ajustada:.0f} KM <span style="font-size:15px; opacity:0.6;">aprox.</span></p>
-                <p style="font-size:22px;">Total Sugerido: <span style="color:#25D366; font-weight:bold;">${total:,.0f}</span></p>
-                <small style="opacity:0.7;">Distancia geodésica calculada entre capitales provinciales.</small>
-            </div>
-            """, unsafe_allow_html=True)
-            msg_calc = f"Consulta desde RetornoMatch: Flete de {loc_o} a {loc_d}. Distancia: {dist_ajustada:.0f}km. Estimado: ${total:,.0f}"
-            st.markdown(f'<a href="https://api.whatsapp.com/send?phone={WSP_VENTAS_VIP}&text={urllib.parse.quote(msg_calc)}" class="btn-wsp" style="background:#3498db;">SOLICITAR COTIZACIÓN FINAL</a>', unsafe_allow_html=True)
-        else:
-            st.info("Selecciona origen y destino para ver el cálculo.")
+            st.markdown(f"""<div style="background:rgba(255,255,255,0.1); padding:20px; border-radius:15px; border-left:10px solid #f1c40f;">
+                <h3>{dist_ajustada:.0f} KM aprox.</h3>
+                <h2>Total: ${total:,.0f}</h2>
+                <small>Cálculo basado en coordenadas de ciudades seleccionadas.</small>
+            </div>""", unsafe_allow_html=True)
 
 # --- FOOTER ---
-st.markdown(f"""
-<div style='text-align:center; margin-top:50px; padding:20px; background:rgba(255,255,255,0.05); border-radius:20px;'>
-    <p style='margin:0;'>Sistema de Gestión de Fletes v2.6</p>
-    <b>Creado por Ignacio Diaz - 2026</b><br>
-    <small>Blindaje Estructural Activo • Datos Sincronizados con Google Cloud</small>
-</div>
-""", unsafe_allow_html=True)
+st.markdown("<div style='text-align:center; margin-top:50px;'><b>Creado por Ignacio Diaz - 2026</b></div>", unsafe_allow_html=True)
