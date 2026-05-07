@@ -20,7 +20,7 @@ ADMIN_PIN = "1323"
 TIEMPO_EXCLUSIVO_MIN = 30  
 WSP_VENTAS_VIP = "5493401525621"
 
-# --- BASE DE DATOS DE PUEBLOS Y CIUDADES (PUERTOS AGREGADOS) ---
+# --- BASE DE DATOS DE PUEBLOS Y CIUDADES (PUERTOS ACTUALIZADOS) ---
 COORDS_CIUDADES = {
     "TODAS": (0,0),
     "SAN JORGE (SF)": (-31.896, -61.859), "ROSARIO (SF)": (-32.946, -60.639), "SANTA FE (SF)": (-31.633, -60.700),
@@ -158,7 +158,8 @@ with st.sidebar:
 
 # --- CABECERA ---
 st.title("🚛 RETORNO MATCH VIP")
-st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding:10px; border-radius:10px; text-align:center;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios} -- CREADO POR IGNACIO DIAZ</b></marquee></div>', unsafe_allow_html=True)
+# Mejorado: Banner limpio sin el nombre del creador en el marquee
+st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding:10px; border-radius:10px; text-align:center;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios}</b></marquee></div>', unsafe_allow_html=True)
 
 # Filtros
 st.write("")
