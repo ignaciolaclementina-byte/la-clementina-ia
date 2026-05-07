@@ -132,8 +132,6 @@ st.markdown("""
     .card-cosecha { background: #1c2a1c; border: 1px solid #2d4d2d; color: #8ebf8e; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 6px solid #4caf50; position: relative; }
     .badge-time { position: absolute; top: 10px; right: 10px; font-size: 0.75rem; background: #30363d; padding: 2px 8px; border-radius: 10px; color: #8b949e; }
     .route-txt { font-size: 1.1rem; font-weight: 800; color: #539bf5; text-transform: uppercase; line-height: 1.2; }
-    .btn-wsp { background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem; }
-    .btn-mapa { background: #21262d; color: #adbac7 !important; padding: 10px; border-radius: 8px; text-decoration: none; display: block; text-align: center; margin-top: 5px; font-size: 0.8rem; border: 1px solid #30363d; }
     .status-bar { background: #161b22; border: 1px solid #30363d; border-left: 4px solid #f1e05a; padding: 10px; border-radius: 8px; margin-bottom: 20px; color: #e6edf3; }
     .stButton>button { width: 100%; border-radius: 8px; }
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 75, 75, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); } }
@@ -215,10 +213,10 @@ with tab1:
 <div class="badge-time">{tiempo}</div>
 <span class="route-txt">📍 {r.iloc[1]} <br>➔ {r.iloc[2]}</span><br>
 <b>EQ:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[5])}
-<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" class="btn-wsp">OFERTAR CARGA</a>
+<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">OFERTAR CARGA</a>
 </div>""", unsafe_allow_html=True)
 
-# --- TAB 2: CARGAS (CON HOJA DE RUTA) ---
+# --- TAB 2: CARGAS (MEJORA DASHBOARD + HOJA DE RUTA) ---
 with tab2:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -241,16 +239,28 @@ with tab2:
                     tiempo = formatear_fecha(r.iloc[0])
                     origen, destino = str(r.iloc[1]), str(r.iloc[2])
                     estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
-                    # Generar link de Google Maps para Hoja de Ruta
+                    # Link Hoja de Ruta mejorado
                     link_ruta = f"https://www.google.com/maps/dir/?api=1&origin={urllib.parse.quote(origen)}&destination={urllib.parse.quote(destino)}&travelmode=driving"
                     
-                    st.markdown(f"""<div class="{estilo}">
-<div class="badge-time">{tiempo}</div>
-<div class="route-txt">{origen} <br>➔ {destino}</div>
-📦 {r.iloc[3]} | 🏢 {r.iloc[5]}
-<a href="{generar_wsp_link(r.iloc[4], origen, destino, False)}" class="btn-wsp" style="background:#2980b9;">SOLICITAR VIAJE</a>
-<a href="{link_ruta}" target="_blank" class="btn-mapa">📍 VER HOJA DE RUTA</a>
-</div>""", unsafe_allow_html=True)
+                    st.markdown(f"""
+                    <div class="{estilo}">
+                        <div class="badge-time">{tiempo}</div>
+                        <div class="route-txt" style="margin-bottom:8px;">{origen} <br>➔ {destino}</div>
+                        <div style="font-size:0.9rem; margin-bottom:12px; opacity:0.9;">
+                            📦 <b>{r.iloc[3]}</b> | 🏢 {r.iloc[5]}
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <a href="{generar_wsp_link(r.iloc[4], origen, destino, False)}" 
+                               style="flex: 2; background:#2980b9; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem;">
+                               SOLICITAR VIAJE
+                            </a>
+                            <a href="{link_ruta}" target="_blank" 
+                               style="flex: 1; background:#30363d; color: #539bf5 !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem; border: 1px solid #539bf5;">
+                               🗺️ RUTA
+                            </a>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
 # --- TAB 3: COSECHA ---
 with tab3:
@@ -273,7 +283,7 @@ with tab3:
 <div class="badge-time">{tiempo}</div>
 <div style="font-weight:bold; font-size:1.1rem;">📍 ZONA: {r.iloc[2]}</div>
 🌾 {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[4])}
-<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" class="btn-wsp" style="background:#238636;">CONTACTAR</a>
+<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">CONTACTAR</a>
 </div>""", unsafe_allow_html=True)
 
 # --- TAB 4: CALCULADOR ---
