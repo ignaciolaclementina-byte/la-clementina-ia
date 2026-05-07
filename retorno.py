@@ -46,12 +46,11 @@ if "situacion_actual" not in st.session_state:
 if "search_query" not in st.session_state:
     st.session_state.search_query = ""
 
-# --- 3. CARGA DE DATOS (BLINDADA) ---
+# --- 3. CARGA DE DATOS ---
 @st.cache_data(ttl=5)
 def cargar_datos_seguros():
     try:
         t = int(time.time())
-        # Carga de Choferes y Cargas
         df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}").fillna("-")
         df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
         
@@ -62,16 +61,13 @@ def cargar_datos_seguros():
             if refs_a_borrar:
                 df_ca = df_ca[~df_ca.iloc[:, 0].astype(str).isin(refs_a_borrar)]
 
-        # Bloque VIP Blindado: Intenta cargar con y sin encabezado para evitar errores
         vips = []
         try:
             url_vip = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VIP}&t={t}"
             df_v = pd.read_csv(url_vip, header=None)
             if not df_v.empty:
                 vips = [str(x).strip().upper().replace(".0", "") for x in df_v[0].dropna().tolist()]
-        except:
-            pass # Si la hoja VIP falla, el sistema sigue funcionando sin VIPs
-
+        except: pass
         return df_ch, df_ca, vips
     except Exception as e:
         st.error(f"Error de conexión: {e}")
@@ -139,6 +135,18 @@ st.markdown("""
     .card-white { background: #1c2128; color: #adbac7; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; border-left: 6px solid #3498db; position: relative; }
     .card-urgente { background: #2d1b1b; color: #ff6b6b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #6e2a2a; animation: pulse 2s infinite; border-left: 6px solid #ff4b4b; position: relative; }
     .card-cosecha { background: #1c2a1c; border: 1px solid #2d4d2d; color: #8ebf8e; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 6px solid #4caf50; position: relative; }
+    
+    /* ESTILO ACCESO VIP RESALTADO */
+    .vip-access-box {
+        background: #1c2128;
+        border: 2px solid #f1c40f;
+        padding: 20px;
+        border-radius: 15px;
+        margin: 10px 0px 25px 0px;
+        text-align: center;
+        box-shadow: 0px 4px 15px rgba(241, 196, 15, 0.2);
+    }
+    
     .badge-time { position: absolute; top: 10px; right: 10px; font-size: 0.75rem; background: #30363d; padding: 2px 8px; border-radius: 10px; color: #8b949e; }
     .route-txt { font-size: 1.1rem; font-weight: 800; color: #539bf5; text-transform: uppercase; line-height: 1.2; }
     .status-bar { background: #161b22; border: 1px solid #30363d; border-left: 4px solid #f1e05a; padding: 10px; border-radius: 8px; margin-bottom: 20px; color: #e6edf3; }
@@ -147,7 +155,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- SIDEBAR ---
+# --- SIDEBAR (Solo para Gestión Admin) ---
 with st.sidebar:
     st.title("🛡️ Gestión")
     pin_input = st.text_input("PIN Admin", type="password")
@@ -160,16 +168,30 @@ with st.sidebar:
             st.cache_data.clear(); st.rerun()
     else: st.session_state.admin_mode = False
 
-    st.divider()
-    user_cuit = st.text_input("🔑 CUIT Acceso VIP:").strip()
-    es_user_vip = user_cuit in LISTA_VIPS_GLOBAL
-
 # --- CABECERA ---
 st.title("🚛 RETORNO MATCH VIP")
-st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding:10px; border-radius:10px; text-align:center;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios}</b></marquee></div>', unsafe_allow_html=True)
+
+# Banner de Anuncios
+st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding:10px; border-radius:10px; text-align:center; margin-bottom:15px;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios}</b></marquee></div>', unsafe_allow_html=True)
+
+# --- SECCIÓN VIP (PRINCIPAL Y VISIBLE) ---
+with st.container():
+    st.markdown('<div class="vip-access-box">', unsafe_allow_html=True)
+    st.subheader("🔑 ACCESO VIP")
+    user_cuit = st.text_input("Ingrese su CUIT para desbloquear números de contacto:", placeholder="Ej: 20304445556", label_visibility="collapsed").strip()
+    es_user_vip = user_cuit in LISTA_VIPS_GLOBAL
+    
+    if user_cuit:
+        if es_user_vip:
+            st.markdown('<p style="color:#2ecc71; font-weight:bold; margin-top:10px;">✅ ACCESO VIP ACTIVO - Contactos Desbloqueados</p>', unsafe_allow_html=True)
+        else:
+            st.markdown('<p style="color:#e74c3c; margin-top:10px;">❌ CUIT no habilitado o inexistente.</p>', unsafe_allow_html=True)
+            st.markdown(f'<a href="{link_ventas_vip(user_cuit)}" target="_blank" style="color:#f1c40f; text-decoration:none; font-weight:bold;">👉 Click aquí para solicitar el acceso por WhatsApp</a>', unsafe_allow_html=True)
+    else:
+        st.info("Complete su CUIT para ver los teléfonos de contacto.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Filtros
-st.write("")
 col_search, col_fast = st.columns([2, 1])
 with col_search:
     busqueda_libre = st.text_input("🔎 BUSCAR:", value=st.session_state.search_query, placeholder="Localidad, Empresa...").upper()
@@ -199,7 +221,8 @@ with col_clima:
 
 tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
 
-lock_btn_html = f'<a href="{link_ventas_vip(user_cuit)}" style="background: #444; color: #f1c40f !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.85rem; border: 1px solid #f1c40f;">⭐ SOLICITAR ACCESO VIP</a>'
+# HTML para botones bloqueados
+lock_btn_html = f'<a href="{link_ventas_vip(user_cuit)}" target="_blank" style="background: #444; color: #f1c40f !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.85rem; border: 1px solid #f1c40f;">⭐ SOLICITAR ACCESO VIP</a>'
 
 # --- TAB 1: CAMIONES ---
 with tab1:
@@ -219,7 +242,7 @@ with tab1:
             for idx, r in df_ch_raw.iterrows():
                 if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[1]).upper()):
                     tiempo = formatear_fecha(r.iloc[0])
-                    btn_html = f'<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">OFERTAR CARGA</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
+                    btn_html = f'<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" target="_blank" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">OFERTAR CARGA</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
                     st.markdown(f"""<div class="card-white"><div class="badge-time">{tiempo}</div><span class="route-txt">📍 {r.iloc[1]} <br>➔ {r.iloc[2]}</span><br><b>EQ:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[5])}{btn_html}</div>""", unsafe_allow_html=True)
 
 # --- TAB 2: CARGAS ---
@@ -245,7 +268,7 @@ with tab2:
                     tiempo, origen, destino = formatear_fecha(r.iloc[0]), str(r.iloc[1]), str(r.iloc[2])
                     estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
                     link_ruta = f"https://www.google.com/maps/dir/?api=1&origin={urllib.parse.quote(origen)}&destination={urllib.parse.quote(destino)}&travelmode=driving"
-                    btn_wsp = f'<a href="{generar_wsp_link(r.iloc[4], origen, destino, False)}" style="flex: 2; background:#2980b9; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem;">SOLICITAR VIAJE</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
+                    btn_wsp = f'<a href="{generar_wsp_link(r.iloc[4], origen, destino, False)}" target="_blank" style="flex: 2; background:#2980b9; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem;">SOLICITAR VIAJE</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
                     st.markdown(f"""<div class="{estilo}"><div class="badge-time">{tiempo}</div><div class="route-txt" style="margin-bottom:8px;">{origen} <br>➔ {destino}</div><div style="font-size:0.9rem; margin-bottom:12px; opacity:0.9;">📦 <b>{r.iloc[3]}</b> | 🏢 {r.iloc[5]}</div><div style="display: flex; gap: 8px;">{btn_wsp}<a href="{link_ruta}" target="_blank" style="flex: 1; background:#30363d; color: #539bf5 !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem; border: 1px solid #539bf5;">🗺️ RUTA</a></div></div>""", unsafe_allow_html=True)
 
 # --- TAB 3: COSECHA ---
@@ -265,7 +288,7 @@ with tab3:
             for idx, r in df_arr.iterrows():
                 if busqueda_libre in str(r).upper():
                     tiempo = formatear_fecha(r.iloc[0])
-                    btn_cosecha = f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">CONTACTAR</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
+                    btn_cosecha = f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" target="_blank" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">CONTACTAR</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
                     st.markdown(f"""<div class="card-cosecha"><div class="badge-time">{tiempo}</div><div style="font-weight:bold; font-size:1.1rem;">📍 ZONA: {r.iloc[2]}</div>🌾 {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[4])}{btn_cosecha}</div>""", unsafe_allow_html=True)
 
 # --- TAB 4: CALCULADOR ---
