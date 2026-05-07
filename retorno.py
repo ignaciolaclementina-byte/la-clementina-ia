@@ -15,8 +15,8 @@ GID_VIP = "968995524"
 
 URL_CARGAS_POST = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
-# CONFIGURACIÓN: Pegá aquí la URL de respuesta de tu Google Form para la hoja de VIPs
-URL_VIP_POST = "TU_URL_DE_FORM_PARA_VIPS" 
+# Reemplazar con la URL real de tu formulario de VIPs para que no dé error de MissingSchema
+URL_VIP_POST = "https://docs.google.com/forms/d/e/TU_ID_DE_FORMULARIO/formResponse" 
 
 ADMIN_PIN = "1323" 
 TIEMPO_EXCLUSIVO_MIN = 30  
@@ -141,7 +141,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- SIDEBAR (CON GESTIÓN VIP MEJORADA) ---
+# --- SIDEBAR (CON GESTIÓN VIP) ---
 with st.sidebar:
     st.title("🛡️ Gestión")
     pin_input = st.text_input("PIN Admin", type="password")
@@ -149,16 +149,15 @@ with st.sidebar:
         st.session_state.admin_mode = True
         st.success("MODO EDITOR ACTIVO")
         
-        # NUEVA MEJORA: AGREGAR VIP DIRECTAMENTE
         st.divider()
         st.subheader("⭐ Panel VIP")
-        with st.form("nuevo_vip_directo", clear_on_submit=True):
-            v_cuit = st.text_input("CUIT para Habilitar:").strip().upper()
-            if st.form_submit_button("✅ HABILITAR ACCESO"):
+        with st.form("nuevo_vip", clear_on_submit=True):
+            v_cuit = st.text_input("Habilitar CUIT:").strip()
+            if st.form_submit_button("✅ AUTORIZAR"):
                 if v_cuit:
-                    # CONFIGURAR: Cambiar entry.XXXXX por el ID de tu Google Form
+                    # Nota: Cambiar entry.123456789 por el ID de campo real de tu form
                     requests.post(URL_VIP_POST, data={"entry.123456789": v_cuit})
-                    st.toast(f"CUIT {v_cuit} agregado correctamente.")
+                    st.toast(f"CUIT {v_cuit} enviado a la lista.")
                     st.cache_data.clear()
                     time.sleep(1)
                     st.rerun()
@@ -171,7 +170,7 @@ with st.sidebar:
     else: st.session_state.admin_mode = False
 
     st.divider()
-    user_cuit = st.text_input("🔑 CUIT Acceso VIP:").strip().upper()
+    user_cuit = st.text_input("🔑 CUIT Acceso VIP:").strip()
     es_user_vip = user_cuit in LISTA_VIPS_GLOBAL
 
 # --- CABECERA ---
