@@ -45,6 +45,9 @@ if "situacion_actual" not in st.session_state:
     st.session_state.situacion_actual = "Sin reportes de demoras por el momento."
 if "search_query" not in st.session_state:
     st.session_state.search_query = ""
+# Nueva variable para reportes de puerto
+if "reportes_puerto" not in st.session_state:
+    st.session_state.reportes_puerto = "Normal - Sin demoras reportadas en accesos."
 
 # --- 3. CARGA DE DATOS ---
 @st.cache_data(ttl=5)
@@ -136,17 +139,14 @@ st.markdown("""
     .card-urgente { background: #2d1b1b; color: #ff6b6b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #6e2a2a; animation: pulse 2s infinite; border-left: 6px solid #ff4b4b; position: relative; }
     .card-cosecha { background: #1c2a1c; border: 1px solid #2d4d2d; color: #8ebf8e; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 6px solid #4caf50; position: relative; }
     
-    /* ESTILO ACCESO VIP RESALTADO */
     .vip-access-box {
-        background: #1c2128;
-        border: 2px solid #f1c40f;
-        padding: 20px;
-        border-radius: 15px;
-        margin: 10px 0px 25px 0px;
-        text-align: center;
-        box-shadow: 0px 4px 15px rgba(241, 196, 15, 0.2);
+        background: #1c2128; border: 2px solid #f1c40f; padding: 20px; border-radius: 15px; margin-bottom: 25px; text-align: center; box-shadow: 0px 4px 15px rgba(241, 196, 15, 0.2);
     }
     
+    .port-report-box {
+        background: #161b22; border: 1px solid #30363d; border-top: 4px solid #539bf5; padding: 15px; border-radius: 12px; margin-bottom: 20px;
+    }
+
     .badge-time { position: absolute; top: 10px; right: 10px; font-size: 0.75rem; background: #30363d; padding: 2px 8px; border-radius: 10px; color: #8b949e; }
     .route-txt { font-size: 1.1rem; font-weight: 800; color: #539bf5; text-transform: uppercase; line-height: 1.2; }
     .status-bar { background: #161b22; border: 1px solid #30363d; border-left: 4px solid #f1e05a; padding: 10px; border-radius: 8px; margin-bottom: 20px; color: #e6edf3; }
@@ -155,7 +155,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- SIDEBAR (Solo para Gestión Admin) ---
+# --- SIDEBAR (Solo Gestión Admin) ---
 with st.sidebar:
     st.title("🛡️ Gestión")
     pin_input = st.text_input("PIN Admin", type="password")
@@ -164,6 +164,7 @@ with st.sidebar:
         st.success("MODO EDITOR ACTIVO")
         st.session_state.anuncios = st.text_area("📢 Mensajes:", st.session_state.anuncios)
         st.session_state.situacion_actual = st.text_area("🚛 Sit. Actual (Demoras):", st.session_state.situacion_actual)
+        st.session_state.reportes_puerto = st.text_area("🚢 Reporte Puertos:", st.session_state.reportes_puerto)
         if st.button("♻️ Forzar Sincronización"):
             st.cache_data.clear(); st.rerun()
     else: st.session_state.admin_mode = False
@@ -185,11 +186,20 @@ with st.container():
         if es_user_vip:
             st.markdown('<p style="color:#2ecc71; font-weight:bold; margin-top:10px;">✅ ACCESO VIP ACTIVO - Contactos Desbloqueados</p>', unsafe_allow_html=True)
         else:
-            st.markdown('<p style="color:#e74c3c; margin-top:10px;">❌ CUIT no habilitado o inexistente.</p>', unsafe_allow_html=True)
+            st.markdown('<p style="color:#e74c3c; margin-top:10px;">❌ CUIT no registrado.</p>', unsafe_allow_html=True)
             st.markdown(f'<a href="{link_ventas_vip(user_cuit)}" target="_blank" style="color:#f1c40f; text-decoration:none; font-weight:bold;">👉 Click aquí para solicitar el acceso por WhatsApp</a>', unsafe_allow_html=True)
     else:
         st.info("Complete su CUIT para ver los teléfonos de contacto.")
     st.markdown('</div>', unsafe_allow_html=True)
+
+# --- NUEVA SECCIÓN: REPORTES DEL PUERTO EN TIEMPO REAL ---
+st.markdown('<div class="port-report-box">', unsafe_allow_html=True)
+col_port_img, col_port_txt = st.columns([1, 4])
+with col_port_img:
+    st.markdown("<h2 style='text-align:center; margin:0;'>🚢</h2>", unsafe_allow_html=True)
+with col_port_txt:
+    st.markdown(f"<small style='color:#8b949e;'>ESTADO DE PUERTOS (ACTUALIZADO):</small><br><b>{st.session_state.reportes_puerto}</b>", unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Filtros
 col_search, col_fast = st.columns([2, 1])
@@ -221,7 +231,6 @@ with col_clima:
 
 tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
 
-# HTML para botones bloqueados
 lock_btn_html = f'<a href="{link_ventas_vip(user_cuit)}" target="_blank" style="background: #444; color: #f1c40f !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.85rem; border: 1px solid #f1c40f;">⭐ SOLICITAR ACCESO VIP</a>'
 
 # --- TAB 1: CAMIONES ---
