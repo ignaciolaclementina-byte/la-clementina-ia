@@ -20,7 +20,7 @@ ADMIN_PIN = "1323"
 TIEMPO_EXCLUSIVO_MIN = 30  
 WSP_VENTAS_VIP = "5493401525621"
 
-# --- BASE DE DATOS AMPLIADA (Agregados Puertos y Destinos Críticos) ---
+# --- BASE DE DATOS DE PUEBLOS Y CIUDADES (ACTUALIZADA CON PUERTOS) ---
 COORDS_CIUDADES = {
     "TODAS": (0,0),
     "SAN JORGE (SF)": (-31.896, -61.859), "ROSARIO (SF)": (-32.946, -60.639), "SANTA FE (SF)": (-31.633, -60.700),
@@ -115,6 +115,7 @@ def calcular_distancia_coord(p1, p2):
     return 6371 * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
 def obtener_clima(ciudad):
+    # PROTECCIÓN: Si la ciudad no está en el mapa, devolvemos None en lugar de romper el código
     if ciudad == "TODAS" or ciudad not in COORDS_CIUDADES: return None
     try:
         lat, lon = COORDS_CIUDADES[ciudad]
@@ -169,23 +170,23 @@ with col_search:
 with col_radio:
     radio_km = st.slider("📍 Radio de cercanía (KM):", 0, 300, 0)
 
-filtro_loc = st.selectbox("📍 Ciudad Base (Filtro Origen):", list(COORDS_CIUDADES.keys()))
+filtro_loc = st.selectbox("📍 Ciudad Base (Origen):", list(COORDS_CIUDADES.keys()))
 
-# Clima con Protección anti-error
-ciudad_clima = "SAN JORGE (SF)" if filtro_loc == "TODAS" else filtro_loc
-clima_display = obtener_clima(ciudad_clima)
-
+# Situación y Clima
 st.write("")
 col_sit, col_clima = st.columns([3, 1])
 with col_sit:
     st.markdown(f'<div class="status-bar">⚠️ <b>SITUACIÓN ACTUAL:</b> {st.session_state.situacion_actual}</div>', unsafe_allow_html=True)
 with col_clima:
-    if clima_display:
-        st.markdown(f'<div class="status-bar" style="border-left-color:#3498db; text-align:center;">{clima_display}<br><small>{ciudad_clima}</small></div>', unsafe_allow_html=True)
+    ciudad_clima = "SAN JORGE (SF)" if filtro_loc == "TODAS" else filtro_loc
+    # Se llama a la función con protección anti-error
+    clima_val = obtener_clima(ciudad_clima)
+    if clima_val:
+        st.markdown(f'<div class="status-bar" style="border-left-color:#3498db; text-align:center;">{clima_val}<br><small>{ciudad_clima}</small></div>', unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 RENTABILIDAD"])
 
-# --- TAB 1 & 2 mantienen lógica previa ---
+# --- TAB 1: CAMIONES ---
 with tab1:
     if not df_ch_raw.empty:
         for idx, r in df_ch_raw.iterrows():
@@ -198,6 +199,7 @@ with tab1:
                     <a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2])}" style="background: #238636; color: white !important; padding: 10px; border-radius: 8px; text-decoration: none; display: block; text-align: center; margin-top: 10px;">OFERTAR CARGA</a>
                 </div>""", unsafe_allow_html=True)
 
+# --- TAB 2: CARGAS ---
 with tab2:
     if not df_ca_raw.empty:
         df_ca_v = df_ca_raw[~df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
@@ -211,29 +213,28 @@ with tab2:
                     <a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" style="background:#2980b9; color: white !important; padding: 10px; border-radius: 8px; text-decoration: none; display: block; text-align: center; margin-top: 10px;">SOLICITAR VIAJE</a>
                 </div>""", unsafe_allow_html=True)
 
-with tab3: # COSECHA
-    st.info("Módulo de Arrimetaje y Cosecha")
-
-# --- TAB 4: RENTABILIDAD (Solución al buscador) ---
+# --- TAB 4: RENTABILIDAD (CON PUERTOS HABILITADOS) ---
 with tab4:
     st.subheader("📈 Calculador de Rentabilidad Real")
-    st.write("Selecciona los puntos para calcular KM y Ganancia:")
     col_c1, col_c2 = st.columns(2)
     with col_c1:
-        # Se usa el diccionario para evitar que se rompa si escriben algo fuera de lista
         punto_a = st.selectbox("Desde:", list(COORDS_CIUDADES.keys()), index=1)
-        punto_b = st.selectbox("Hasta (Puerto/Destino):", list(COORDS_CIUDADES.keys()), index=12) # Index 12 es Pto San Martin ahora
+        punto_b = st.selectbox("Hasta (Puerto/Destino):", list(COORDS_CIUDADES.keys()), index=12) # Index 12 es PTO SAN MARTIN
         toneladas = st.number_input("Toneladas", value=30)
     with col_c2:
         tarifa = st.number_input("Tarifa por Tonelada ($)", value=25000)
         gasoil = st.number_input("Precio Gasoil ($/L)", value=1100)
 
-    dist = calcular_distancia_coord(COORDS_CIUDADES[punto_a], COORDS_CIUDADES[punto_b])
+    # Cálculo seguro con coordenadas mapeadas
+    coord_a = COORDS_CIUDADES.get(punto_a, (0,0))
+    coord_b = COORDS_CIUDADES.get(punto_b, (0,0))
+    dist = calcular_distancia_coord(coord_a, coord_b)
+    
     if dist > 0 and dist < 9999:
-        km_reales = dist * 1.25 # Factor de corrección vial
+        km_reales = dist * 1.25
         ingreso = tarifa * toneladas
-        gasto_fuego = (km_reales / 100) * 40 * gasoil # Asumiendo 40L/100km
-        neta = ingreso - gasto_fuego - (ingreso * 0.07) # 7% comision
+        gasto_fuego = (km_reales / 100) * 40 * gasoil
+        neta = ingreso - gasto_fuego - (ingreso * 0.07)
         
         st.divider()
         st.metric("Distancia Estimada", f"{km_reales:.0f} KM")
