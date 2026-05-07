@@ -132,7 +132,8 @@ st.markdown("""
     .card-cosecha { background: #1c2a1c; border: 1px solid #2d4d2d; color: #8ebf8e; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 6px solid #4caf50; position: relative; }
     .badge-time { position: absolute; top: 10px; right: 10px; font-size: 0.75rem; background: #30363d; padding: 2px 8px; border-radius: 10px; color: #8b949e; }
     .route-txt { font-size: 1.1rem; font-weight: 800; color: #539bf5; text-transform: uppercase; line-height: 1.2; }
-    .btn-wsp { background: #238636; color: white !important; padding: 14px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 1rem; }
+    .btn-wsp { background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem; }
+    .btn-mapa { background: #21262d; color: #adbac7 !important; padding: 10px; border-radius: 8px; text-decoration: none; display: block; text-align: center; margin-top: 5px; font-size: 0.8rem; border: 1px solid #30363d; }
     .status-bar { background: #161b22; border: 1px solid #30363d; border-left: 4px solid #f1e05a; padding: 10px; border-radius: 8px; margin-bottom: 20px; color: #e6edf3; }
     .stButton>button { width: 100%; border-radius: 8px; }
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 75, 75, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); } }
@@ -161,7 +162,7 @@ with st.sidebar:
 st.title("🚛 RETORNO MATCH VIP")
 st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding:10px; border-radius:10px; text-align:center;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios} -- CREADO POR IGNACIO DIAZ</b></marquee></div>', unsafe_allow_html=True)
 
-# Filtros Rápidos (Definición de filtro_loc antes de ser usado en el clima)
+# Filtros Rápidos
 st.write("")
 col_search, col_fast = st.columns([2, 1])
 with col_search:
@@ -180,7 +181,7 @@ if cf4.button("📍 SAN JORGE"): st.session_state.search_query = "SAN JORGE"; st
 
 filtro_loc = st.selectbox("📍 Filtrar por Ciudad Base:", list(COORDS_CIUDADES.keys()))
 
-# Sección Situación Actual y Clima (Ahora filtro_loc ya existe)
+# Sección Situación Actual y Clima
 st.write("")
 col_sit, col_clima = st.columns([3, 1])
 with col_sit:
@@ -217,7 +218,7 @@ with tab1:
 <a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" class="btn-wsp">OFERTAR CARGA</a>
 </div>""", unsafe_allow_html=True)
 
-# --- TAB 2: CARGAS ---
+# --- TAB 2: CARGAS (CON HOJA DE RUTA) ---
 with tab2:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -238,12 +239,17 @@ with tab2:
             for idx, r in df_ca_v.iterrows():
                 if busqueda_libre in str(r).upper():
                     tiempo = formatear_fecha(r.iloc[0])
+                    origen, destino = str(r.iloc[1]), str(r.iloc[2])
                     estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
+                    # Generar link de Google Maps para Hoja de Ruta
+                    link_ruta = f"https://www.google.com/maps/dir/?api=1&origin={urllib.parse.quote(origen)}&destination={urllib.parse.quote(destino)}&travelmode=driving"
+                    
                     st.markdown(f"""<div class="{estilo}">
 <div class="badge-time">{tiempo}</div>
-<div class="route-txt">{r.iloc[1]} <br>➔ {r.iloc[2]}</div>
+<div class="route-txt">{origen} <br>➔ {destino}</div>
 📦 {r.iloc[3]} | 🏢 {r.iloc[5]}
-<a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" class="btn-wsp" style="background:#2980b9;">SOLICITAR VIAJE</a>
+<a href="{generar_wsp_link(r.iloc[4], origen, destino, False)}" class="btn-wsp" style="background:#2980b9;">SOLICITAR VIAJE</a>
+<a href="{link_ruta}" target="_blank" class="btn-mapa">📍 VER HOJA DE RUTA</a>
 </div>""", unsafe_allow_html=True)
 
 # --- TAB 3: COSECHA ---
