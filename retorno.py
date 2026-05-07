@@ -37,6 +37,7 @@ COORDS_CIUDADES = {
 # --- 2. GESTIÓN DE SESIÓN ---
 if "admin_mode" not in st.session_state: st.session_state.admin_mode = False
 if "anuncios" not in st.session_state: st.session_state.anuncios = "¡Bienvenido al Sistema VIP!"
+if "estado_puertos" not in st.session_state: st.session_state.estado_puertos = "🚢 PUERTOS: Operativos con flujo normal"
 if "search_query" not in st.session_state: st.session_state.search_query = ""
 if "modo_ruta" not in st.session_state: st.session_state.modo_ruta = False
 
@@ -105,7 +106,6 @@ def calcular_distancia(origen, destino):
 # --- 5. INTERFAZ Y ESTILOS ---
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
-# Estilos dinámicos para Modo Ruta
 font_size = "1.3rem" if st.session_state.modo_ruta else "1.1rem"
 card_padding = "20px" if st.session_state.modo_ruta else "15px"
 
@@ -114,6 +114,8 @@ st.markdown(f"""
     .stApp {{ background-color: #0e1117; color: #adbac7; }}
     .card-white {{ background: #1c2128; color: #adbac7; padding: {card_padding}; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; border-left: 6px solid #3498db; position: relative; }}
     .card-urgente {{ background: #2d1b1b; color: #ff6b6b; padding: {card_padding}; border-radius: 12px; margin-bottom: 12px; border: 1px solid #6e2a2a; animation: pulse 2s infinite; border-left: 6px solid #ff4b4b; position: relative; }}
+    .card-cosecha {{ background: #1b2d1b; color: #7cfc00; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #2a6e2a; border-left: 6px solid #2ecc71; position: relative; }}
+    .smart-match {{ background: #1a1a2e; border: 1px dashed #539bf5; padding: 10px; border-radius: 8px; margin-top: 5px; font-size: 0.9rem; color: #539bf5; }}
     .badge-time {{ position: absolute; top: 10px; right: 10px; font-size: 0.75rem; background: #30363d; padding: 2px 8px; border-radius: 10px; color: #8b949e; }}
     .badge-cupo {{ background: #f39c12; color: black; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; margin-left: 10px; }}
     .route-txt {{ font-size: {font_size}; font-weight: 800; color: #539bf5; text-transform: uppercase; line-height: 1.2; }}
@@ -129,6 +131,7 @@ with st.sidebar:
         st.session_state.admin_mode = True
         st.success("MODO EDITOR")
         st.session_state.anuncios = st.text_area("📢 Anuncio:", st.session_state.anuncios)
+        st.session_state.estado_puertos = st.text_input("🚢 Estado Puertos:", st.session_state.estado_puertos)
         if st.button("♻️ Sincronizar"): st.cache_data.clear(); st.rerun()
     else: st.session_state.admin_mode = False
     
@@ -140,19 +143,13 @@ with st.sidebar:
 # --- CABECERA ---
 st.title("🚛 RETORNO MATCH VIP")
 st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding:10px; border-radius:10px; text-align:center;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios} -- CREADO POR IGNACIO DIAZ</b></marquee></div>', unsafe_allow_html=True)
+st.info(st.session_state.estado_puertos)
 
 # Filtros e Insights
 st.write("")
 col_s, col_l = st.columns([2, 1])
-busqueda_libre = col_s.text_input("🔎 BUSCAR:", value=st.session_state.search_query).upper()
+busqueda_libre = col_s.text_input("🔎 BUSCAR CIUDAD O EMPRESA:", value=st.session_state.search_query).upper()
 if col_l.button("🧹 Limpiar"): st.session_state.search_query = ""; st.rerun()
-
-st.write("Accesos Rápidos:")
-r1, r2, r3, r4 = st.columns(4)
-if r1.button("🚢 PUERTOS"): st.session_state.search_query = "PUERTO"; st.rerun()
-if r2.button("🌻 ACEITERAS"): st.session_state.search_query = "COFCO"; st.rerun()
-if r3.button("📍 MI ZONA"): st.session_state.search_query = "SAN JORGE"; st.rerun()
-if r4.button("⭐ FAVORITOS"): st.session_state.search_query = "VIP"; st.rerun()
 
 tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
 
@@ -161,7 +158,7 @@ with tab1:
     c1, c2 = st.columns([1, 2.2])
     with c1:
         if st.session_state.admin_mode:
-            with st.expander("➕ REGISTRAR"):
+            with st.expander("➕ REGISTRAR CAMIÓN"):
                 with st.form("f_ch", clear_on_submit=True):
                     o, d = st.text_input("Origen").upper(), st.text_input("Destino").upper()
                     eq, cu, ws = st.text_input("Equipo"), st.text_input("CUIT"), st.text_input("WhatsApp")
@@ -176,10 +173,10 @@ with tab1:
                     <div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
                     <span class="route-txt">📍 {r.iloc[1]} ➔ {r.iloc[2]}</span><br>
                     <b>EQ:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[5])}<br>
-                    <a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2])}" class="btn-wsp">OFERTAR</a>
+                    <a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2])}" class="btn-wsp">OFERTAR MI CAMIÓN</a>
                     </div>""", unsafe_allow_html=True)
 
-# --- TAB 2: CARGAS ---
+# --- TAB 2: CARGAS (MEJORADA CON SMART MATCH) ---
 with tab2:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -196,13 +193,24 @@ with tab2:
     with c2:
         if not df_ca_raw.empty:
             for _, r in df_ca_raw[~df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME')].iterrows():
-                if busqueda_libre in str(r).upper():
+                # Lógica Smart Match: Si el usuario busca "San Jorge" pero la carga es en "Sastre" (está cerca), avisar.
+                dist_proximidad = 0
+                if busqueda_libre in COORDS_CIUDADES and r.iloc[1] in COORDS_CIUDADES:
+                    dist_proximidad = calcular_distancia(busqueda_libre, r.iloc[1])
+
+                if busqueda_libre in str(r).upper() or (0 < dist_proximidad < 100):
                     estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
                     cupo_label = re.search(r'CUPOS:(\d+)', str(r.iloc[3]))
                     cupo_html = f'<span class="badge-cupo">CUPOS: {cupo_label.group(1)}</span>' if cupo_label else ""
+                    
+                    smart_msg = ""
+                    if dist_proximidad > 0 and busqueda_libre not in str(r.iloc[1]):
+                        smart_msg = f'<div class="smart-match">💡 Smart Match: A solo {dist_proximidad:.0f}km de tu búsqueda</div>'
+
                     st.markdown(f"""<div class="{estilo}">
                     <div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
                     <div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]} {cupo_html}</div>
+                    {smart_msg}
                     📦 {r.iloc[3]} | 🏢 {r.iloc[5]}<br>
                     <a href="{link_google_maps(r.iloc[1], r.iloc[2])}" class="btn-maps" target="_blank">🗺️ Ver Hoja de Ruta</a>
                     <a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" class="btn-wsp" style="background:#2980b9;">PEDIR VIAJE</a>
@@ -217,18 +225,36 @@ with tab3:
                 st.markdown(f"""<div class="card-cosecha">
                 <div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
                 <b>📍 ZONA: {r.iloc[2]}</b><br>🌾 {r.iloc[3]}
-                <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" class="btn-wsp">CONTACTAR</a>
+                <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" class="btn-wsp">CONTACTAR DIRECTO</a>
                 </div>""", unsafe_allow_html=True)
 
-# --- TAB 4: CALCULADOR ---
+# --- TAB 4: CALCULADOR DE MARGEN (NUEVO) ---
 with tab4:
-    o_c = st.selectbox("Origen", list(COORDS_CIUDADES.keys()))
-    d_c = st.selectbox("Destino", list(COORDS_CIUDADES.keys()))
+    st.subheader("📊 Calculadora de Rentabilidad")
+    col1, col2 = st.columns(2)
+    with col1:
+        o_c = st.selectbox("Origen del viaje", list(COORDS_CIUDADES.keys()))
+        d_c = st.selectbox("Destino del viaje", list(COORDS_CIUDADES.keys()))
+        tarifa = st.number_input("Tarifa pactada ($/TN)", value=18000)
+    with col2:
+        gasoil = st.number_input("Precio Gasoil ($/Litro)", value=1100)
+        consumo = st.slider("Consumo Camión (L/100km)", 30, 50, 40)
+    
     dist = calcular_distancia(o_c, d_c)
     if dist > 0:
-        dist_f = dist * 1.22
-        st.metric("Distancia Estimada", f"{dist_f:.0f} KM")
-        st.info(f"💡 Sugerencia: El precio promedio en esta ruta es de $1.450/KM")
+        dist_real = dist * 1.25 # Factor de corrección vial
+        litros_total = (dist_real / 100) * consumo
+        costo_combustible = litros_total * gasoil
+        ingreso_bruto = tarifa * 30 # Base 30 toneladas
+        margen = ingreso_bruto - costo_combustible
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Distancia", f"{dist_real:.0f} KM")
+        c2.metric("Gasto Gasoil", f"${costo_combustible:,.0f}")
+        c3.metric("Margen Est.", f"${margen:,.0f}", delta=f"{((margen/ingreso_bruto)*100):.1f}% Rentabilidad")
+        
+        st.progress(min(max(margen / ingreso_bruto, 0.0), 1.0))
+        st.caption("Nota: El cálculo no incluye gomas, peajes ni viáticos.")
 
 # --- FOOTER ---
 st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026</b></div>", unsafe_allow_html=True)
