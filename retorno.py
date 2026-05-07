@@ -20,7 +20,7 @@ ADMIN_PIN = "1323"
 TIEMPO_EXCLUSIVO_MIN = 30  
 WSP_VENTAS_VIP = "5493401525621"
 
-# --- BASE DE DATOS DE PUEBLOS Y CIUDADES (PUERTOS ACTUALIZADOS) ---
+# --- BASE DE DATOS DE PUEBLOS Y CIUDADES ---
 COORDS_CIUDADES = {
     "TODAS": (0,0),
     "SAN JORGE (SF)": (-31.896, -61.859), "ROSARIO (SF)": (-32.946, -60.639), "SANTA FE (SF)": (-31.633, -60.700),
@@ -158,7 +158,6 @@ with st.sidebar:
 
 # --- CABECERA ---
 st.title("🚛 RETORNO MATCH VIP")
-# Mejorado: Banner limpio sin el nombre del creador en el marquee
 st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding:10px; border-radius:10px; text-align:center;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios}</b></marquee></div>', unsafe_allow_html=True)
 
 # Filtros
@@ -210,10 +209,17 @@ with tab1:
             for idx, r in df_ch_raw.iterrows():
                 if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[1]).upper()):
                     tiempo = formatear_fecha(r.iloc[0])
+                    
+                    # LÓGICA DE BLOQUEO VIP
+                    if es_user_vip or st.session_state.admin_mode:
+                        btn_html = f'<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">OFERTAR CARGA</a>'
+                    else:
+                        btn_html = f'<div style="background: #30363d; color: #8b949e; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.8rem; border: 1px dashed #484f58;">🔒 SOLO USUARIOS VIP</div>'
+
                     st.markdown(f"""<div class="card-white"><div class="badge-time">{tiempo}</div>
                     <span class="route-txt">📍 {r.iloc[1]} <br>➔ {r.iloc[2]}</span><br>
                     <b>EQ:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[5])}
-                    <a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">OFERTAR CARGA</a>
+                    {btn_html}
                     </div>""", unsafe_allow_html=True)
 
 # --- TAB 2: CARGAS ---
@@ -240,11 +246,18 @@ with tab2:
                     origen, destino = str(r.iloc[1]), str(r.iloc[2])
                     estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
                     link_ruta = f"https://www.google.com/maps/dir/?api=1&origin={urllib.parse.quote(origen)}&destination={urllib.parse.quote(destino)}&travelmode=driving"
+                    
+                    # LÓGICA DE BLOQUEO VIP
+                    if es_user_vip or st.session_state.admin_mode:
+                        btn_wsp = f'<a href="{generar_wsp_link(r.iloc[4], origen, destino, False)}" style="flex: 2; background:#2980b9; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem;">SOLICITAR VIAJE</a>'
+                    else:
+                        btn_wsp = f'<div style="flex: 2; background: #30363d; color: #8b949e; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.8rem; border: 1px dashed #484f58;">🔒 SOLO VIP</div>'
+
                     st.markdown(f"""<div class="{estilo}"><div class="badge-time">{tiempo}</div>
                     <div class="route-txt" style="margin-bottom:8px;">{origen} <br>➔ {destino}</div>
                     <div style="font-size:0.9rem; margin-bottom:12px; opacity:0.9;">📦 <b>{r.iloc[3]}</b> | 🏢 {r.iloc[5]}</div>
                     <div style="display: flex; gap: 8px;">
-                        <a href="{generar_wsp_link(r.iloc[4], origen, destino, False)}" style="flex: 2; background:#2980b9; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem;">SOLICITAR VIAJE</a>
+                        {btn_wsp}
                         <a href="{link_ruta}" target="_blank" style="flex: 1; background:#30363d; color: #539bf5 !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem; border: 1px solid #539bf5;">🗺️ RUTA</a>
                     </div></div>""", unsafe_allow_html=True)
 
@@ -265,10 +278,17 @@ with tab3:
             for idx, r in df_arr.iterrows():
                 if busqueda_libre in str(r).upper():
                     tiempo = formatear_fecha(r.iloc[0])
+                    
+                    # LÓGICA DE BLOQUEO VIP
+                    if es_user_vip or st.session_state.admin_mode:
+                        btn_cosecha = f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">CONTACTAR</a>'
+                    else:
+                        btn_cosecha = f'<div style="background: #30363d; color: #8b949e; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.8rem; border: 1px dashed #484f58;">🔒 SOLO VIP</div>'
+
                     st.markdown(f"""<div class="card-cosecha"><div class="badge-time">{tiempo}</div>
                     <div style="font-weight:bold; font-size:1.1rem;">📍 ZONA: {r.iloc[2]}</div>
                     🌾 {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[4])}
-                    <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">CONTACTAR</a>
+                    {btn_cosecha}
                     </div>""", unsafe_allow_html=True)
 
 # --- TAB 4: CALCULADOR ---
