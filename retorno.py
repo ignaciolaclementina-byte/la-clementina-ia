@@ -161,17 +161,7 @@ with st.sidebar:
 st.title("🚛 RETORNO MATCH VIP")
 st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding:10px; border-radius:10px; text-align:center;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios} -- CREADO POR IGNACIO DIAZ</b></marquee></div>', unsafe_allow_html=True)
 
-# Sección Situación Actual y Clima
-st.write("")
-col_sit, col_clima = st.columns([3, 1])
-with col_sit:
-    st.markdown(f'<div class="status-bar">⚠️ <b>SITUACIÓN ACTUAL:</b> {st.session_state.situacion_actual}</div>', unsafe_allow_html=True)
-with col_clima:
-    ciudad_clima = "SAN JORGE (SF)" if filtro_loc == "TODAS" else filtro_loc
-    clima_val = obtener_clima(ciudad_clima)
-    st.markdown(f'<div class="status-bar" style="border-left-color:#3498db; text-align:center;">{clima_val}<br><small>{ciudad_clima}</small></div>', unsafe_allow_html=True)
-
-# Filtros Rápidos
+# Filtros Rápidos (Definición de filtro_loc antes de ser usado en el clima)
 st.write("")
 col_search, col_fast = st.columns([2, 1])
 with col_search:
@@ -189,6 +179,16 @@ if cf3.button("🌽 MAIZ"): st.session_state.search_query = "MAIZ"; st.rerun()
 if cf4.button("📍 SAN JORGE"): st.session_state.search_query = "SAN JORGE"; st.rerun()
 
 filtro_loc = st.selectbox("📍 Filtrar por Ciudad Base:", list(COORDS_CIUDADES.keys()))
+
+# Sección Situación Actual y Clima (Ahora filtro_loc ya existe)
+st.write("")
+col_sit, col_clima = st.columns([3, 1])
+with col_sit:
+    st.markdown(f'<div class="status-bar">⚠️ <b>SITUACIÓN ACTUAL:</b> {st.session_state.situacion_actual}</div>', unsafe_allow_html=True)
+with col_clima:
+    ciudad_clima = "SAN JORGE (SF)" if filtro_loc == "TODAS" else filtro_loc
+    clima_val = obtener_clima(ciudad_clima)
+    st.markdown(f'<div class="status-bar" style="border-left-color:#3498db; text-align:center;">{clima_val}<br><small>{ciudad_clima}</small></div>', unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
 
