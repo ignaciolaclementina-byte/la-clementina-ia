@@ -18,7 +18,7 @@ URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDz
 
 ADMIN_PIN = "1323" 
 TIEMPO_EXCLUSIVO_MIN = 30  
-WSP_VENTAS_VIP = "5493401525621" # Tu WhatsApp para ventas
+WSP_VENTAS_VIP = "5493406649346" # ACTUALIZADO: Número de ventas VIP solicitado
 
 # --- BASE DE DATOS DE PUEBLOS Y CIUDADES ---
 COORDS_CIUDADES = {
@@ -195,7 +195,7 @@ with col_clima:
 
 tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
 
-# Mensaje de bloqueo común para usuarios No-VIP
+# Mensaje de bloqueo común para usuarios No-VIP (Usa el número 3406649346)
 lock_btn_html = f'<a href="{link_ventas_vip(user_cuit)}" style="background: #444; color: #f1c40f !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.85rem; border: 1px solid #f1c40f;">⭐ SOLICITAR ACCESO VIP</a>'
 
 # --- TAB 1: CAMIONES ---
