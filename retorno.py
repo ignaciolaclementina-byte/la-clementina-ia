@@ -123,6 +123,7 @@ st.markdown("""
     .btn-wsp { background: #238636; color: white !important; padding: 14px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 1rem; }
     .stButton>button { width: 100%; border-radius: 8px; }
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 75, 75, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); } }
+    @media (max-width: 640px) { .stTabs [data-baseweb="tab"] { font-size: 12px; padding: 10px 5px; } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -138,11 +139,31 @@ with st.sidebar:
             st.cache_data.clear(); st.rerun()
     else: st.session_state.admin_mode = False
 
+    st.divider()
+    user_cuit = st.text_input("🔑 CUIT Acceso VIP:").strip()
+    es_user_vip = user_cuit in LISTA_VIPS_GLOBAL
+
 # --- CABECERA ---
 st.title("🚛 RETORNO MATCH VIP")
 st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding:10px; border-radius:10px; text-align:center;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios} -- CREADO POR IGNACIO DIAZ</b></marquee></div>', unsafe_allow_html=True)
 
-busqueda_libre = st.text_input("🔎 BUSCAR:", value=st.session_state.search_query, placeholder="Localidad, Empresa...").upper()
+# Filtros Rápidos
+st.write("")
+col_search, col_fast = st.columns([2, 1])
+with col_search:
+    busqueda_libre = st.text_input("🔎 BUSCAR:", value=st.session_state.search_query, placeholder="Localidad, Empresa...").upper()
+with col_fast:
+    if st.button("🧹 Limpiar Filtros"):
+        st.session_state.search_query = ""
+        st.rerun()
+
+st.write("Filtros Rápidos:")
+cf1, cf2, cf3, cf4 = st.columns(4)
+if cf1.button("🚢 PUERTOS"): st.session_state.search_query = "PUERTO"; st.rerun()
+if cf2.button("🌻 ACEITERA"): st.session_state.search_query = "COFCO"; st.rerun()
+if cf3.button("🌽 MAIZ"): st.session_state.search_query = "MAIZ"; st.rerun()
+if cf4.button("📍 SAN JORGE"): st.session_state.search_query = "SAN JORGE"; st.rerun()
+
 filtro_loc = st.selectbox("📍 Filtrar por Ciudad Base:", list(COORDS_CIUDADES.keys()))
 
 tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
@@ -164,14 +185,15 @@ with tab1:
         if not df_ch_raw.empty:
             for idx, r in df_ch_raw.iterrows():
                 if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[1]).upper()):
+                    tiempo = formatear_fecha(r.iloc[0])
                     st.markdown(f"""<div class="card-white">
-<div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
+<div class="badge-time">{tiempo}</div>
 <span class="route-txt">📍 {r.iloc[1]} <br>➔ {r.iloc[2]}</span><br>
 <b>EQ:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[5])}
 <a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" class="btn-wsp">OFERTAR CARGA</a>
 </div>""", unsafe_allow_html=True)
 
-# --- TAB 2: CARGAS (CORRECCIÓN CRÍTICA DE INDENTACIÓN AQUÍ) ---
+# --- TAB 2: CARGAS ---
 with tab2:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -193,7 +215,6 @@ with tab2:
                 if busqueda_libre in str(r).upper():
                     tiempo = formatear_fecha(r.iloc[0])
                     estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
-                    # IMPORTANTE: El HTML debe estar pegado al borde izquierdo en el código
                     st.markdown(f"""<div class="{estilo}">
 <div class="badge-time">{tiempo}</div>
 <div class="route-txt">{r.iloc[1]} <br>➔ {r.iloc[2]}</div>
@@ -203,14 +224,23 @@ with tab2:
 
 # --- TAB 3: COSECHA ---
 with tab3:
-    c2 = st.container()
+    c1, c2 = st.columns([1, 2.2])
+    with c1:
+        if st.session_state.admin_mode:
+            with st.expander("➕ REGISTRAR ARRIME"):
+                with st.form("f_arr", clear_on_submit=True):
+                    loc_arr, det_arr, wsp_arr = st.text_input("Localidad").upper(), st.text_input("Detalle"), st.text_input("WhatsApp")
+                    if st.form_submit_button("🌾 PUBLICAR"):
+                        requests.post(URL_CARGAS_POST, data={"entry.610070407": "ARRIME ZONA", "entry.170847116": loc_arr, "entry.576675281": det_arr, "entry.466540450": wsp_arr})
+                        st.cache_data.clear(); st.rerun()
     with c2:
         if not df_ca_raw.empty:
             df_arr = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
             for idx, r in df_arr.iterrows():
                 if busqueda_libre in str(r).upper():
+                    tiempo = formatear_fecha(r.iloc[0])
                     st.markdown(f"""<div class="card-cosecha">
-<div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
+<div class="badge-time">{tiempo}</div>
 <div style="font-weight:bold; font-size:1.1rem;">📍 ZONA: {r.iloc[2]}</div>
 🌾 {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[4])}
 <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" class="btn-wsp" style="background:#238636;">CONTACTAR</a>
@@ -221,9 +251,12 @@ with tab4:
     st.subheader("📊 Estimador de Costos")
     o_c = st.selectbox("Desde", list(COORDS_CIUDADES.keys()), key="ca1")
     d_c = st.selectbox("Hasta", list(COORDS_CIUDADES.keys()), key="ca2")
+    t_km = st.number_input("Tarifa $/KM", value=1300)
     dist = calcular_distancia(o_c, d_c)
     if dist > 0:
-        st.metric("Distancia Estimada", f"{(dist * 1.22):.0f} KM")
+        dist_r = dist * 1.22
+        st.metric("Distancia Estimada", f"{dist_r:.0f} KM")
+        st.success(f"Total Sugerido: ${dist_r * t_km:,.0f}")
 
 # --- FOOTER ---
 st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026</b></div>", unsafe_allow_html=True)
