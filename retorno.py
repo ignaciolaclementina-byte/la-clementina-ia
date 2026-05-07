@@ -288,7 +288,7 @@ with tab4:
     st.subheader("📊 Estimador de Costos")
     o_c = st.selectbox("Desde", list(COORDS_CIUDADES.keys()), key="ca1")
     d_c = st.selectbox("Hasta", list(COORDS_CIUDADES.keys()), key="ca2")
-    t_km = st.number_input("Tarifa $/KM", value=1300)
+    t_km = st.number_input("Tarifa $/KM", value=8800)
     dist = calcular_distancia(o_c, d_c)
     if dist > 0:
         dist_r = dist * 1.22
