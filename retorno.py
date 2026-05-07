@@ -158,6 +158,7 @@ with st.sidebar:
 
 # --- CABECERA ---
 st.title("🚛 RETORNO MATCH VIP")
+# Mejorado: Banner limpio sin el nombre del creador en el marquee
 st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding:10px; border-radius:10px; text-align:center;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios}</b></marquee></div>', unsafe_allow_html=True)
 
 # Filtros
@@ -207,13 +208,11 @@ with tab1:
     with c2:
         if not df_ch_raw.empty:
             for idx, r in df_ch_raw.iterrows():
-                if (busqueda_libre in str(r).upper()) and (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[1]).upper()):
+                if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[1]).upper()):
                     tiempo = formatear_fecha(r.iloc[0])
-                    # Lógica VIP: si es usuario VIP ve el número completo, si no, oculto
-                    tel_mostrar = r.iloc[5] if es_user_vip else ocultar_telefono(r.iloc[5])
                     st.markdown(f"""<div class="card-white"><div class="badge-time">{tiempo}</div>
                     <span class="route-txt">📍 {r.iloc[1]} <br>➔ {r.iloc[2]}</span><br>
-                    <b>EQ:</b> {r.iloc[3]} | 📱 {tel_mostrar}
+                    <b>EQ:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[5])}
                     <a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">OFERTAR CARGA</a>
                     </div>""", unsafe_allow_html=True)
 
@@ -266,10 +265,9 @@ with tab3:
             for idx, r in df_arr.iterrows():
                 if busqueda_libre in str(r).upper():
                     tiempo = formatear_fecha(r.iloc[0])
-                    tel_mostrar = r.iloc[4] if es_user_vip else ocultar_telefono(r.iloc[4])
                     st.markdown(f"""<div class="card-cosecha"><div class="badge-time">{tiempo}</div>
                     <div style="font-weight:bold; font-size:1.1rem;">📍 ZONA: {r.iloc[2]}</div>
-                    🌾 {r.iloc[3]} | 📱 {tel_mostrar}
+                    🌾 {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[4])}
                     <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">CONTACTAR</a>
                     </div>""", unsafe_allow_html=True)
 
@@ -286,4 +284,4 @@ with tab4:
         st.success(f"Total Sugerido: ${dist_r * t_km:,.0f}")
 
 # --- FOOTER ---
-st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026</b></div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026</b></div>", un
