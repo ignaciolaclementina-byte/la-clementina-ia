@@ -133,6 +133,7 @@ st.markdown("""
     .card-urgente { background: linear-gradient(145deg, #2d1b1b, #3d1f1f); color: #ff6b6b; padding: 18px; border-radius: 14px; margin-bottom: 12px; border: 1px solid #6e2a2a; animation: pulse 2s infinite; border-left: 6px solid #ff4b4b; position: relative; }
     .card-cosecha { background: linear-gradient(145deg, #1c2a1c, #243524); border: 1px solid #2d4d2d; color: #8ebf8e; padding: 18px; border-radius: 14px; margin-bottom: 12px; border-left: 6px solid #4caf50; position: relative; }
     .badge-time { position: absolute; top: 12px; right: 12px; font-size: 0.7rem; background: #0d1117; padding: 3px 10px; border-radius: 20px; color: #8b949e; border: 1px solid #30363d; }
+    .badge-vip { background: #f1e05a; color: #0d1117; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 0.7rem; margin-left: 5px; vertical-align: middle; }
     .fresh-green { border-bottom: 3px solid #238636; }
     .fresh-orange { border-bottom: 3px solid #d29922; }
     .fresh-gray { border-bottom: 3px solid #30363d; }
@@ -157,6 +158,7 @@ with st.sidebar:
     st.divider()
     user_cuit = st.text_input("🔑 CUIT Acceso VIP:").strip()
     es_user_vip = user_cuit in LISTA_VIPS_GLOBAL
+    if es_user_vip: st.warning("✅ IDENTIDAD VERIFICADA")
     
     st.divider()
     st.write("⭐ Mis Favoritos:", len(st.session_state.favoritos))
@@ -192,7 +194,7 @@ with col_clima:
     ciudad_clima = "SAN JORGE (SF)" if filtro_loc == "TODAS" else filtro_loc
     st.markdown(f'<div class="status-bar" style="border-left-color:#3498db; text-align:center;">{obtener_clima(ciudad_clima)}<br><small>{ciudad_clima}</small></div>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
+tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 RENTABILIDAD"])
 
 # --- TAB 1: CAMIONES ---
 with tab1:
@@ -210,14 +212,14 @@ with tab1:
     with c2:
         if not df_ch_raw.empty:
             for idx, r in df_ch_raw.iterrows():
-                # Lógica de Radio de Cercanía
                 dist_km = calcular_distancia_coord(COORDS_CIUDADES.get(filtro_loc, (0,0)), COORDS_CIUDADES.get(str(r.iloc[1]), (0,0)))
                 cumple_radio = True if radio_km == 0 or dist_km <= radio_km else False
                 
                 if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or cumple_radio):
+                    badge_verificado = '<span class="badge-vip">⭐ VERIFICADO</span>' if str(r.iloc[4]).strip() in LISTA_VIPS_GLOBAL else ""
                     st.markdown(f"""<div class="card-white {obtener_frescura_clase(r.iloc[0])}">
                         <div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
-                        <span class="route-txt">📍 {r.iloc[1]} <br>➔ {r.iloc[2]}</span><br>
+                        <span class="route-txt">📍 {r.iloc[1]} <br>➔ {r.iloc[2]}</span> {badge_verificado}<br>
                         <b>EQ:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[5])}
                         <a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">OFERTAR CARGA</a>
                     </div>""", unsafe_allow_html=True)
@@ -247,11 +249,9 @@ with tab2:
                 
                 if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or cumple_radio):
                     estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
-                    frescura = obtener_frescura_clase(r.iloc[0])
                     link_ruta = f"https://www.google.com/maps/dir/?api=1&origin={urllib.parse.quote(origen)}&destination={urllib.parse.quote(destino)}"
-                    
                     st.markdown(f"""
-                    <div class="{estilo} {frescura}">
+                    <div class="{estilo} {obtener_frescura_clase(r.iloc[0])}">
                         <div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
                         <div class="route-txt" style="margin-bottom:8px;">{origen} <br>➔ {destino}</div>
                         <div style="font-size:0.9rem; margin-bottom:12px; opacity:0.9;">
@@ -262,43 +262,43 @@ with tab2:
                             <a href="{link_ruta}" target="_blank" style="flex: 1; background:#30363d; color: #539bf5 !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem; border: 1px solid #539bf5;">🗺️ RUTA</a>
                         </div>
                     </div>""", unsafe_allow_html=True)
-                    if st.button(f"⭐ Guardar Favorito #{idx}", key=f"fav_{idx}"):
-                        st.session_state.favoritos.append(f"{origen} -> {destino}")
-                        st.toast("Guardado en favoritos")
 
-# --- TAB 3: COSECHA ---
-with tab3:
-    c1, c2 = st.columns([1, 2.2])
-    with c1:
-        if st.session_state.admin_mode:
-            with st.expander("➕ REGISTRAR ARRIME"):
-                with st.form("f_arr", clear_on_submit=True):
-                    loc_arr, det_arr, wsp_arr = st.text_input("Localidad").upper(), st.text_input("Detalle"), st.text_input("WhatsApp")
-                    if st.form_submit_button("🌾 PUBLICAR"):
-                        requests.post(URL_CARGAS_POST, data={"entry.610070407": "ARRIME ZONA", "entry.170847116": loc_arr, "entry.576675281": det_arr, "entry.466540450": wsp_arr})
-                        st.cache_data.clear(); st.rerun()
-    with c2:
-        if not df_ca_raw.empty:
-            df_arr = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
-            for idx, r in df_arr.iterrows():
-                if busqueda_libre in str(r).upper():
-                    st.markdown(f"""<div class="card-cosecha">
-                        <div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
-                        <div style="font-weight:bold; font-size:1.1rem;">📍 ZONA: {r.iloc[2]}</div>
-                        🌾 {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[4])}
-                        <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">CONTACTAR</a>
-                    </div>""", unsafe_allow_html=True)
-
-# --- TAB 4: CALCULADOR ---
+# --- TAB 4: RENTABILIDAD (NUEVA MEJORA INNOVADORA) ---
 with tab4:
-    st.subheader("📊 Estimador de Costos")
-    o_c, d_c = st.selectbox("Desde", list(COORDS_CIUDADES.keys()), key="ca1"), st.selectbox("Hasta", list(COORDS_CIUDADES.keys()), key="ca2")
-    t_km = st.number_input("Tarifa $/KM", value=1300)
+    st.subheader("📈 Calculador de Rentabilidad Real")
+    col_calc1, col_calc2 = st.columns(2)
+    with col_calc1:
+        o_c = st.selectbox("Desde", list(COORDS_CIUDADES.keys()), key="rent1")
+        d_c = st.selectbox("Hasta", list(COORDS_CIUDADES.keys()), key="rent2")
+        tarifa_ton = st.number_input("Tarifa por Tonelada ($)", value=25000)
+        carga_ton = st.number_input("Carga (Toneladas)", value=30)
+    with col_calc2:
+        precio_gasoil = st.number_input("Precio Gasoil por Litro ($)", value=1100)
+        consumo_camion = st.slider("Consumo (Litros cada 100km)", 30, 50, 40)
+        comision_agencia = st.slider("Comisión Agencia (%)", 0, 15, 7)
+
     dist = calcular_distancia_coord(COORDS_CIUDADES.get(o_c, (0,0)), COORDS_CIUDADES.get(d_c, (0,0)))
     if dist > 0 and dist < 9999:
-        dist_r = dist * 1.22
-        st.metric("Distancia Estimada", f"{dist_r:.0f} KM")
-        st.success(f"Total Sugerido: ${dist_r * t_km:,.0f}")
+        km_reales = dist * 1.22
+        ingreso_bruto = tarifa_ton * carga_ton
+        costo_gasoil = (km_reales / 100) * consumo_camion * precio_gasoil
+        costo_comision = ingreso_bruto * (comision_agencia / 100)
+        ganancia_neta = ingreso_bruto - costo_gasoil - costo_comision
+        margen = (ganancia_neta / ingreso_bruto) * 100 if ingreso_bruto > 0 else 0
+
+        st.divider()
+        m1, m2, m3 = st.columns(3)
+        m1.metric("KM Estimados", f"{km_reales:.0f}")
+        m2.metric("Gasto Gasoil", f"${costo_gasoil:,.0f}")
+        m3.metric("Comisión", f"${costo_comision:,.0f}")
+        
+        color_res = "green" if margen > 20 else "orange" if margen > 10 else "red"
+        st.markdown(f"""
+        <div style="background:#1c2128; padding:20px; border-radius:15px; border: 2px solid {color_res}; text-align:center;">
+            <h2 style="color:{color_res}; margin:0;">GANANCIA NETA: ${ganancia_neta:,.0f}</h2>
+            <p style="opacity:0.7;">Margen de utilidad sobre bruto: {margen:.1f}%</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 # --- FOOTER ---
 st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026</b></div>", unsafe_allow_html=True)
