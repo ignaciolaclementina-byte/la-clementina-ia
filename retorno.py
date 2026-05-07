@@ -79,12 +79,13 @@ st.markdown("""
 <style>
     .stApp { background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2075'); background-size: cover; color: white; }
     .card-white { background: white; color: #333; padding: 20px; border-radius: 15px; margin-bottom: 15px; border-left: 10px solid #3498db; }
+    .card-urgente { background: #fff1f1; color: #333; padding: 20px; border-radius: 15px; margin-bottom: 15px; border: 3px solid #ff4b4b; animation: pulse 2s infinite; }
     .card-vip { background: #fff9e6; border: 2px solid #f1c40f; color: #333; padding: 20px; border-radius: 15px; margin-bottom: 15px; }
     .card-cosecha { background: #e8f5e9; border: 2px solid #2e7d32; color: #1b5e20; padding: 20px; border-radius: 15px; margin-bottom: 15px; }
     .card-bloqueada { background: rgba(0,0,0,0.6); border: 2px dashed #f1c40f; color: white; text-align: center; padding: 30px; border-radius: 15px; }
     .route-txt { font-size: 20px; font-weight: 900; color: #1e3799; text-transform: uppercase; }
     .btn-wsp { background: #25D366; color: white !important; padding: 10px; border-radius: 10px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; }
-    .admin-only-msg { background: #34495e; color: #f1c40f; padding: 15px; border-radius: 10px; text-align: center; font-weight: bold; border: 1px solid #f1c40f; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(255, 75, 75, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -109,12 +110,12 @@ with st.sidebar:
 st.title("🚛 RETORNO MATCH VIP")
 busqueda_libre = st.text_input("🔎 Filtrar por ciudad o empresa:").upper()
 
-# Radar con firma
+# Radar
 st.markdown(f'<div style="background:#e74c3c; padding:10px; border-radius:10px; text-align:center;"><marquee scrollamount="8"><b>{st.session_state.anuncios} -- I.S.D</b></marquee></div>', unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA"])
 
-# --- TAB 1: CAMIONES (FORMULARIO SOLO ADMIN) ---
+# --- TAB 1: CAMIONES ---
 with tab1:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -124,11 +125,13 @@ with tab1:
                 o = st.selectbox("Origen", list(COORDS_PROV.keys()), key="o1")
                 d = st.selectbox("Destino", list(COORDS_PROV.keys()), key="d1")
                 m, en, w = st.text_input("Mercadería"), st.text_input("Empresa"), st.text_input("WhatsApp")
+                urg = st.checkbox("🚨 ¿ES URGENTE?")
                 if st.form_submit_button("PUBLICAR"):
-                    requests.post(URL_CARGAS_POST, data={"entry.610070407": o, "entry.170847116": d, "entry.576675281": m, "entry.1930562861": en, "entry.466540450": w})
+                    m_final = f"⚠️URGENTE: {m}" if urg else m
+                    requests.post(URL_CARGAS_POST, data={"entry.610070407": o, "entry.170847116": d, "entry.576675281": m_final, "entry.1930562861": en, "entry.466540450": w})
                     st.cache_data.clear(); st.rerun()
         else:
-            st.markdown('<div class="admin-only-msg">🔒 Formulario restringido.<br>Solo Ignacio Diaz puede cargar o borrar.</div>', unsafe_allow_html=True)
+            st.markdown('<div class="admin-only-msg" style="background:#34495e; color:#f1c40f; padding:15px; border-radius:10px; text-align:center;">🔒 Formulario restringido.</div>', unsafe_allow_html=True)
     
     with c2:
         if not df_ch_raw.empty:
@@ -139,14 +142,13 @@ with tab1:
                     <div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</div>
                     <b>EQUIPO:</b> {r.iloc[3]} | 📱 <b>TEL:</b> {ocultar_telefono(r.iloc[5])}
                     <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[5])}" class="btn-wsp">ENVIAR PROPUESTA</a>
-                    {'<button class="btn-del" style="background:#ff4b4b; color:white; border:none; width:100%; padding:5px; border-radius:5px; margin-top:10px;">BORRAR (Acceder en Sidebar)</button>' if not st.session_state.admin_mode else ''}
                     </div>""", unsafe_allow_html=True)
                     if st.session_state.admin_mode:
                         if st.button(f"🗑️ ELIMINAR #{idx}", key=f"d_ch_{idx}"):
                             requests.post(URL_CHOFERES_POST, data={"entry.1304806144": "BORRADO", "entry.1542650763": f"REF:{r.iloc[0]}"})
                             st.cache_data.clear(); st.rerun()
 
-# --- TAB 2: CARGAS (FORMULARIO SOLO ADMIN) ---
+# --- TAB 2: CARGAS ---
 with tab2:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -160,18 +162,20 @@ with tab2:
                     requests.post(URL_CHOFERES_POST, data={"entry.1304806144": o_p, "entry.1519265625": d_p, "entry.597193898": eq, "entry.1542650763": cu, "entry.1574172378": ws})
                     st.cache_data.clear(); st.rerun()
         else:
-            st.markdown('<div class="admin-only-msg">🔒 Formulario restringido.<br>Solo Ignacio Diaz puede cargar o borrar.</div>', unsafe_allow_html=True)
+            st.markdown('<div class="admin-only-msg" style="background:#34495e; color:#f1c40f; padding:15px; border-radius:10px; text-align:center;">🔒 Formulario restringido.</div>', unsafe_allow_html=True)
     
     with c2:
         if not df_ca_raw.empty:
             df_ca_f = df_ca_raw[~df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
             for idx, r in df_ca_f.iterrows():
                 try:
+                    es_u = "URGENTE" in str(r.iloc[3]).upper()
                     minutos = (datetime.now() - pd.to_datetime(r.iloc[0], dayfirst=True)).total_seconds() / 60
                     if minutos < TIEMPO_EXCLUSIVO_MIN and not es_user_vip:
                         st.markdown(f'<div class="card-bloqueada">🔒 EXCLUSIVO VIP ({int(TIEMPO_EXCLUSIVO_MIN-minutos)} min)</div>', unsafe_allow_html=True)
                     elif busqueda_libre in str(r).upper():
-                        st.markdown(f"""<div class="card-white"><div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</div>
+                        clase = "card-urgente" if es_u else "card-white"
+                        st.markdown(f"""<div class="{clase}"><div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</div>
                         <b>CARGA:</b> {r.iloc[3]} | 🏢 {r.iloc[5]} | 📱 {ocultar_telefono(r.iloc[4])}
                         <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" class="btn-wsp">CONSULTAR</a>
                         </div>""", unsafe_allow_html=True)
@@ -181,7 +185,7 @@ with tab2:
                                 st.cache_data.clear(); st.rerun()
                 except: continue
 
-# --- TAB 3: COSECHA (FORMULARIO SOLO ADMIN) ---
+# --- TAB 3: COSECHA ---
 with tab3:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -189,18 +193,22 @@ with tab3:
             st.subheader("🌾 Publicar Arrime")
             with st.form("f_arr", clear_on_submit=True):
                 z, g, w_a = st.text_input("📍 Localidad"), st.text_input("Detalle"), st.text_input("WhatsApp")
+                urg_a = st.checkbox("🚨 ¿URGENTE?")
                 if st.form_submit_button("SUBIR"):
-                    requests.post(URL_CARGAS_POST, data={"entry.610070407": "ARRIME ZONA", "entry.170847116": z, "entry.576675281": g, "entry.1930562861": "COSECHA", "entry.466540450": w_a})
+                    g_final = f"⚠️URGENTE: {g}" if urg_a else g
+                    requests.post(URL_CARGAS_POST, data={"entry.610070407": "ARRIME ZONA", "entry.170847116": z, "entry.576675281": g_final, "entry.1930562861": "COSECHA", "entry.466540450": w_a})
                     st.cache_data.clear(); st.rerun()
         else:
-            st.markdown('<div class="admin-only-msg">🔒 Formulario restringido.<br>Solo Ignacio Diaz puede cargar o borrar.</div>', unsafe_allow_html=True)
+            st.markdown('<div class="admin-only-msg" style="background:#34495e; color:#f1c40f; padding:15px; border-radius:10px; text-align:center;">🔒 Formulario restringido.</div>', unsafe_allow_html=True)
     
     with c2:
         if not df_ca_raw.empty:
             df_a = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
             for idx, r in df_a.iterrows():
                 if busqueda_libre in str(r).upper():
-                    st.markdown(f"""<div class="card-cosecha"><div class="route-txt" style="color:#2e7d32;">📍 {r.iloc[2]}</div>
+                    es_u_a = "URGENTE" in str(r.iloc[3]).upper()
+                    estilo = "border: 4px solid red; background: #fff5f5;" if es_u_a else ""
+                    st.markdown(f"""<div class="card-cosecha" style="{estilo}"><div class="route-txt" style="color:#2e7d32;">📍 {r.iloc[2]}</div>
                     <b>INFO:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[4])}
                     <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" class="btn-wsp" style="background:#2e7d32;">CONTACTAR</a>
                     </div>""", unsafe_allow_html=True)
