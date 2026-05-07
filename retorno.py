@@ -72,6 +72,16 @@ def ocultar_telefono(num):
     clean = "".join(filter(str.isdigit, str(num).split('.')[0]))
     return f"*******{clean[-4:]}" if len(clean) > 4 else "*******"
 
+def calcular_distancia(origen, destino):
+    lat1, lon1 = COORDS_PROV.get(origen, (0,0))
+    lat2, lon2 = COORDS_PROV.get(destino, (0,0))
+    if lat1 == 0 or lat2 == 0: return 0
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    return 6371 * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
 # --- 5. INTERFAZ Y ESTILOS ---
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
@@ -138,9 +148,9 @@ with c_f1:
 with c_f2:
     filtro_prov = st.selectbox("📍 Filtrar por Provincia:", list(COORDS_PROV.keys()))
 
-tab1, tab2, tab3 = st.tabs(["🚀 CAMIONES DISPONIBLES", "🏢 CARGAS DISPONIBLES", "🌾 COSECHA / ARRIME"])
+tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES DISPONIBLES", "🏢 CARGAS DISPONIBLES", "🌾 COSECHA / ARRIME", "📊 CALCULADOR"])
 
-# --- TAB 1: CAMIONES (CHOFERES BUSCANDO) ---
+# --- TAB 1: CAMIONES ---
 with tab1:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -163,7 +173,6 @@ with tab1:
     with c2:
         if not df_ch_raw.empty:
             for idx, r in df_ch_raw.iterrows():
-                # Lógica de Filtro
                 match_prov = (filtro_prov == "TODAS" or filtro_prov in str(r.iloc[1]).upper() or filtro_prov in str(r.iloc[2]).upper())
                 if busqueda_libre in str(r).upper() and match_prov:
                     is_v = str(r.iloc[4]) in LISTA_VIPS_GLOBAL
@@ -181,7 +190,7 @@ with tab1:
                             requests.post(URL_CHOFERES_POST, data={"entry.1304806144": "BORRADO", "entry.1542650763": f"REF:{r.iloc[0]}"})
                             st.cache_data.clear(); st.rerun()
 
-# --- TAB 2: CARGAS (EMPRESAS BUSCANDO) ---
+# --- TAB 2: CARGAS ---
 with tab2:
     c1, c2 = st.columns([1, 2.2])
     with c1:
@@ -209,9 +218,7 @@ with tab2:
                     match_prov = (filtro_prov == "TODAS" or filtro_prov in str(r.iloc[1]).upper() or filtro_prov in str(r.iloc[2]).upper())
                     if busqueda_libre in str(r).upper() and match_prov:
                         es_u = "URGENTE" in str(r.iloc[3]).upper()
-                        # Lógica VIP con cuenta regresiva didáctica
                         minutos = (datetime.now() - pd.to_datetime(r.iloc[0], dayfirst=True)).total_seconds() / 60
-                        
                         if minutos < TIEMPO_EXCLUSIVO_MIN and not es_user_vip:
                             st.markdown(f'''<div class="card-bloqueada">
                                 <h3 style="margin:0;">🔒 CONTENIDO EXCLUSIVO VIP</h3>
@@ -229,14 +236,13 @@ with tab2:
                             </div>
                             <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}&text=Hola,%20consulto%20por%20la%20carga%20de%20{r.iloc[1]}%20a%20{r.iloc[2]}" class="btn-wsp">SOLICITAR VIAJE</a>
                             </div>""", unsafe_allow_html=True)
-                            
                             if st.session_state.admin_mode:
                                 if st.button(f"🗑️ Eliminar Carga #{idx}", key=f"d_ca_{idx}"):
                                     requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.576675281": f"REF:{r.iloc[0]}"})
                                     st.cache_data.clear(); st.rerun()
                 except: continue
 
-# --- TAB 3: COSECHA (ARRIME) ---
+# --- TAB 3: COSECHA ---
 with tab3:
     st.write("### 🌾 Logística de Cosecha (Arrimes de Campo)")
     c1, c2 = st.columns([1, 2.2])
@@ -251,7 +257,6 @@ with tab3:
                     g_final = f"⚠️URGENTE: {g}" if urg_a else g
                     requests.post(URL_CARGAS_POST, data={"entry.610070407": "ARRIME ZONA", "entry.170847116": z, "entry.576675281": g_final, "entry.1930562861": "COSECHA", "entry.466540450": w_a})
                     st.cache_data.clear(); st.rerun()
-    
     with c2:
         if not df_ca_raw.empty:
             df_a = df_ca_raw[df_ca_raw.astype(str).apply(lambda x: x.str.contains('ARRIME', case=False)).any(axis=1)]
@@ -270,10 +275,36 @@ with tab3:
                             requests.post(URL_CARGAS_POST, data={"entry.610070407": "BORRADO", "entry.576675281": f"REF:{r.iloc[0]}"})
                             st.cache_data.clear(); st.rerun()
 
+# --- TAB 4: CALCULADOR DE COSTOS ---
+with tab4:
+    st.subheader("📊 Estimador de Fletes (Ruta en Línea Recta)")
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        loc_o = st.selectbox("📍 Punto A (Origen)", list(COORDS_PROV.keys()), key="calc_o")
+        loc_d = st.selectbox("🏁 Punto B (Destino)", list(COORDS_PROV.keys()), key="calc_d")
+        tarifa_km = st.number_input("💰 Tarifa por KM ($)", value=1200, step=50)
+    with c2:
+        dist = calcular_distancia(loc_o, loc_d)
+        if dist > 0:
+            dist_ajustada = dist * 1.25 # Factor de corrección vial 25%
+            total = dist_ajustada * tarifa_km
+            st.markdown(f"""
+            <div style="background:rgba(255,255,255,0.1); padding:25px; border-radius:15px; border-left:10px solid #f1c40f;">
+                <h4 style="margin:0; color:#f1c40f;">RESULTADO DEL CÁLCULO</h4>
+                <p style="font-size:35px; font-weight:bold; margin:10px 0;">{dist_ajustada:.0f} KM <span style="font-size:15px; opacity:0.6;">aprox.</span></p>
+                <p style="font-size:22px;">Total Sugerido: <span style="color:#25D366; font-weight:bold;">${total:,.0f}</span></p>
+                <small style="opacity:0.7;">Distancia geodésica calculada entre capitales provinciales.</small>
+            </div>
+            """, unsafe_allow_html=True)
+            msg_calc = f"Consulta desde RetornoMatch: Flete de {loc_o} a {loc_d}. Distancia: {dist_ajustada:.0f}km. Estimado: ${total:,.0f}"
+            st.markdown(f'<a href="https://api.whatsapp.com/send?phone={WSP_VENTAS_VIP}&text={urllib.parse.quote(msg_calc)}" class="btn-wsp" style="background:#3498db;">SOLICITAR COTIZACIÓN FINAL</a>', unsafe_allow_html=True)
+        else:
+            st.info("Selecciona origen y destino para ver el cálculo.")
+
 # --- FOOTER ---
 st.markdown(f"""
 <div style='text-align:center; margin-top:50px; padding:20px; background:rgba(255,255,255,0.05); border-radius:20px;'>
-    <p style='margin:0;'>Sistema de Gestión de Fletes v2.5</p>
+    <p style='margin:0;'>Sistema de Gestión de Fletes v2.6</p>
     <b>Creado por Ignacio Diaz - 2026</b><br>
     <small>Blindaje Estructural Activo • Datos Sincronizados con Google Cloud</small>
 </div>
