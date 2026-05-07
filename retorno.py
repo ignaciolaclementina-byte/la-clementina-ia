@@ -115,12 +115,13 @@ st.markdown(f"""
     .card-white {{ background: #1c2128; color: #adbac7; padding: {card_padding}; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; border-left: 6px solid #3498db; position: relative; }}
     .card-urgente {{ background: #2d1b1b; color: #ff6b6b; padding: {card_padding}; border-radius: 12px; margin-bottom: 12px; border: 1px solid #6e2a2a; animation: pulse 2s infinite; border-left: 6px solid #ff4b4b; position: relative; }}
     .card-cosecha {{ background: #1b2d1b; color: #7cfc00; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #2a6e2a; border-left: 6px solid #2ecc71; position: relative; }}
-    .smart-match {{ background: #1a1a2e; border: 1px dashed #539bf5; padding: 10px; border-radius: 8px; margin-top: 5px; font-size: 0.9rem; color: #539bf5; }}
+    .smart-match {{ background: #1a1a2e; border: 1px dashed #539bf5; padding: 10px; border-radius: 8px; margin-top: 5px; font-size: 0.9rem; color: #539bf5; margin-bottom: 10px; }}
     .badge-time {{ position: absolute; top: 10px; right: 10px; font-size: 0.75rem; background: #30363d; padding: 2px 8px; border-radius: 10px; color: #8b949e; }}
     .badge-cupo {{ background: #f39c12; color: black; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; margin-left: 10px; }}
     .route-txt {{ font-size: {font_size}; font-weight: 800; color: #539bf5; text-transform: uppercase; line-height: 1.2; }}
-    .btn-wsp {{ background: #238636; color: white !important; padding: 14px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 1rem; }}
-    .btn-maps {{ background: #30363d; color: #adbac7 !important; padding: 8px; border-radius: 6px; text-decoration: none; display: inline-block; text-align: center; font-size: 0.8rem; margin-top: 5px; border: 1px solid #444; }}
+    .btn-wsp {{ background: #238636; color: white !important; padding: 14px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; font-size: 1rem; flex: 2; }}
+    .btn-maps {{ background: #30363d; color: #adbac7 !important; padding: 14px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-size: 0.8rem; border: 1px solid #444; flex: 1; }}
+    .container-btns {{ display: flex; gap: 10px; margin-top: 10px; align-items: center; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -145,7 +146,7 @@ st.title("🚛 RETORNO MATCH VIP")
 st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding:10px; border-radius:10px; text-align:center;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios} -- CREADO POR IGNACIO DIAZ</b></marquee></div>', unsafe_allow_html=True)
 st.info(st.session_state.estado_puertos)
 
-# Filtros e Insights
+# Filtros
 st.write("")
 col_s, col_l = st.columns([2, 1])
 busqueda_libre = col_s.text_input("🔎 BUSCAR CIUDAD O EMPRESA:", value=st.session_state.search_query).upper()
@@ -173,7 +174,7 @@ with tab1:
                     <div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
                     <span class="route-txt">📍 {r.iloc[1]} ➔ {r.iloc[2]}</span><br>
                     <b>EQ:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[5])}<br>
-                    <a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2])}" class="btn-wsp">OFERTAR MI CAMIÓN</a>
+                    <a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2])}" target="_blank" class="btn-wsp" style="margin-top:10px;">OFERTAR MI CAMIÓN</a>
                     </div>""", unsafe_allow_html=True)
 
 # --- TAB 2: CARGAS (MEJORADA CON SMART MATCH) ---
@@ -193,7 +194,6 @@ with tab2:
     with c2:
         if not df_ca_raw.empty:
             for _, r in df_ca_raw[~df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME')].iterrows():
-                # Lógica Smart Match: Si el usuario busca "San Jorge" pero la carga es en "Sastre" (está cerca), avisar.
                 dist_proximidad = 0
                 if busqueda_libre in COORDS_CIUDADES and r.iloc[1] in COORDS_CIUDADES:
                     dist_proximidad = calcular_distancia(busqueda_libre, r.iloc[1])
@@ -203,18 +203,20 @@ with tab2:
                     cupo_label = re.search(r'CUPOS:(\d+)', str(r.iloc[3]))
                     cupo_html = f'<span class="badge-cupo">CUPOS: {cupo_label.group(1)}</span>' if cupo_label else ""
                     
-                    smart_msg = ""
-                    if dist_proximidad > 0 and busqueda_libre not in str(r.iloc[1]):
-                        smart_msg = f'<div class="smart-match">💡 Smart Match: A solo {dist_proximidad:.0f}km de tu búsqueda</div>'
+                    smart_msg = f'<div class="smart-match">💡 Smart Match: A solo {dist_proximidad:.0f}km de tu búsqueda</div>' if dist_proximidad > 0 and busqueda_libre not in str(r.iloc[1]) else ""
 
-                    st.markdown(f"""<div class="{estilo}">
-                    <div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
-                    <div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]} {cupo_html}</div>
-                    {smart_msg}
-                    📦 {r.iloc[3]} | 🏢 {r.iloc[5]}<br>
-                    <a href="{link_google_maps(r.iloc[1], r.iloc[2])}" class="btn-maps" target="_blank">🗺️ Ver Hoja de Ruta</a>
-                    <a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" class="btn-wsp" style="background:#2980b9;">PEDIR VIAJE</a>
-                    </div>""", unsafe_allow_html=True)
+                    st.markdown(f"""
+                    <div class="{estilo}">
+                        <div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
+                        <div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]} {cupo_html}</div>
+                        {smart_msg}
+                        📦 {r.iloc[3]} | 🏢 {r.iloc[5]}<br>
+                        <div class="container-btns">
+                            <a href="{link_google_maps(r.iloc[1], r.iloc[2])}" class="btn-maps" target="_blank">🗺️ Hoja Ruta</a>
+                            <a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" class="btn-wsp" target="_blank" style="background:#2980b9;">PEDIR VIAJE</a>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
 # --- TAB 3: COSECHA ---
 with tab3:
@@ -222,13 +224,15 @@ with tab3:
         df_arr = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME')]
         for _, r in df_arr.iterrows():
             if busqueda_libre in str(r).upper():
-                st.markdown(f"""<div class="card-cosecha">
-                <div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
-                <b>📍 ZONA: {r.iloc[2]}</b><br>🌾 {r.iloc[3]}
-                <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" class="btn-wsp">CONTACTAR DIRECTO</a>
-                </div>""", unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="card-cosecha">
+                    <div class="badge-time">{formatear_fecha(r.iloc[0])}</div>
+                    <b>📍 ZONA: {r.iloc[2]}</b><br>🌾 {r.iloc[3]}
+                    <a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" target="_blank" class="btn-wsp" style="margin-top:10px;">CONTACTAR DIRECTO</a>
+                </div>
+                """, unsafe_allow_html=True)
 
-# --- TAB 4: CALCULADOR DE MARGEN (NUEVO) ---
+# --- TAB 4: CALCULADOR DE MARGEN ---
 with tab4:
     st.subheader("📊 Calculadora de Rentabilidad")
     col1, col2 = st.columns(2)
@@ -242,19 +246,19 @@ with tab4:
     
     dist = calcular_distancia(o_c, d_c)
     if dist > 0:
-        dist_real = dist * 1.25 # Factor de corrección vial
+        dist_real = dist * 1.25 
         litros_total = (dist_real / 100) * consumo
         costo_combustible = litros_total * gasoil
-        ingreso_bruto = tarifa * 30 # Base 30 toneladas
+        ingreso_bruto = tarifa * 30 
         margen = ingreso_bruto - costo_combustible
         
         c1, c2, c3 = st.columns(3)
         c1.metric("Distancia", f"{dist_real:.0f} KM")
         c2.metric("Gasto Gasoil", f"${costo_combustible:,.0f}")
-        c3.metric("Margen Est.", f"${margen:,.0f}", delta=f"{((margen/ingreso_bruto)*100):.1f}% Rentabilidad")
+        c3.metric("Margen Est.", f"${margen:,.0f}", delta=f"{((margen/ingreso_bruto)*100):.1f}% Rent.")
         
         st.progress(min(max(margen / ingreso_bruto, 0.0), 1.0))
-        st.caption("Nota: El cálculo no incluye gomas, peajes ni viáticos.")
+        st.caption("Nota: Estimación de rentabilidad sobre flete bruto (30 TN).")
 
 # --- FOOTER ---
 st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026</b></div>", unsafe_allow_html=True)
