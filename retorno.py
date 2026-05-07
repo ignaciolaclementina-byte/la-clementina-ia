@@ -147,6 +147,7 @@ st.markdown("""
 with st.sidebar:
     st.title("🛡️ Gestión")
     pin_input = st.text_input("PIN Admin", type="password")
+    
     if pin_input == ADMIN_PIN:
         st.session_state.admin_mode = True
         st.success("MODO EDITOR ACTIVO")
@@ -296,4 +297,4 @@ with tab4:
         st.success(f"Total Sugerido: ${dist_r * t_km:,.0f}")
 
 # --- FOOTER ---
-st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026</b></div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026 - San Jorge, Santa Fe</b></div>", unsafe_allow_html=True)
