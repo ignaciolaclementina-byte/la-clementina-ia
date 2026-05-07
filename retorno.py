@@ -147,7 +147,6 @@ st.markdown("""
 with st.sidebar:
     st.title("🛡️ Gestión")
     pin_input = st.text_input("PIN Admin", type="password")
-    
     if pin_input == ADMIN_PIN:
         st.session_state.admin_mode = True
         st.success("MODO EDITOR ACTIVO")
@@ -194,9 +193,9 @@ with col_clima:
     clima_val = obtener_clima(ciudad_clima)
     st.markdown(f'<div class="status-bar" style="border-left-color:#3498db; text-align:center;">{clima_val}<br><small>{ciudad_clima}</small></div>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS", "🗺️ MAPA LOGÍSTICO"])
 
-# Mensaje de bloqueo común para usuarios No-VIP (Usa el número 3406649346)
+# Mensaje de bloqueo común para usuarios No-VIP
 lock_btn_html = f'<a href="{link_ventas_vip(user_cuit)}" style="background: #444; color: #f1c40f !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.85rem; border: 1px solid #f1c40f;">⭐ SOLICITAR ACCESO VIP</a>'
 
 # --- TAB 1: CAMIONES ---
@@ -212,6 +211,17 @@ with tab1:
                         if o_p and d_p:
                             requests.post(URL_CHOFERES_POST, data={"entry.1304806144": o_p, "entry.1519265625": d_p, "entry.597193898": eq, "entry.1542650763": cu, "entry.1574172378": ws})
                             st.cache_data.clear(); st.rerun()
+        
+        # PRO: Radar de Cercanía para el usuario
+        if es_user_vip and filtro_loc != "TODAS":
+            st.markdown("### 📡 Radar VIP")
+            cercanas = []
+            for _, rc in df_ca_raw.iterrows():
+                if calcular_distancia(filtro_loc, str(rc.iloc[1])) < 50:
+                    cercanas.append(str(rc.iloc[1]))
+            if cercanas:
+                st.info(f"Hay {len(set(cercanas))} localidades con carga a menos de 50km de {filtro_loc}")
+
     with c2:
         if not df_ch_raw.empty:
             for idx, r in df_ch_raw.iterrows():
@@ -248,7 +258,7 @@ with tab2:
                     tiempo = formatear_fecha(r.iloc[0])
                     origen, destino = str(r.iloc[1]), str(r.iloc[2])
                     estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
-                    link_ruta = f"https://www.google.com/maps/dir/?api=1&origin={urllib.parse.quote(origen)}&destination={urllib.parse.quote(destino)}&travelmode=driving"
+                    link_ruta = f"https://www.google.com/maps/dir/{urllib.parse.quote(origen)}/{urllib.parse.quote(destino)}"
                     btn_wsp = f'<a href="{generar_wsp_link(r.iloc[4], origen, destino, False)}" style="flex: 2; background:#2980b9; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem;">SOLICITAR VIAJE</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
 
                     st.markdown(f"""<div class="{estilo}"><div class="badge-time">{tiempo}</div>
@@ -295,6 +305,32 @@ with tab4:
         dist_r = dist * 1.22
         st.metric("Distancia Estimada", f"{dist_r:.0f} KM")
         st.success(f"Total Sugerido: ${dist_r * t_km:,.0f}")
+
+# --- TAB 5: PRO - MAPA LOGÍSTICO ---
+with tab5:
+    st.subheader("🗺️ Visualización de Cargas y Camiones")
+    map_data = []
+    
+    # Agregar Cargas al mapa (Azul)
+    for _, row in df_ca_raw.iterrows():
+        loc = str(row.iloc[1]).upper()
+        if loc in COORDS_CIUDADES and loc != "TODAS":
+            lat, lon = COORDS_CIUDADES[loc]
+            map_data.append({"lat": lat, "lon": lon, "tipo": "CARGA"})
+            
+    # Agregar Camiones al mapa (Rojo/Verde)
+    for _, row in df_ch_raw.iterrows():
+        loc = str(row.iloc[1]).upper()
+        if loc in COORDS_CIUDADES and loc != "TODAS":
+            lat, lon = COORDS_CIUDADES[loc]
+            map_data.append({"lat": lat, "lon": lon, "tipo": "CAMIÓN"})
+            
+    if map_data:
+        df_map = pd.DataFrame(map_data)
+        st.map(df_map)
+        st.caption("Puntos en el mapa representan concentraciones de oferta (camiones) y demanda (cargas).")
+    else:
+        st.warning("No hay suficientes datos con coordenadas para mostrar el mapa.")
 
 # --- FOOTER ---
 st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026 - San Jorge, Santa Fe</b></div>", unsafe_allow_html=True)
