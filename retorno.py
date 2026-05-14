@@ -1,5 +1,4 @@
 import streamlit as st
-import pd as pd
 import pandas as pd
 import time
 import requests
@@ -9,7 +8,7 @@ import re
 import math
 
 # --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - CREADO POR IGNACIO DIAZ) ---
-# Se mantiene tu estructura original intacta
+# Se mantiene la estructura original y la autoría de Ignacio Diaz
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
@@ -233,8 +232,7 @@ if cf4.button("📍 SAN JORGE"): st.session_state.search_query = "SAN JORGE"; st
 
 filtro_loc = st.selectbox("📍 Filtrar por Ciudad Base:", list(COORDS_CIUDADES.keys()))
 
-# Situación Actual y Clima Mejorado
-st.write("")
+# Situación Actual y Clima
 col_sit, col_clima = st.columns([3, 1])
 col_sit.markdown(f'<div class="status-bar">⚠️ <b>SITUACIÓN ACTUAL:</b> {st.session_state.situacion_actual}</div>', unsafe_allow_html=True)
 ciudad_clima = "SAN JORGE (SF)" if filtro_loc == "TODAS" else filtro_loc
