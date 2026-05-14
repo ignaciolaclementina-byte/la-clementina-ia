@@ -6,7 +6,7 @@ import urllib.parse
 from datetime import datetime, timedelta
 import re
 import math
-import pydeck as pdk # Agregamos para el Mapa de Calor
+import pydeck as pdk # Necesario para el mapa de calor
 
 # --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - CREADO POR IGNACIO DIAZ) ---
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
@@ -51,14 +51,12 @@ def cargar_datos_seguros():
         t = int(time.time())
         df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}").fillna("-")
         df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
-        
         if not df_ca.empty:
             mask_borrado = (df_ca.iloc[:, 1].astype(str).str.contains('BORRADO', case=False))
             refs_a_borrar = [re.search(r'REF:(.*)', str(cell)).group(1).strip() for row in df_ca[mask_borrado].values for cell in row if re.search(r'REF:(.*)', str(cell))]
             df_ca = df_ca[~mask_borrado]
             if refs_a_borrar:
                 df_ca = df_ca[~df_ca.iloc[:, 0].astype(str).isin(refs_a_borrar)]
-
         vips = []
         try:
             url_vip = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VIP}&t={t}"
@@ -72,7 +70,7 @@ def cargar_datos_seguros():
 
 df_ch_raw, df_ca_raw, LISTA_VIPS_GLOBAL = cargar_datos_seguros()
 
-# --- 4. FUNCIONES AUXILIARES ---
+# --- 4. FUNCIONES AUXILIARES (MANTENIENDO TU LÓGICA DE MENSAJES) ---
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num).split('.')[0]))
     if not clean: return "5491111111111"
@@ -83,9 +81,12 @@ def limpiar_wsp(num):
 def generar_wsp_link(num, origen, destino, es_chofer=True, reporte_llegada=False):
     clean_num = limpiar_wsp(num)
     if reporte_llegada:
-        msg = f"Ignacio, ya estoy en destino ({destino}). Mi ubicación actual es: https://www.google.com/maps/search/?api=1&query={COORDS_CIUDADES.get(destino, (0,0))[0]},{COORDS_CIUDADES.get(destino, (0,0))[1]}"
+        # Mejora: Mensaje automático de llegada con ubicación
+        lat, lon = COORDS_CIUDADES.get(destino, (0,0))
+        msg = f"Ignacio, ya estoy en destino ({destino}). Mi ubicación: https://www.google.com/maps/search/?api=1&query={lat},{lon}"
     else:
-        msg = f"Hola! Vi tu anuncio de {origen} a {destino} en Retorno Match."
+        # Tus mensajes originales
+        msg = f"Hola! Vi tu camión de {origen} a {destino} en Retorno Match. ¿Tenés carga?" if es_chofer else f"Hola! Me interesa la carga de {origen} a {destino} que publicaste en Retorno Match."
     return f"https://api.whatsapp.com/send?phone={clean_num}&text={urllib.parse.quote(msg)}"
 
 def link_ventas_vip(cuit=""):
@@ -112,23 +113,23 @@ def calcular_distancia(origen, destino):
     a = math.sin(math.radians(lat2-lat1)/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(math.radians(lon2-lon1)/2)**2
     return 6371 * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
-def obtener_clima(ciudad):
+def obtener_clima_semaforo(ciudad):
     if ciudad == "TODAS" or ciudad not in COORDS_CIUDADES: return None
     try:
         lat, lon = COORDS_CIUDADES[ciudad]
         res = requests.get(f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=True").json()
         temp = res['current_weather']['temperature']
         code = res['current_weather']['weathercode']
-        # Semáforo de color por código de clima
-        emoji = "🔴" if code >= 51 else "🟢"
-        return f"{emoji} {temp}°C"
+        # Mejora: Semáforo visual (Rojo si llueve/tormenta)
+        icon = "🟢" if code < 51 else "🔴"
+        return f"{icon} {temp}°C"
     except: return "N/A"
 
 def generar_reporte_puertos_real():
     if st.session_state.reportes_puerto and st.session_state.reportes_puerto.strip() != "":
         return f"🚨 AVISO ADMIN: {st.session_state.reportes_puerto}"
     puertos = ["TIMBUES (SF)", "PTO GRAL SAN MARTIN (SF)", "SAN LORENZO (SF)"]
-    estados = [f"{p.split(' ')[0]}: {obtener_clima(p)}" for p in puertos]
+    estados = [f"{p.split(' ')[0]}: {obtener_clima_semaforo(p)}" for p in puertos]
     return " | ".join(estados)
 
 # --- 5. INTERFAZ Y ESTILOS ---
@@ -160,40 +161,40 @@ with st.sidebar:
 # --- CABECERA ---
 st.title("🚛 RETORNO MATCH VIP")
 
-# --- ALERTA COSECHA (Mejora solicitada) ---
+# --- MEJORA: ALERTA COSECHA ---
 if datetime.now().month in [3, 4, 5]:
-    st.warning("🌾 **ALERTA COSECHA GRUESA:** Se detecta alta demanda. Priorice viajes con cupo confirmado.")
+    st.warning("🌾 **ATENCIÓN:** Temporada de cosecha activa. Priorizar cupos confirmados.")
 
 # --- SECCIÓN VIP ---
 user_cuit = st.text_input("Ingrese CUIT:", key="cuit_input").strip()
 es_user_vip = user_cuit in LISTA_VIPS_GLOBAL
 
-# --- REPORTE DE PUERTOS (Mejora: Semáforos) ---
+# --- REPORTE DE PUERTOS CON SEMÁFOROS ---
 st.markdown(f'<div class="status-bar">🚢 **CUPOS:** {generar_reporte_puertos_real()}</div>', unsafe_allow_html=True)
 
-# Filtros Rápidos
-busqueda_libre = st.text_input("🔎 BUSCAR (Localidad, Empresa...):").upper()
-filtro_loc = st.selectbox("📍 Ciudad Base:", list(COORDS_CIUDADES.keys()))
+# Filtros
+busqueda_libre = st.text_input("🔎 BUSCAR:").upper()
+filtro_loc = st.selectbox("📍 Filtrar Ciudad:", list(COORDS_CIUDADES.keys()))
 
 tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
 
-# --- TAB 1: CAMIONES (Mejora: Mapa de Calor) ---
+# --- TAB 1: CAMIONES (CON MAPA DE CALOR) ---
 with tab1:
     if not df_ch_raw.empty:
         # Lógica de Mapa de Calor
-        map_points = []
+        puntos = []
         for loc in df_ch_raw.iloc[:, 1].unique():
             if loc in COORDS_CIUDADES:
-                count = len(df_ch_raw[df_ch_raw.iloc[:, 1] == loc])
+                cant = len(df_ch_raw[df_ch_raw.iloc[:, 1] == loc])
                 lat, lon = COORDS_CIUDADES[loc]
-                map_points.append({"lat": lat, "lon": lon, "weight": count})
+                puntos.append({"lat": lat, "lon": lon, "weight": cant})
         
-        if map_points:
-            with st.expander("📍 VER MAPA DE CONCENTRACIÓN DE CAMIONES"):
+        if puntos:
+            with st.expander("📍 VER CONCENTRACIÓN DE CAMIONES"):
                 st.pydeck_chart(pdk.Deck(
                     map_style='mapbox://styles/mapbox/dark-v9',
-                    initial_view_state=pdk.ViewState(latitude=-31.8, longitude=-61.8, zoom=6, pitch=40),
-                    layers=[pdk.Layer('HeatmapLayer', data=map_points, get_position='[lon, lat]', get_weight='weight', radius_pixels=60)]
+                    initial_view_state=pdk.ViewState(latitude=-31.8, longitude=-61.8, zoom=6),
+                    layers=[pdk.Layer('HeatmapLayer', data=puntos, get_position='[lon, lat]', get_weight='weight', radius_pixels=50)]
                 ))
 
     col1, col2 = st.columns([1, 2.2])
@@ -203,17 +204,18 @@ with tab1:
                 btn = f'<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" target="_blank" style="background:#238636; color:white; padding:10px; border-radius:8px; text-decoration:none; display:block; text-align:center;">OFERTAR CARGA</a>' if es_user_vip else "🔒 Bloqueado"
                 st.markdown(f'<div class="card-white"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><span class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</span><br><b>EQ:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[5])}{btn}</div>', unsafe_allow_html=True)
 
-# --- TAB 2: CARGAS (Mejora: Botón Llegué) ---
+# --- TAB 2: CARGAS (CON BOTÓN LLEGADA) ---
 with tab2:
     for idx, r in df_ca_raw.iterrows():
         if "ARRIME" not in str(r.iloc[1]) and busqueda_libre in str(r).upper():
             estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
             btn_wsp = f'<a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" target="_blank" style="background:#2980b9; color:white; padding:10px; border-radius:8px; text-decoration:none; display:block; text-align:center; flex:2;">SOLICITAR VIAJE</a>' if es_user_vip else "🔒 Acceso VIP"
+            # Nuevo Botón Llegué
             btn_llegue = f'<a href="{generar_wsp_link(WSP_VENTAS_VIP, r.iloc[1], r.iloc[2], reporte_llegada=True)}" target="_blank" style="background:#30363d; color:#539bf5; padding:10px; border-radius:8px; text-decoration:none; display:block; text-align:center; flex:1; border:1px solid #539bf5;">✅ LLEGUÉ</a>'
             
             st.markdown(f'<div class="{estilo}"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><span class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</span><br>{r.iloc[3]} | {r.iloc[5]}<div style="display:flex; gap:10px; margin-top:10px;">{btn_wsp}{btn_llegue}</div></div>', unsafe_allow_html=True)
 
-# --- TAB 3: COSECHA (Arrimes) ---
+# --- TAB 3: COSECHA (ARRIMES) ---
 with tab3:
     df_arr = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
     for idx, r in df_arr.iterrows():
