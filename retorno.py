@@ -139,8 +139,9 @@ def obtener_clima(ciudad):
         return f"{estado} {temp}°C"
     except: return "N/A"
 
+# --- MEJORA: REPORTE REAL DE PUERTOS ---
 def generar_reporte_puertos_real():
-    # Prioridad al reporte manual del administrador
+    # Prioridad al reporte manual del administrador si existe
     if st.session_state.reportes_puerto and st.session_state.reportes_puerto.strip() != "":
         return f"🚨 AVISO ADMIN: {st.session_state.reportes_puerto}"
     
@@ -151,8 +152,13 @@ def generar_reporte_puertos_real():
 
     for p in puertos:
         clima = obtener_clima(p)
-        if clima and ("Lluvia" in clima or "Tormenta" in clima): riesgo_lluvia = True
-        estados.append(f"{p.split(' ')[0]}: {clima if clima else 'N/A'}")
+        # Si no hay respuesta de clima, evitamos error
+        if clima:
+            if "Lluvia" in clima or "Tormenta" in clima: 
+                riesgo_lluvia = True
+            estados.append(f"{p.split(' ')[0]}: {clima}")
+        else:
+            estados.append(f"{p.split(' ')[0]}: N/D")
 
     info_base = " | ".join(estados)
     if riesgo_lluvia:
@@ -179,7 +185,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- SIDEBAR (Gestión Admin) ---
+# --- SIDEBAR (Solo Gestión Admin) ---
 with st.sidebar:
     st.title("🛡️ Gestión")
     pin_input = st.text_input("PIN Admin", type="password")
@@ -188,7 +194,7 @@ with st.sidebar:
         st.success("MODO EDITOR ACTIVO")
         st.session_state.anuncios = st.text_area("📢 Mensajes:", st.session_state.anuncios)
         st.session_state.situacion_actual = st.text_area("🚛 Sit. Actual (Demoras):", st.session_state.situacion_actual)
-        st.session_state.reportes_puerto = st.text_area("🚢 Reporte Manual Puertos:", st.session_state.reportes_puerto)
+        st.session_state.reportes_puerto = st.text_area("🚢 Reporte Manual Puertos (Opcional):", st.session_state.reportes_puerto)
         if st.button("♻️ Forzar Sincronización"):
             st.cache_data.clear(); st.rerun()
     else: st.session_state.admin_mode = False
@@ -201,17 +207,17 @@ st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding
 with st.container():
     st.markdown('<div class="vip-access-box">', unsafe_allow_html=True)
     st.subheader("🔑 ACCESO VIP")
-    user_cuit = st.text_input("Ingrese su CUIT para desbloquear contactos:", placeholder="Ej: 20304445556", key="cuit_input", label_visibility="collapsed").strip()
+    user_cuit = st.text_input("Ingrese su CUIT para desbloquear números de contacto:", placeholder="Ej: 20304445556", key="cuit_input", label_visibility="collapsed").strip()
     es_user_vip = user_cuit in LISTA_VIPS_GLOBAL
     if user_cuit:
-        if es_user_vip: st.markdown('<p style="color:#2ecc71; font-weight:bold; margin-top:10px;">✅ ACCESO VIP ACTIVO</p>', unsafe_allow_html=True)
+        if es_user_vip: st.markdown('<p style="color:#2ecc71; font-weight:bold; margin-top:10px;">✅ ACCESO VIP ACTIVO - Contactos Desbloqueados</p>', unsafe_allow_html=True)
         else:
             st.markdown('<p style="color:#e74c3c; margin-top:10px;">❌ CUIT no registrado.</p>', unsafe_allow_html=True)
             st.markdown(f'<a href="{link_ventas_vip(user_cuit)}" target="_blank" style="color:#f1c40f; text-decoration:none; font-weight:bold;">👉 Click aquí para solicitar el acceso por WhatsApp</a>', unsafe_allow_html=True)
     else: st.info("Complete su CUIT para ver los teléfonos de contacto.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- REPORTES DEL PUERTO ---
+# --- REPORTES DEL PUERTO (AHORA REAL Y AUTOMÁTICO) ---
 reporte_final = generar_reporte_puertos_real()
 st.markdown('<div class="port-report-box">', unsafe_allow_html=True)
 cp1, cp2 = st.columns([1, 4])
@@ -234,7 +240,8 @@ if cf4.button("📍 SAN JORGE"): st.session_state.search_query = "SAN JORGE"; st
 
 filtro_loc = st.selectbox("📍 Filtrar por Ciudad Base:", list(COORDS_CIUDADES.keys()))
 
-# Situación y Clima
+# Situación Actual y Clima Mejorado
+st.write("")
 col_sit, col_clima = st.columns([3, 1])
 col_sit.markdown(f'<div class="status-bar">⚠️ <b>SITUACIÓN ACTUAL:</b> {st.session_state.situacion_actual}</div>', unsafe_allow_html=True)
 ciudad_clima = "SAN JORGE (SF)" if filtro_loc == "TODAS" else filtro_loc
@@ -318,5 +325,4 @@ with tab4:
         st.success(f"Total Sugerido: ${dist_r * t_km:,.0f}")
 
 # --- FOOTER ---
-# Manteniendo la firma y fecha según lo solicitado
 st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026</b></div>", unsafe_allow_html=True)
