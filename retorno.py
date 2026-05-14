@@ -37,10 +37,13 @@ COORDS_CIUDADES = {
 }
 
 # --- 2. GESTIÓN DE SESIÓN ---
-for key, val in {"admin_mode": False, "anuncios": "¡Bienvenido!", "situacion_actual": "Normal", "search_query": "", "reportes_puerto": ""}.items():
-    if key not in st.session_state: st.session_state[key] = val
+if "admin_mode" not in st.session_state: st.session_state.admin_mode = False
+if "anuncios" not in st.session_state: st.session_state.anuncios = "¡Bienvenido al Sistema VIP!"
+if "situacion_actual" not in st.session_state: st.session_state.situacion_actual = "Sin reportes de demoras."
+if "search_query" not in st.session_state: st.session_state.search_query = ""
+if "reportes_puerto" not in st.session_state: st.session_state.reportes_puerto = "" 
 
-# --- 3. CARGA DE DATOS (CORREGIDO PARA MOSTRAR TODO) ---
+# --- 3. CARGA DE DATOS ---
 @st.cache_data(ttl=5)
 def cargar_datos_seguros():
     try:
@@ -48,17 +51,23 @@ def cargar_datos_seguros():
         df_ch = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CHOFERES}&t={t}").fillna("-")
         df_ca = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_CARGAS}&t={t}").fillna("-")
         
-        # Limpieza de borrados: busca la palabra en cualquier parte de la fila
         if not df_ca.empty:
-            df_ca = df_ca[~df_ca.apply(lambda row: row.astype(str).str.contains('BORRADO', case=False).any(), axis=1)]
+            mask_borrado = (df_ca.iloc[:, 1].astype(str).str.contains('BORRADO', case=False))
+            refs_a_borrar = [re.search(r'REF:(.*)', str(cell)).group(1).strip() for row in df_ca[mask_borrado].values for cell in row if re.search(r'REF:(.*)', str(cell))]
+            df_ca = df_ca[~mask_borrado]
+            if refs_a_borrar:
+                df_ca = df_ca[~df_ca.iloc[:, 0].astype(str).isin(refs_a_borrar)]
 
         vips = []
         try:
             df_v = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VIP}&t={t}", header=None)
-            vips = [str(x).strip().upper().replace(".0", "") for x in df_v[0].dropna().tolist()]
+            if not df_v.empty:
+                vips = [str(x).strip().upper().replace(".0", "") for x in df_v[0].dropna().tolist()]
         except: pass
         return df_ch, df_ca, vips
-    except: return pd.DataFrame(), pd.DataFrame(), []
+    except Exception as e:
+        st.error(f"Error de conexión: {e}")
+        return pd.DataFrame(), pd.DataFrame(), []
 
 df_ch_raw, df_ca_raw, LISTA_VIPS_GLOBAL = cargar_datos_seguros()
 
@@ -71,11 +80,13 @@ def limpiar_wsp(num):
     return "549" + clean if not clean.startswith("549") else clean
 
 def generar_wsp_link(num, origen, destino, es_chofer=True):
-    msg = f"Hola! Vi tu camión de {origen} a {destino}" if es_chofer else f"Me interesa la carga {origen} -> {destino}"
-    return f"https://api.whatsapp.com/send?phone={limpiar_wsp(num)}&text={urllib.parse.quote(msg)}"
+    clean_num = limpiar_wsp(num)
+    msg = f"Hola! Vi tu camión de {origen} a {destino} en Retorno Match. ¿Tenés carga?" if es_chofer else f"Hola! Me interesa la carga de {origen} a {destino} en Retorno Match."
+    return f"https://api.whatsapp.com/send?phone={clean_num}&text={urllib.parse.quote(msg)}"
 
 def link_ventas_vip(cuit=""):
-    return f"https://api.whatsapp.com/send?phone={WSP_VENTAS_VIP}&text=Solicito VIP CUIT: {cuit}"
+    msg = f"Hola Ignacio! Solicito acceso VIP CUIT: {cuit}"
+    return f"https://api.whatsapp.com/send?phone={WSP_VENTAS_VIP}&text={urllib.parse.quote(msg)}"
 
 def ocultar_telefono(num):
     clean = "".join(filter(str.isdigit, str(num).split('.')[0]))
@@ -83,35 +94,49 @@ def ocultar_telefono(num):
 
 def formatear_fecha(timestamp_str):
     try:
-        dt = pd.to_datetime(timestamp_str); diff = datetime.now() - dt
+        dt = pd.to_datetime(timestamp_str)
+        diff = datetime.now() - dt
         if diff.days > 0: return f"Hace {diff.days}d"
-        return f"Hace {diff.seconds // 3600}h" if diff.seconds // 3600 > 0 else f"Hace {diff.seconds // 60}m"
+        horas = diff.seconds // 3600
+        if horas > 0: return f"Hace {horas}h"
+        minutos = (diff.seconds % 3600) // 60
+        return f"Hace {minutos}m"
     except: return "Reciente"
 
-def calcular_distancia(o, d):
-    p1, p2 = COORDS_CIUDADES.get(o, (0,0)), COORDS_CIUDADES.get(d, (0,0))
-    if p1 == (0,0) or p2 == (0,0): return 0
-    a = math.sin(math.radians(p2[0]-p1[0])/2)**2 + math.cos(math.radians(p1[0]))*math.cos(math.radians(p2[0]))*math.sin(math.radians(p2[1]-p1[1])/2)**2
+def calcular_distancia(origen, destino):
+    lat1, lon1 = COORDS_CIUDADES.get(origen, (0,0))
+    lat2, lon2 = COORDS_CIUDADES.get(destino, (0,0))
+    if lat1 == 0 or lat2 == 0: return 0
+    a = math.sin(math.radians(lat2-lat1)/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(math.radians(lon2-lon1)/2)**2
     return 6371 * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
 def obtener_clima(ciudad):
+    if ciudad == "TODAS" or ciudad not in COORDS_CIUDADES: return None
     try:
-        lat, lon = COORDS_CIUDADES.get(ciudad, COORDS_CIUDADES["SAN JORGE (SF)"])
+        lat, lon = COORDS_CIUDADES[ciudad]
         res = requests.get(f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=True").json()
-        return f"🌡️ {res['current_weather']['temperature']}°C"
+        temp = res['current_weather']['temperature']
+        return f"🌡️ {temp}°C"
     except: return "N/A"
 
-# --- 5. INTERFAZ ---
-st.set_page_config(page_title="RETORNO MATCH VIP", layout="wide")
+def generar_reporte_puertos_real():
+    if st.session_state.reportes_puerto: return f"🚨 AVISO ADMIN: {st.session_state.reportes_puerto}"
+    return "✅ PUERTOS OPERATIVOS: Timbúes, Pto Gral San Martín y San Lorenzo sin alertas."
+
+# --- 5. INTERFAZ Y ESTILOS ---
+st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 st.markdown("""<style>
     .stApp { background-color: #0e1117; color: #adbac7; }
-    .card-white { background: #1c2128; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 6px solid #3498db; position: relative; }
-    .card-urgente { background: #2d1b1b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 6px solid #ff4b4b; position: relative; }
-    .card-cosecha { background: #1c2a1c; border: 1px solid #2d4d2d; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 6px solid #4caf50; position: relative; }
-    .badge-time { position: absolute; top: 10px; right: 10px; font-size: 0.7rem; color: #8b949e; }
+    .card-white { background: #1c2128; color: #adbac7; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; border-left: 6px solid #3498db; position: relative; }
+    .card-urgente { background: #2d1b1b; color: #ff6b6b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #6e2a2a; border-left: 6px solid #ff4b4b; position: relative; }
+    .card-cosecha { background: #1c2a1c; border: 1px solid #2d4d2d; color: #8ebf8e; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 6px solid #4caf50; position: relative; }
+    .vip-access-box { background: #1c2128; border: 2px solid #f1c40f; padding: 20px; border-radius: 15px; margin-bottom: 25px; text-align: center; }
+    .badge-time { position: absolute; top: 10px; right: 10px; font-size: 0.75rem; color: #8b949e; }
     .route-txt { font-size: 1.1rem; font-weight: 800; color: #539bf5; text-transform: uppercase; }
+    .status-bar { background: #161b22; border: 1px solid #30363d; border-left: 4px solid #f1e05a; padding: 10px; border-radius: 8px; margin-bottom: 20px; }
 </style>""", unsafe_allow_html=True)
 
+# --- SIDEBAR ---
 with st.sidebar:
     st.title("🛡️ Gestión")
     if st.text_input("PIN Admin", type="password") == ADMIN_PIN:
@@ -120,46 +145,48 @@ with st.sidebar:
         st.session_state.situacion_actual = st.text_area("🚛 Sit. Actual:", st.session_state.situacion_actual)
         if st.button("♻️ Forzar Sincronización"): st.cache_data.clear(); st.rerun()
 
+# --- HEADER & VIP ---
 st.title("🚛 RETORNO MATCH VIP")
-st.info(f"📢 {st.session_state.anuncios}")
+st.markdown(f'<div class="status-bar"><marquee><b>{st.session_state.anuncios}</b></marquee></div>', unsafe_allow_html=True)
 
-user_cuit = st.text_input("Ingrese su CUIT:", key="cuit_input").strip()
+user_cuit = st.text_input("Ingrese su CUIT para desbloquear contactos:", key="cuit_input").strip()
 es_user_vip = user_cuit in LISTA_VIPS_GLOBAL or st.session_state.admin_mode
-lock_btn_html = f'<div style="background: #333; color: #f1c40f; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #f1c40f; font-size:0.8rem;">⭐ ACCESO VIP REQUERIDO</div>'
-
-busqueda_libre = st.text_input("🔎 BUSCAR:", value=st.session_state.search_query).upper()
-filtro_loc = st.selectbox("📍 Filtrar por Ciudad Base:", list(COORDS_CIUDADES.keys()))
-
-tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
+if not es_user_vip and user_cuit:
+    st.warning("CUIT no registrado.")
+    st.markdown(f'<a href="{link_ventas_vip(user_cuit)}" target="_blank">👉 Solicitar Acceso VIP</a>', unsafe_allow_html=True)
 
 # --- TABS ---
+tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
+lock_btn_html = f'<div style="background:#333; color:#f1c40f; padding:10px; border-radius:8px; text-align:center; border:1px solid #f1c40f;">⭐ RECO VIP REQUERIDO</div>'
+
 with tab1: # CAMIONES
     if not df_ch_raw.empty:
         for _, r in df_ch_raw.iterrows():
-            if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[1]).upper()):
-                btn = f'<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2])}" target="_blank" style="background: #238636; color: white; padding: 10px; border-radius: 8px; text-decoration: none; display: block; text-align: center;">OFERTAR</a>' if es_user_vip else lock_btn_html
-                st.markdown(f'<div class="card-white"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><span class="route-txt">📍 {r.iloc[1]} ➔ {r.iloc[2]}</span><br><b>EQ:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[5])}{btn}</div>', unsafe_allow_html=True)
+            if (st.session_state.search_query.upper() in str(r).upper()):
+                btn = f'<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2])}" target="_blank" style="background:#238636; color:white; padding:10px; border-radius:8px; text-decoration:none; display:block; text-align:center;">OFERTAR</a>' if es_user_vip else lock_btn_html
+                st.markdown(f'<div class="card-white"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><span class="route-txt">📍 {r.iloc[1]} ➔ {r.iloc[2]}</span><br><b>EQ:</b> {r.iloc[3]} | {ocultar_telefono(r.iloc[5])}{btn}</div>', unsafe_allow_html=True)
 
-with tab2: # CARGAS (Filtrando para que NO aparezca Arrime)
+with tab2: # CARGAS
     if not df_ca_raw.empty:
-        df_ca_v = df_ca_raw[~df_ca_raw.iloc[:, 1].astype(str).str.upper().str.contains('ARRIME', na=False)]
+        df_ca_v = df_ca_raw[~df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
         for _, r in df_ca_v.iterrows():
-            if busqueda_libre in str(r).upper():
-                estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
-                btn = f'<a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" target="_blank" style="background:#2980b9; color: white; padding: 10px; border-radius: 8px; text-decoration: none; display:block; text-align: center;">SOLICITAR</a>' if es_user_vip else lock_btn_html
-                st.markdown(f'<div class="{estilo}"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</div><b>{r.iloc[3]}</b> | {r.iloc[5]}{btn}</div>', unsafe_allow_html=True)
+            estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
+            btn = f'<a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" target="_blank" style="background:#2980b9; color:white; padding:10px; border-radius:8px; text-decoration:none; display:block; text-align:center;">SOLICITAR</a>' if es_user_vip else lock_btn_html
+            st.markdown(f'<div class="{estilo}"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</div><b>{r.iloc[3]}</b> | {r.iloc[5]}{btn}</div>', unsafe_allow_html=True)
 
-with tab3: # COSECHA (CORREGIDO PARA DETECTAR 'ARRIME ZONA')
+with tab3: # COSECHA
     st.markdown('<div class="card-cosecha">🚜 <b>INDICADOR DE DENSIDAD DE COSECHA: 85%</b></div>', unsafe_allow_html=True)
     if not df_ca_raw.empty:
-        # Buscamos 'ARRIME' en mayúsculas para asegurar detección según image_77c334.png
-        df_arr = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.upper().str.contains('ARRIME', na=False)]
+        df_arr = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
         for _, r in df_arr.iterrows():
-            if busqueda_libre in str(r).upper():
-                btn = f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" target="_blank" style="background: #238636; color: white; padding: 10px; border-radius: 8px; text-decoration: none; display: block; text-align: center;">CONTACTAR</a>' if es_user_vip else lock_btn_html
-                st.markdown(f'<div class="card-cosecha"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div style="font-weight:bold;">📍 ZONA: {r.iloc[2]}</div>🌾 {r.iloc[3]}{btn}</div>', unsafe_allow_html=True)
+            btn = f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" target="_blank" style="background:#238636; color:white; padding:10px; border-radius:8px; text-decoration:none; display:block; text-align:center;">CONTACTAR</a>' if es_user_vip else lock_btn_html
+            st.markdown(f'<div class="card-cosecha"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div style="font-weight:bold;">📍 ZONA: {r.iloc[2]}</div>🌾 {r.iloc[3]}{btn}</div>', unsafe_allow_html=True)
 
 with tab4: # COSTOS
-    st.write(f"Distancia: {calcular_distancia(st.selectbox('Origen', list(COORDS_CIUDADES.keys()), key='c1'), st.selectbox('Destino', list(COORDS_CIUDADES.keys()), key='c2')) * 1.22:.0f} KM")
+    st.subheader("📊 Estimador")
+    o = st.selectbox("Origen", list(COORDS_CIUDADES.keys()))
+    d = st.selectbox("Destino", list(COORDS_CIUDADES.keys()))
+    if o and d: st.write(f"Distancia: {calcular_distancia(o, d) * 1.22:.0f} KM")
 
+# --- FOOTER ---
 st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026</b></div>", unsafe_allow_html=True)
