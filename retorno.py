@@ -8,6 +8,7 @@ import re
 import math
 
 # --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - CREADO POR IGNACIO DIAZ) ---
+# Se mantiene tu estructura original intacta
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
@@ -46,7 +47,7 @@ if "situacion_actual" not in st.session_state:
 if "search_query" not in st.session_state:
     st.session_state.search_query = ""
 if "reportes_puerto" not in st.session_state:
-    st.session_state.reportes_puerto = "Normal - Sin demoras reportadas en accesos."
+    st.session_state.reportes_puerto = "" # Iniciamos vacío para activar el auto-reporte real
 
 # --- 3. CARGA DE DATOS ---
 @st.cache_data(ttl=5)
@@ -138,6 +139,28 @@ def obtener_clima(ciudad):
         return f"{estado} {temp}°C"
     except: return "N/A"
 
+# --- NUEVA FUNCIÓN PARA REPORTE REAL DE PUERTOS ---
+def generar_reporte_puertos_real():
+    # Si hay un reporte manual del administrador, lo priorizamos
+    if st.session_state.reportes_puerto and st.session_state.reportes_puerto.strip() != "":
+        return f"🚨 AVISO ADMIN: {st.session_state.reportes_puerto}"
+    
+    # Si no, generamos reporte automático basado en clima de la zona norte de Rosario
+    puertos = ["TIMBUES (SF)", "PTO GRAL SAN MARTIN (SF)", "SAN LORENZO (SF)"]
+    estados = []
+    riesgo_lluvia = False
+
+    for p in puertos:
+        clima = obtener_clima(p)
+        if "Lluvia" in clima or "Tormenta" in clima: riesgo_lluvia = True
+        estados.append(f"{p.split(' ')[0]}: {clima}")
+
+    info_base = " | ".join(estados)
+    if riesgo_lluvia:
+        return f"⚠️ OPERACIÓN LENTA POR CLIMA: {info_base}. Posibles demoras en calada."
+    else:
+        return f"✅ PUERTOS OPERATIVOS: {info_base}. Sin alertas climáticas actuales."
+
 # --- 5. INTERFAZ Y ESTILOS ---
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
@@ -166,7 +189,7 @@ with st.sidebar:
         st.success("MODO EDITOR ACTIVO")
         st.session_state.anuncios = st.text_area("📢 Mensajes:", st.session_state.anuncios)
         st.session_state.situacion_actual = st.text_area("🚛 Sit. Actual (Demoras):", st.session_state.situacion_actual)
-        st.session_state.reportes_puerto = st.text_area("🚢 Reporte Puertos:", st.session_state.reportes_puerto)
+        st.session_state.reportes_puerto = st.text_area("🚢 Reporte Manual Puertos (Opcional):", st.session_state.reportes_puerto)
         if st.button("♻️ Forzar Sincronización"):
             st.cache_data.clear(); st.rerun()
     else: st.session_state.admin_mode = False
@@ -179,7 +202,7 @@ st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding
 with st.container():
     st.markdown('<div class="vip-access-box">', unsafe_allow_html=True)
     st.subheader("🔑 ACCESO VIP")
-    user_cuit = st.text_input("Ingrese su CUIT para desbloquear números de contacto:", placeholder="Ej: 20304445556", label_visibility="collapsed").strip()
+    user_cuit = st.text_input("Ingrese su CUIT para desbloquear números de contacto:", placeholder="Ej: 20304445556", key="cuit_input", label_visibility="collapsed").strip()
     es_user_vip = user_cuit in LISTA_VIPS_GLOBAL
     if user_cuit:
         if es_user_vip: st.markdown('<p style="color:#2ecc71; font-weight:bold; margin-top:10px;">✅ ACCESO VIP ACTIVO - Contactos Desbloqueados</p>', unsafe_allow_html=True)
@@ -189,11 +212,12 @@ with st.container():
     else: st.info("Complete su CUIT para ver los teléfonos de contacto.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- REPORTES DEL PUERTO ---
+# --- REPORTES DEL PUERTO (AHORA REAL Y AUTOMÁTICO) ---
+reporte_final = generar_reporte_puertos_real()
 st.markdown('<div class="port-report-box">', unsafe_allow_html=True)
 cp1, cp2 = st.columns([1, 4])
 cp1.markdown("<h2 style='text-align:center; margin:0;'>🚢</h2>", unsafe_allow_html=True)
-cp2.markdown(f"<small style='color:#8b949e;'>ESTADO DE PUERTOS (ACTUALIZADO):</small><br><b>{st.session_state.reportes_puerto}</b>", unsafe_allow_html=True)
+cp2.markdown(f"<small style='color:#8b949e;'>ESTADO DE PUERTOS (TIEMPO REAL):</small><br><b>{reporte_final}</b>", unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # Filtros
