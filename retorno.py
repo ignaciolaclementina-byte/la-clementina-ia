@@ -39,7 +39,7 @@ COORDS_CIUDADES = {
 # --- 2. GESTIÓN DE SESIÓN ---
 if "admin_mode" not in st.session_state: st.session_state.admin_mode = False
 if "anuncios" not in st.session_state: st.session_state.anuncios = "¡Bienvenido al Sistema VIP!"
-if "situacion_actual" not in st.session_state: st.session_state.situacion_actual = "Sin reportes de demoras."
+if "situacion_actual" not in st.session_state: st.session_state.situacion_actual = "Sin reportes de demoras por el momento."
 if "search_query" not in st.session_state: st.session_state.search_query = ""
 if "reportes_puerto" not in st.session_state: st.session_state.reportes_puerto = "" 
 
@@ -81,11 +81,11 @@ def limpiar_wsp(num):
 
 def generar_wsp_link(num, origen, destino, es_chofer=True):
     clean_num = limpiar_wsp(num)
-    msg = f"Hola! Vi tu camión de {origen} a {destino} en Retorno Match. ¿Tenés carga?" if es_chofer else f"Hola! Me interesa la carga de {origen} a {destino} en Retorno Match."
+    msg = f"Hola! Vi tu camión de {origen} a {destino} en Retorno Match. ¿Tenés carga?" if es_chofer else f"Hola! Me interesa la carga de {origen} a {destino} que publicaste en Retorno Match."
     return f"https://api.whatsapp.com/send?phone={clean_num}&text={urllib.parse.quote(msg)}"
 
 def link_ventas_vip(cuit=""):
-    msg = f"Hola Ignacio! Solicito acceso VIP CUIT: {cuit}"
+    msg = f"Hola Ignacio! Quiero solicitar el acceso VIP para el CUIT: {cuit}"
     return f"https://api.whatsapp.com/send?phone={WSP_VENTAS_VIP}&text={urllib.parse.quote(msg)}"
 
 def ocultar_telefono(num):
@@ -116,77 +116,104 @@ def obtener_clima(ciudad):
         lat, lon = COORDS_CIUDADES[ciudad]
         res = requests.get(f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=True").json()
         temp = res['current_weather']['temperature']
-        return f"🌡️ {temp}°C"
+        code = res['current_weather']['weathercode']
+        codigos = {0: "☀️ Despejado", 1: "🌤️ Liger. Nublado", 2: "⛅ Nublado", 3: "☁️ Cubierto", 45: "🌫️ Niebla", 61: "🌧️ Lluvia Leve", 63: "🌧️ Lluvia", 95: "⚡ Tormenta"}
+        estado = codigos.get(code, "🌡️ Templado")
+        return f"{estado} {temp}°C"
     except: return "N/A"
 
 def generar_reporte_puertos_real():
-    if st.session_state.reportes_puerto: return f"🚨 AVISO ADMIN: {st.session_state.reportes_puerto}"
-    return "✅ PUERTOS OPERATIVOS: Timbúes, Pto Gral San Martín y San Lorenzo sin alertas."
+    if st.session_state.reportes_puerto and st.session_state.reportes_puerto.strip() != "":
+        return f"🚨 AVISO ADMIN: {st.session_state.reportes_puerto}"
+    puertos = ["TIMBUES (SF)", "PTO GRAL SAN MARTIN (SF)", "SAN LORENZO (SF)"]
+    estados = [f"{p.split(' ')[0]}: {obtener_clima(p)}" for p in puertos]
+    return f"✅ PUERTOS OPERATIVOS: {' | '.join(estados)}. Sin alertas climáticas."
 
 # --- 5. INTERFAZ Y ESTILOS ---
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 st.markdown("""<style>
     .stApp { background-color: #0e1117; color: #adbac7; }
     .card-white { background: #1c2128; color: #adbac7; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; border-left: 6px solid #3498db; position: relative; }
-    .card-urgente { background: #2d1b1b; color: #ff6b6b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #6e2a2a; border-left: 6px solid #ff4b4b; position: relative; }
+    .card-urgente { background: #2d1b1b; color: #ff6b6b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #6e2a2a; animation: pulse 2s infinite; border-left: 6px solid #ff4b4b; position: relative; }
     .card-cosecha { background: #1c2a1c; border: 1px solid #2d4d2d; color: #8ebf8e; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 6px solid #4caf50; position: relative; }
     .vip-access-box { background: #1c2128; border: 2px solid #f1c40f; padding: 20px; border-radius: 15px; margin-bottom: 25px; text-align: center; }
-    .badge-time { position: absolute; top: 10px; right: 10px; font-size: 0.75rem; color: #8b949e; }
+    .port-report-box { background: #161b22; border: 1px solid #30363d; border-top: 4px solid #539bf5; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+    .badge-time { position: absolute; top: 10px; right: 10px; font-size: 0.75rem; color: #8b949e; background: #30363d; padding: 2px 8px; border-radius: 10px; }
     .route-txt { font-size: 1.1rem; font-weight: 800; color: #539bf5; text-transform: uppercase; }
     .status-bar { background: #161b22; border: 1px solid #30363d; border-left: 4px solid #f1e05a; padding: 10px; border-radius: 8px; margin-bottom: 20px; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 75, 75, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); } }
 </style>""", unsafe_allow_html=True)
 
-# --- SIDEBAR ---
+# --- SIDEBAR (ADMIN) ---
 with st.sidebar:
     st.title("🛡️ Gestión")
     if st.text_input("PIN Admin", type="password") == ADMIN_PIN:
         st.session_state.admin_mode = True
         st.session_state.anuncios = st.text_area("📢 Mensajes:", st.session_state.anuncios)
         st.session_state.situacion_actual = st.text_area("🚛 Sit. Actual:", st.session_state.situacion_actual)
-        if st.button("♻️ Forzar Sincronización"): st.cache_data.clear(); st.rerun()
+        st.session_state.reportes_puerto = st.text_area("🚢 Reporte Manual:", st.session_state.reportes_puerto)
+        if st.button("♻️ Sincronizar"): st.cache_data.clear(); st.rerun()
+    else: st.session_state.admin_mode = False
 
-# --- HEADER & VIP ---
+# --- CABECERA ---
 st.title("🚛 RETORNO MATCH VIP")
-st.markdown(f'<div class="status-bar"><marquee><b>{st.session_state.anuncios}</b></marquee></div>', unsafe_allow_html=True)
+st.markdown(f'<div style="background:#21262d; border: 1px solid #30363d; padding:10px; border-radius:10px; text-align:center; margin-bottom:15px;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios}</b></marquee></div>', unsafe_allow_html=True)
 
-user_cuit = st.text_input("Ingrese su CUIT para desbloquear contactos:", key="cuit_input").strip()
-es_user_vip = user_cuit in LISTA_VIPS_GLOBAL or st.session_state.admin_mode
-if not es_user_vip and user_cuit:
-    st.warning("CUIT no registrado.")
-    st.markdown(f'<a href="{link_ventas_vip(user_cuit)}" target="_blank">👉 Solicitar Acceso VIP</a>', unsafe_allow_html=True)
+# --- SECCIÓN VIP ---
+with st.container():
+    st.markdown('<div class="vip-access-box">', unsafe_allow_html=True)
+    st.subheader("🔑 ACCESO VIP")
+    user_cuit = st.text_input("CUIT para desbloquear:", key="cuit_input", label_visibility="collapsed").strip()
+    es_user_vip = user_cuit in LISTA_VIPS_GLOBAL or st.session_state.admin_mode
+    if user_cuit:
+        if es_user_vip: st.markdown('<p style="color:#2ecc71; font-weight:bold;">✅ ACCESO VIP ACTIVO</p>', unsafe_allow_html=True)
+        else: st.markdown(f'<a href="{link_ventas_vip(user_cuit)}" target="_blank" style="color:#f1c40f; font-weight:bold;">👉 Solicitar Acceso VIP</a>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# --- TABS ---
+# --- REPORTES PUERTO ---
+st.markdown(f'<div class="port-report-box">🚢 <small>PUERTOS (TIEMPO REAL):</small><br><b>{generar_reporte_puertos_real()}</b></div>', unsafe_allow_html=True)
+
+# Filtros
+col_search, _ = st.columns([2, 1])
+busqueda_libre = col_search.text_input("🔎 BUSCAR:", placeholder="Localidad...").upper()
+filtro_loc = st.selectbox("📍 Filtrar por Ciudad Base:", list(COORDS_CIUDADES.keys()))
+
+# Situación y Clima
+cs1, cs2 = st.columns([3, 1])
+cs1.markdown(f'<div class="status-bar">⚠️ <b>SITUACIÓN ACTUAL:</b> {st.session_state.situacion_actual}</div>', unsafe_allow_html=True)
+cs2.markdown(f'<div class="status-bar" style="border-left-color:#3498db; text-align:center;">{obtener_clima(filtro_loc if filtro_loc != "TODAS" else "SAN JORGE (SF)")}</div>', unsafe_allow_html=True)
+
 tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
-lock_btn_html = f'<div style="background:#333; color:#f1c40f; padding:10px; border-radius:8px; text-align:center; border:1px solid #f1c40f;">⭐ RECO VIP REQUERIDO</div>'
+lock_btn_html = f'<div style="background:#444; color:#f1c40f; padding:12px; border-radius:8px; text-align:center; border:1px solid #f1c40f; font-weight:bold;">⭐ RECO VIP REQUERIDO</div>'
 
 with tab1: # CAMIONES
     if not df_ch_raw.empty:
         for _, r in df_ch_raw.iterrows():
-            if (st.session_state.search_query.upper() in str(r).upper()):
-                btn = f'<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2])}" target="_blank" style="background:#238636; color:white; padding:10px; border-radius:8px; text-decoration:none; display:block; text-align:center;">OFERTAR</a>' if es_user_vip else lock_btn_html
-                st.markdown(f'<div class="card-white"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><span class="route-txt">📍 {r.iloc[1]} ➔ {r.iloc[2]}</span><br><b>EQ:</b> {r.iloc[3]} | {ocultar_telefono(r.iloc[5])}{btn}</div>', unsafe_allow_html=True)
+            if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[1]).upper()):
+                btn = f'<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" target="_blank" style="background:#238636; color:white; padding:12px; border-radius:8px; text-decoration:none; display:block; text-align:center; font-weight:bold;">OFERTAR</a>' if es_user_vip else lock_btn_html
+                st.markdown(f'<div class="card-white"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><span class="route-txt">📍 {r.iloc[1]} ➔ {r.iloc[2]}</span><br>EQ: {r.iloc[3]} | {ocultar_telefono(r.iloc[5])}{btn}</div>', unsafe_allow_html=True)
 
 with tab2: # CARGAS
     if not df_ca_raw.empty:
         df_ca_v = df_ca_raw[~df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
         for _, r in df_ca_v.iterrows():
-            estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
-            btn = f'<a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" target="_blank" style="background:#2980b9; color:white; padding:10px; border-radius:8px; text-decoration:none; display:block; text-align:center;">SOLICITAR</a>' if es_user_vip else lock_btn_html
-            st.markdown(f'<div class="{estilo}"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</div><b>{r.iloc[3]}</b> | {r.iloc[5]}{btn}</div>', unsafe_allow_html=True)
+            if busqueda_libre in str(r).upper():
+                estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
+                btn = f'<a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" target="_blank" style="background:#2980b9; color:white; padding:12px; border-radius:8px; text-decoration:none; display:block; text-align:center; font-weight:bold;">SOLICITAR</a>' if es_user_vip else lock_btn_html
+                st.markdown(f'<div class="{estilo}"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</div>📦 <b>{r.iloc[3]}</b> | {r.iloc[5]}{btn}</div>', unsafe_allow_html=True)
 
 with tab3: # COSECHA
     st.markdown('<div class="card-cosecha">🚜 <b>INDICADOR DE DENSIDAD DE COSECHA: 85%</b></div>', unsafe_allow_html=True)
     if not df_ca_raw.empty:
         df_arr = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
         for _, r in df_arr.iterrows():
-            btn = f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" target="_blank" style="background:#238636; color:white; padding:10px; border-radius:8px; text-decoration:none; display:block; text-align:center;">CONTACTAR</a>' if es_user_vip else lock_btn_html
+            btn = f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" target="_blank" style="background:#238636; color:white; padding:12px; border-radius:8px; text-decoration:none; display:block; text-align:center; font-weight:bold;">CONTACTAR</a>' if es_user_vip else lock_btn_html
             st.markdown(f'<div class="card-cosecha"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div style="font-weight:bold;">📍 ZONA: {r.iloc[2]}</div>🌾 {r.iloc[3]}{btn}</div>', unsafe_allow_html=True)
 
 with tab4: # COSTOS
-    st.subheader("📊 Estimador")
-    o = st.selectbox("Origen", list(COORDS_CIUDADES.keys()))
-    d = st.selectbox("Destino", list(COORDS_CIUDADES.keys()))
-    if o and d: st.write(f"Distancia: {calcular_distancia(o, d) * 1.22:.0f} KM")
+    o, d = st.selectbox("Origen", list(COORDS_CIUDADES.keys()), key="o"), st.selectbox("Destino", list(COORDS_CIUDADES.keys()), key="d")
+    dist = calcular_distancia(o, d) * 1.22
+    if dist > 0: st.metric("Distancia Estimada", f"{dist:.0f} KM")
 
-# --- FOOTER ---
+# FOOTER
 st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026</b></div>", unsafe_allow_html=True)
