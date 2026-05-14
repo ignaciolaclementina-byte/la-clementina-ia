@@ -296,4 +296,4 @@ with tab4:
         st.success(f"Total Sugerido: ${dist_r * t_km:,.0f}")
 
 # --- FOOTER ---
-st.markdown(f"<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - {datetime.now().year}</b></div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026</b></div>", unsafe_allow_html=True)
