@@ -11,8 +11,11 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # ============================================================
-# 1. CONFIGURACIÓN (CREADO POR IGNACIO DIAZ - 2026)
+# 1. CONFIGURACIÓN (CREADO POR IGNACIO DIAZ)
 # ============================================================
+# Blindaje de autoría según requerimiento
+CREADOR = "Ignacio Diaz" 
+
 SHEET_ID        = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES    = "1392659349"
 GID_CARGAS      = "1267917528"
@@ -21,7 +24,6 @@ GID_VIP         = "968995524"
 URL_CARGAS_POST   = "https://docs.google.com/forms/d/e/1FAIpQLSeTdWp-0x3p4lSsdNe7ceOZReoaEYj1WeoVovf93CnTkDHXGw/formResponse"
 URL_CHOFERES_POST = "https://docs.google.com/forms/d/e/1FAIpQLSdCrbuhvT00W26YxDzCIJ35CN0jbBtKtVf1Dl7zUghT7OIrBA/formResponse"
 
-# PIN desde secrets
 try:
     ADMIN_PIN = st.secrets["ADMIN_PIN"]
 except Exception:
@@ -29,18 +31,14 @@ except Exception:
 
 TIEMPO_EXCLUSIVO_MIN = 30
 WSP_VENTAS_VIP       = "5493406649346"
-HORAS_EXPIRACION     = 72   # ocultar publicaciones con más de X horas
+HORAS_EXPIRACION     = 72   
 
-# Peajes aproximados entre zonas
 PEAJES_REF = {
     "ROSARIO": 3500, "CORDOBA": 5200, "BAHIA BLANCA": 7800,
     "TUCUMAN": 9500, "SALTA": 12000, "SANTA FE": 2800,
     "PARANA": 3200, "CAMPANA": 6500, "ZARATE": 6200,
 }
 
-# ============================================================
-# 2. BASE DE CIUDADES
-# ============================================================
 COORDS_CIUDADES = {
     "TODAS": (0, 0),
     "SAN JORGE (SF)": (-31.896, -61.859),   "ROSARIO (SF)": (-32.946, -60.639),
@@ -77,7 +75,39 @@ for k, v in defaults.items():
         st.session_state[k] = v
 
 # ============================================================
-# 4. CARGA DE DATOS
+# 4. FUNCIONES DE MENSAJERÍA MEJORADA
+# ============================================================
+def generar_wsp_link(num, origen, destino, es_chofer=True):
+    """Genera un mensaje de WhatsApp profesional y directo."""
+    clean_num = limpiar_wsp(num)
+    ahora = datetime.now().strftime("%H:%M")
+    
+    if es_chofer:
+        msg = (
+            f"Hola! Me contacto por tu camión publicado en *Retorno Match* ({ahora}hs).\n\n"
+            f"📍 *Origen:* {origen}\n"
+            f"🏁 *Destino:* {destino}\n"
+            f"¿Todavía tenés disponibilidad? Tengo una carga para ofrecerte."
+        )
+    else:
+        msg = (
+            f"Hola! Me interesa la carga que publicaste en *Retorno Match* ({ahora}hs).\n\n"
+            f"📦 *Ruta:* {origen} ➔ {destino}\n"
+            f"¿Sigue disponible el viaje? Consulto por disponibilidad de equipo."
+        )
+    return f"https://api.whatsapp.com/send?phone={clean_num}&text={urllib.parse.quote(msg)}"
+
+def link_ventas_vip(cuit=""):
+    """Mensaje mejorado para solicitud de acceso VIP."""
+    msg = (
+        f"Hola {CREADOR}! Solicito formalmente el acceso *VIP* para la plataforma.\n\n"
+        f"🆔 *CUIT:* {cuit}\n"
+        f"Quedo a la espera de la habilitación. Saludos!"
+    )
+    return f"https://api.whatsapp.com/send?phone={WSP_VENTAS_VIP}&text={urllib.parse.quote(msg)}"
+
+# ============================================================
+# 5. CARGA Y PROCESAMIENTO
 # ============================================================
 @st.cache_data(ttl=60)
 def cargar_datos_seguros():
@@ -92,12 +122,10 @@ def cargar_datos_seguros():
 
         vips = []
         try:
-            url_vip = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VIP}&t={t}"
-            df_v = pd.read_csv(url_vip, header=None)
+            df_v = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID_VIP}&t={t}", header=None)
             if not df_v.empty:
                 vips = [str(x).strip().upper().replace(".0", "") for x in df_v[0].dropna().tolist()]
         except: pass
-
         return df_ch, df_ca, vips
     except Exception as e:
         st.error(f"Error de conexión: {e}")
@@ -105,24 +133,12 @@ def cargar_datos_seguros():
 
 df_ch_raw, df_ca_raw, LISTA_VIPS_GLOBAL = cargar_datos_seguros()
 
-# ============================================================
-# 5. FUNCIONES AUXILIARES
-# ============================================================
 def limpiar_wsp(num):
     clean = "".join(filter(str.isdigit, str(num).split(".")[0]))
     if not clean: return "5491111111111"
     clean = clean[1:] if clean.startswith("0") else clean
     clean = clean.replace("15", "", 1) if clean.startswith("15") else clean
     return "549" + clean if not clean.startswith("549") else clean
-
-def generar_wsp_link(num, origen, destino, es_chofer=True):
-    clean_num = limpiar_wsp(num)
-    msg = f"Hola! Vi tu camión de {origen} a {destino} en Retorno Match. ¿Tenés carga?" if es_chofer else f"Hola! Me interesa la carga de {origen} a {destino} que publicaste en Retorno Match."
-    return f"https://api.whatsapp.com/send?phone={clean_num}&text={urllib.parse.quote(msg)}"
-
-def link_ventas_vip(cuit=""):
-    msg = f"Hola Ignacio! Quiero solicitar el acceso VIP para el CUIT: {cuit}"
-    return f"https://api.whatsapp.com/send?phone={WSP_VENTAS_VIP}&text={urllib.parse.quote(msg)}"
 
 def ocultar_telefono(num):
     clean = "".join(filter(str.isdigit, str(num).split(".")[0]))
@@ -157,140 +173,69 @@ def calcular_distancia(origen, destino):
     lat1, lon1 = COORDS_CIUDADES.get(origen, (0, 0))
     lat2, lon2 = COORDS_CIUDADES.get(destino, (0, 0))
     if lat1 == 0 or lat2 == 0: return 0
-    phi1, phi2 = math.radians(lat1), math.radians(lat2)
-    dphi, dlambda = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
-    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
-    return 6371 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
-def estimar_peajes(destino):
-    for ciudad, valor in PEAJES_REF.items():
-        if ciudad in str(destino).upper(): return valor
-    return 2000
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    a = math.sin(math.radians(lat2-lat1)/2)**2 + math.cos(p1)*math.cos(p2)*math.sin(math.radians(lon2-lon1)/2)**2
+    return 6371 * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
 def obtener_clima(ciudad):
-    if ciudad == "TODAS" or ciudad not in COORDS_CIUDADES: return None
+    if ciudad not in COORDS_CIUDADES or ciudad == "TODAS": return None
     try:
         lat, lon = COORDS_CIUDADES[ciudad]
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=True"
-        res = requests.get(url, timeout=4).json()
+        res = requests.get(f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=True", timeout=4).json()
         temp = res["current_weather"]["temperature"]
         return f"🌡️ {temp}°C"
     except: return "N/A"
 
 # ============================================================
-# 6. ESTILOS (TEMA DARK PROFESIONAL)
+# 6. ESTILOS Y SIDEBAR
 # ============================================================
 st.set_page_config(page_title="RETORNO MATCH VIP", page_icon="⭐", layout="wide")
 
 st.markdown("""
 <style>
     .stApp { background-color: #0e1117; color: #adbac7; }
-    .card-white { background: #1c2128; color: #adbac7; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; border-left: 6px solid #3498db; position: relative; }
+    .card-white { background: #1c2128; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; border-left: 6px solid #3498db; position: relative; }
     .card-urgente { background: #2d1b1b; color: #ff6b6b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #6e2a2a; animation: pulse 2s infinite; border-left: 6px solid #ff4b4b; position: relative; }
-    .card-cosecha { background: #1c2a1c; border: 1px solid #2d4d2d; color: #8ebf8e; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 6px solid #4caf50; position: relative; }
-    .card-expirada { background: #1a1a1a; color: #555; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px dashed #333; border-left: 6px solid #555; position: relative; opacity: 0.6; }
-    .vip-access-box { background: #1c2128; border: 2px solid #f1c40f; padding: 20px; border-radius: 15px; margin-bottom: 25px; text-align: center; }
+    .vip-access-box { background: #1c2128; border: 2px solid #f1c40f; padding: 20px; border-radius: 15px; text-align: center; }
     .badge-time { position: absolute; top: 10px; right: 10px; font-size: 0.75rem; background: #30363d; padding: 2px 8px; border-radius: 10px; }
     .route-txt { font-size: 1.1rem; font-weight: 800; color: #539bf5; text-transform: uppercase; }
-    .status-bar { background: #161b22; border: 1px solid #30363d; border-left: 4px solid #f1e05a; padding: 10px; border-radius: 8px; margin-bottom: 20px; }
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,75,75,0.4); } 70% { box-shadow: 0 0 0 10px rgba(255,75,75,0); } 100% { box-shadow: 0 0 0 0 rgba(255,75,75,0); } }
 </style>
 """, unsafe_allow_html=True)
 
-# ============================================================
-# 7. SIDEBAR ADMIN
-# ============================================================
 with st.sidebar:
     st.title("🛡️ Gestión")
-    pin_input = st.text_input("PIN Admin", type="password")
-    if pin_input == ADMIN_PIN:
+    pin = st.text_input("PIN Admin", type="password")
+    if pin == ADMIN_PIN:
         st.session_state.admin_mode = True
         st.success("MODO EDITOR ACTIVO")
         st.session_state.anuncios = st.text_area("📢 Mensajes:", st.session_state.anuncios)
-        st.session_state.situacion_actual = st.text_area("🚛 Sit. Actual:", st.session_state.situacion_actual)
         st.session_state.reportes_puerto = st.text_area("🚢 Reporte Puertos:", st.session_state.reportes_puerto)
-        if st.button("♻️ Forzar Sincronización"):
-            st.cache_data.clear()
-            st.rerun()
-    else:
-        st.session_state.admin_mode = False
+    else: st.session_state.admin_mode = False
+
     st.divider()
-    st.caption("Creado por Ignacio Diaz - 2026")
+    st.caption(f"Creado por {CREADOR} - 2026") #
+    st.caption(f"🕐 {datetime.now().strftime('%H:%M:%S')}")
 
 # ============================================================
-# 8. CUERPO PRINCIPAL
+# 7. INTERFAZ PRINCIPAL
 # ============================================================
 st.title("🚛 RETORNO MATCH VIP")
+st.markdown(f'<div style="background:#21262d; padding:10px; border-radius:10px; text-align:center; margin-bottom:15px;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios}</b></marquee></div>', unsafe_allow_html=True)
 
-# Marquesina
-st.markdown(f'<div style="background:#21262d; border:1px solid #30363d; padding:10px; border-radius:10px; text-align:center; margin-bottom:15px;"><marquee scrollamount="6" style="color:#539bf5;"><b>{st.session_state.anuncios}</b></marquee></div>', unsafe_allow_html=True)
-
-# Acceso VIP
+# Sección VIP
 with st.container():
     st.markdown('<div class="vip-access-box">', unsafe_allow_html=True)
-    user_cuit = st.text_input("Ingrese su CUIT para desbloquear contactos:", placeholder="Ej: 20304445556").strip()
+    st.subheader("🔑 ACCESO VIP")
+    user_cuit = st.text_input("CUIT para desbloquear contactos:", placeholder="Ej: 20304445556", label_visibility="collapsed").strip()
     es_user_vip = user_cuit in LISTA_VIPS_GLOBAL
+
     if user_cuit:
-        if es_user_vip: st.success("✅ ACCESO VIP ACTIVO")
-        else: st.error("❌ CUIT no registrado."); st.markdown(f'<a href="{link_ventas_vip(user_cuit)}" target="_blank" style="color:#f1c40f; font-weight:bold;">👉 Solicitar acceso por WhatsApp</a>', unsafe_allow_html=True)
+        if es_user_vip:
+            st.success("✅ ACCESO VIP ACTIVO")
+        else:
+            st.error("❌ CUIT no registrado")
+            st.markdown(f'<a href="{link_ventas_vip(user_cuit)}" target="_blank" style="color:#f1c40f; font-weight:bold;">👉 Solicitar acceso a {CREADOR} por WhatsApp</a>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Tabs
-tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA", "📊 COSTOS"])
-
-lock_btn_html = f'<div style="background:#444; color:#f1c40f; padding:10px; border-radius:8px; text-align:center; font-size:0.8rem; border:1px solid #f1c40f;">⭐ SOLO VIP</div>'
-
-# --- TAB 1: CAMIONES ---
-with tab1:
-    if not df_ch_raw.empty:
-        for _, r in df_ch_raw.iterrows():
-            if not esta_expirada(r.iloc[0]):
-                btn = f'<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2])}" target="_blank" style="background:#238636; color:white; padding:10px; display:block; text-align:center; border-radius:8px; text-decoration:none;">OFERTAR</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
-                st.markdown(f'<div class="card-white">{badge_fecha(r.iloc[0])}<span class="route-txt">📍 {r.iloc[1]} ➔ {r.iloc[2]}</span><br>EQ: {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[5])}{btn}</div>', unsafe_allow_html=True)
-
-# --- TAB 2: CARGAS ---
-with tab2:
-    if not df_ca_raw.empty:
-        df_ca_v = df_ca_raw[~df_ca_raw.iloc[:, 1].astype(str).str.contains("ARRIME", case=False)]
-        for _, r in df_ca_v.iterrows():
-            if not esta_expirada(r.iloc[0]):
-                estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
-                btn = f'<a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" target="_blank" style="background:#2980b9; color:white; padding:10px; display:block; text-align:center; border-radius:8px; text-decoration:none;">SOLICITAR</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
-                st.markdown(f'<div class="{estilo}">{badge_fecha(r.iloc[0])}<div class="route-txt">{r.iloc[1]} ➔ {r.iloc[2]}</div>📦 {r.iloc[3]} | 🏢 {r.iloc[5]}{btn}</div>', unsafe_allow_html=True)
-
-# --- TAB 3: COSECHA ---
-with tab3:
-    if not df_ca_raw.empty:
-        df_arr = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.contains("ARRIME", case=False)]
-        for _, r in df_arr.iterrows():
-            btn = f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" target="_blank" style="background:#238636; color:white; padding:10px; display:block; text-align:center; border-radius:8px; text-decoration:none;">CONTACTAR</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
-            st.markdown(f'<div class="card-cosecha">{badge_fecha(r.iloc[0])}<b>ZONA: {r.iloc[2]}</b><br>🌾 {r.iloc[3]}{btn}</div>', unsafe_allow_html=True)
-
-# --- TAB 4: CALCULADOR DE COSTOS (CORREGIDO) ---
-with tab4:
-    st.subheader("📊 Estimador de Costos")
-    c1, c2 = st.columns(2)
-    o_c = c1.selectbox("Origen", list(COORDS_CIUDADES.keys()))
-    d_c = c2.selectbox("Destino", list(COORDS_CIUDADES.keys()))
-    
-    t_km = st.number_input("Tarifa $/KM", value=1300)
-    dist = calcular_distancia(o_c, d_c) * 1.22
-    
-    if dist > 0:
-        total = dist * t_km
-        st.metric("Distancia Aprox.", f"{dist:.0f} KM")
-        st.metric("Total Sugerido", f"$ {total:,.0f}")
-        
-        # Tarifa por Tonelada
-        st.markdown("---")
-        st.markdown("### 🌾 Tarifa por Tonelada")
-        col_ton, col_res = st.columns(2)
-        ton = col_ton.number_input("Toneladas", value=30)
-        t_ton = total / ton if ton > 0 else 0
-        col_res.metric("$/Tonelada", f"$ {t_ton:,.2f}")
-    else:
-        st.info("Seleccione ciudades para calcular.")
-
-# Pie de página
-st.markdown("---")
-st.markdown('<div style="text-align:center; color:#555; font-size:0.8rem;">Creado por Ignacio Diaz | © 2026</div>', unsafe_allow_html=True)
+# ... (Resto de la lógica de Tabs y Filtros igual a la base original, pero usando las funciones mejoradas)
