@@ -144,16 +144,25 @@ st.markdown("""<style>
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 75, 75, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); } }
 </style>""", unsafe_allow_html=True)
 
-# --- SIDEBAR (ADMIN) ---
+# --- SIDEBAR (ADMIN BLINDADO) ---
 with st.sidebar:
     st.title("🛡️ Gestión")
-    if st.text_input("PIN Admin", type="password") == ADMIN_PIN:
+    pin_input = st.text_input("PIN Admin", type="password", key="sid_pin_input")
+    
+    # El estado admin_mode se bloquea usando la sesión permanente
+    if pin_input == ADMIN_PIN:
         st.session_state.admin_mode = True
+        st.success("🔓 Modo Administrador Activo")
+        
         st.session_state.anuncios = st.text_area("📢 Mensajes:", st.session_state.anuncios)
         st.session_state.situacion_actual = st.text_area("🚛 Sit. Actual:", st.session_state.situacion_actual)
         st.session_state.reportes_puerto = st.text_area("🚢 Reporte Manual:", st.session_state.reportes_puerto)
-        if st.button("♻️ Sincronizar"): st.cache_data.clear(); st.rerun()
-    else: st.session_state.admin_mode = False
+        
+        if st.button("♻️ Sincronizar"): 
+            st.cache_data.clear()
+            st.rerun()
+    else:
+        st.session_state.admin_mode = False
 
 # --- CABECERA ---
 st.title("🚛 RETORNO MATCH VIP")
@@ -187,6 +196,27 @@ tab1, tab2, tab3, tab4 = st.tabs(["🚀 CAMIONES", "🏢 CARGAS", "🌾 COSECHA"
 lock_btn_html = f'<div style="background:#444; color:#f1c40f; padding:12px; border-radius:8px; text-align:center; border:1px solid #f1c40f; font-weight:bold;">⭐ RECO VIP REQUERIDO</div>'
 
 with tab1: # CAMIONES
+    if st.session_state.admin_mode:
+        with st.expander("➕ CARGAR NUEVO CAMIÓN (ADMIN)"):
+            with st.form("form_nuevo_chofer", clear_on_submit=True):
+                ch_orig = st.selectbox("Origen Camión", list(COORDS_CIUDADES.keys()))
+                ch_dest = st.selectbox("Destino Camión", list(COORDS_CIUDADES.keys()))
+                ch_equi = st.text_input("Equipo / Tipo Camión (Ej: Batea, Chasis)")
+                ch_tele = st.text_input("Teléfono (Ej: 3406430000)")
+                btn_sub_ch = st.form_submit_button("Guardar Camión")
+                if btn_sub_ch:
+                    payload = {
+                        "entry.1704513166": ch_orig,  # Mapear con IDs de tu Google Form
+                        "entry.1458897532": ch_dest,
+                        "entry.1985552365": ch_equi,
+                        "entry.1114585632": ch_tele
+                    }
+                    try:
+                        requests.post(URL_CHOFERES_POST, data=payload)
+                        st.success("✅ Camión subido exitosamente. ¡Sincroniza para ver los cambios!")
+                    except:
+                        st.error("Error al enviar los datos.")
+
     if not df_ch_raw.empty:
         for _, r in df_ch_raw.iterrows():
             if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[1]).upper()):
@@ -194,6 +224,29 @@ with tab1: # CAMIONES
                 st.markdown(f'<div class="card-white"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><span class="route-txt">📍 {r.iloc[1]} ➔ {r.iloc[2]}</span><br>EQ: {r.iloc[3]} | {ocultar_telefono(r.iloc[5])}{btn}</div>', unsafe_allow_html=True)
 
 with tab2: # CARGAS
+    if st.session_state.admin_mode:
+        with st.expander("➕ CARGAR NUEVA CARGA (ADMIN)"):
+            with st.form("form_nueva_carga", clear_on_submit=True):
+                ca_orig = st.selectbox("Origen Carga", list(COORDS_CIUDADES.keys()))
+                ca_dest = st.selectbox("Destino Carga", list(COORDS_CIUDADES.keys()))
+                ca_prod = st.text_input("Producto / Comentario (Ej: Maíz URGENTE)")
+                ca_tele = st.text_input("Teléfono de Contacto")
+                ca_obse = st.text_input("Observaciones")
+                btn_sub_ca = st.form_submit_button("Guardar Carga")
+                if btn_sub_ca:
+                    payload = {
+                        "entry.582654123": ca_orig,  # Mapear con IDs de tu Google Form
+                        "entry.985632145": ca_dest,
+                        "entry.147852369": ca_prod,
+                        "entry.369852147": ca_tele,
+                        "entry.258147369": ca_obse
+                    }
+                    try:
+                        requests.post(URL_CARGAS_POST, data=payload)
+                        st.success("✅ Carga añadida de forma correcta. ¡Sincroniza para actualizar!")
+                    except:
+                        st.error("Error al conectar con la base de datos.")
+
     if not df_ca_raw.empty:
         df_ca_v = df_ca_raw[~df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
         for _, r in df_ca_v.iterrows():
