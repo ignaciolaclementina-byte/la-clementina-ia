@@ -8,7 +8,6 @@ import re
 import math
 
 # --- 1. CONFIGURACIÓN (ESTRUCTURA BLINDADA - CREADO POR IGNACIO DIAZ) ---
-# Se mantiene la estructura y el nombre del creador según tus instrucciones
 SHEET_ID = "18oipzHxWlvBPGW0f7ikEnXRh3EeG9IMC06jZG0uLiOs"
 GID_CHOFERES = "1392659349"
 GID_CARGAS = "1267917528"
@@ -278,17 +277,19 @@ with tab2:
                             st.cache_data.clear(); st.rerun()
     with c2:
         if not df_ca_raw.empty:
-            df_ca_v = df_ca_raw[~df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
+            # FILTRADO CORREGIDO: Se descartan las filas donde la columna B contenga exactamente 'ARRIME ZONA'
+            df_ca_v = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.strip().str.upper() != 'ARRIME ZONA']
             for idx, r in df_ca_v.iterrows():
                 if busqueda_libre in str(r).upper():
                     estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
                     btn_wsp = f'<a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" target="_blank" style="flex: 2; background:#2980b9; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem;">SOLICITAR VIAJE</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
                     link_r = f"https://www.google.com/maps/dir/?api=1&origin={urllib.parse.quote(str(r.iloc[1]))}&destination={urllib.parse.quote(str(r.iloc[2]))}&travelmode=driving"
-                    st.markdown(f"""<div class="{estilo}"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div class="route-txt">{r.iloc[1]} <br>➔ {r.iloc[2]}</div><div style="font-size:0.9rem; margin:8px 0; opacity:0.9;">📦 <b>{r.iloc[3]}</b> | 🏢 {r.iloc[5]}</div><div style="display: flex; gap: 8px;">{btn_wsp}<a href="{link_r}" target="_blank" style="flex: 1; background:#30363d; color: #539bf5 !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem; border: 1px solid #539bf5;">🗺️ RUTA</a></div></div>""", unsafe_allow_html=True)
+                    
+                    # RENDERIZADO CORREGIDO: Alineado a las columnas reales del Excel (B: Origen, C: Destino, D: Mercadería, F: Empresa)
+                    st.markdown(f"""<div class="{estilo}"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div class="route-txt">📍 {r.iloc[1]} <br>➔ {r.iloc[2]}</div><div style="font-size:0.9rem; margin:8px 0; opacity:0.9;">📦 <b>{r.iloc[3]}</b> | 🏢 {r.iloc[5]}</div><div style="display: flex; gap: 8px;">{btn_wsp}<a href="{link_r}" target="_blank" style="flex: 1; background:#30363d; color: #539bf5 !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem; border: 1px solid #539bf5;">🗺️ RUTA</a></div></div>""", unsafe_allow_html=True)
 
-# --- TAB 3: COSECHA (Basado en image_946dd5.png) ---
+# --- TAB 3: COSECHA ---
 with tab3:
-    # Indicador de Densidad (como se ve en la imagen)
     st.markdown("""
     <div style="background: #1c2a1c; border: 1px solid #2d4d2d; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
         <h3 style="color: #4caf50; margin: 0;">🚜 INDICADOR DE DENSIDAD DE COSECHA</h3>
@@ -308,10 +309,13 @@ with tab3:
                         st.cache_data.clear(); st.rerun()
     with c2:
         if not df_ca_raw.empty:
-            df_arr = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
+            # FILTRADO DE ARRIME: Se toman únicamente las filas donde la columna B es exactamente 'ARRIME ZONA'
+            df_arr = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.strip().str.upper() == 'ARRIME ZONA']
             for idx, r in df_arr.iterrows():
                 if busqueda_libre in str(r).upper():
                     btn_c = f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" target="_blank" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">CONTACTAR</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
+                    
+                    # RENDERIZADO DE ARRIME: C es Localidad, D es Detalle, E es WhatsApp
                     st.markdown(f"""<div class="card-cosecha"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div style="font-weight:bold; font-size:1.1rem;">📍 ZONA: {r.iloc[2]}</div>🌾 {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[4])}{btn_c}</div>""", unsafe_allow_html=True)
 
 # --- TAB 4: CALCULADOR ---
@@ -326,5 +330,4 @@ with tab4:
         st.success(f"Total Sugerido: ${dist_r * t_km:,.0f}")
 
 # --- FOOTER ---
-# Manteniendo la identidad solicitada
 st.markdown("<div style='text-align:center; padding:20px; opacity:0.5;'><b>Creado por Ignacio Diaz - 2026</b></div>", unsafe_allow_html=True)
