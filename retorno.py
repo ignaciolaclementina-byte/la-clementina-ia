@@ -219,6 +219,10 @@ with tab1: # CAMIONES
 
     if not df_ch_raw.empty:
         for _, r in df_ch_raw.iterrows():
+            # FILTRO ANTI-VACÍOS: Si origen o destino están vacíos o son un guion, se salta la fila
+            if str(r.iloc[1]).strip() in ["", "-"] or str(r.iloc[2]).strip() in ["", "-"]:
+                continue
+                
             if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[1]).upper()):
                 btn = f'<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" target="_blank" style="background:#238636; color:white; padding:12px; border-radius:8px; text-decoration:none; display:block; text-align:center; font-weight:bold;">OFERTAR</a>' if es_user_vip else lock_btn_html
                 st.markdown(f'<div class="card-white"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><span class="route-txt">📍 {r.iloc[1]} ➔ {r.iloc[2]}</span><br>EQ: {r.iloc[3]} | {ocultar_telefono(r.iloc[5])}{btn}</div>', unsafe_allow_html=True)
@@ -250,6 +254,10 @@ with tab2: # CARGAS
     if not df_ca_raw.empty:
         df_ca_v = df_ca_raw[~df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
         for _, r in df_ca_v.iterrows():
+            # FILTRO ANTI-VACÍOS: Blindaje total para que no dibuje tarjetas sin datos como la de la captura
+            if str(r.iloc[1]).strip() in ["", "-"] or str(r.iloc[2]).strip() in ["", "-"]:
+                continue
+                
             if busqueda_libre in str(r).upper():
                 estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
                 btn = f'<a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" target="_blank" style="background:#2980b9; color:white; padding:12px; border-radius:8px; text-decoration:none; display:block; text-align:center; font-weight:bold;">SOLICITAR</a>' if es_user_vip else lock_btn_html
@@ -260,6 +268,10 @@ with tab3: # COSECHA
     if not df_ca_raw.empty:
         df_arr = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.contains('ARRIME', case=False)]
         for _, r in df_arr.iterrows():
+            # FILTRO ANTI-VACÍOS: Si no tiene información de zona o producto válida, se ignora
+            if str(r.iloc[2]).strip() in ["", "-"]:
+                continue
+                
             btn = f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" target="_blank" style="background:#238636; color:white; padding:12px; border-radius:8px; text-decoration:none; display:block; text-align:center; font-weight:bold;">CONTACTAR</a>' if es_user_vip else lock_btn_html
             st.markdown(f'<div class="card-cosecha"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div style="font-weight:bold;">📍 ZONA: {r.iloc[2]}</div>🌾 {r.iloc[3]}{btn}</div>', unsafe_allow_html=True)
 
