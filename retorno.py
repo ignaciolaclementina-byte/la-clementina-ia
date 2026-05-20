@@ -258,8 +258,14 @@ with tab1:
         if not df_ch_raw.empty:
             for idx, r in df_ch_raw.iterrows():
                 if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[1]).upper()):
-                    btn = f'<a href="{generar_wsp_link(r.iloc[5], r.iloc[1], r.iloc[2], True)}" target="_blank" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">OFERTAR CARGA</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
-                    st.markdown(f"""<div class="card-white"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><span class="route-txt">📍 {r.iloc[1]} <br>➔ {r.iloc[2]}</span><br><b>EQ:</b> {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[5])}{btn}</div>""", unsafe_allow_html=True)
+                    # Validacion de seguridad para evitar indices rotos
+                    orig = str(r.iloc[1]).strip() if len(r) > 1 else "S/D"
+                    dest = str(r.iloc[2]).strip() if len(r) > 2 else "S/D"
+                    equip = str(r.iloc[3]).strip() if len(r) > 3 else "S/D"
+                    wsp_ch = str(r.iloc[5]).strip() if len(r) > 5 else ""
+                    
+                    btn = f'<a href="{generar_wsp_link(wsp_ch, orig, dest, True)}" target="_blank" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">OFERTAR CARGA</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
+                    st.markdown(f"""<div class="card-white"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><span class="route-txt">📍 {orig} <br>➔ {dest}</span><br><b>EQ:</b> {equip} | 📱 {ocultar_telefono(wsp_ch)}{btn}</div>""", unsafe_allow_html=True)
 
 # --- TAB 2: CARGAS ---
 with tab2:
@@ -277,16 +283,25 @@ with tab2:
                             st.cache_data.clear(); st.rerun()
     with c2:
         if not df_ca_raw.empty:
-            # FILTRADO CORREGIDO: Se descartan las filas donde la columna B contenga exactamente 'ARRIME ZONA'
+            # FILTRADO EXPLICITO DE CARGAS: Se quitan las filas que contengan 'ARRIME ZONA' en la Columna B
             df_ca_v = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.strip().str.upper() != 'ARRIME ZONA']
+            
             for idx, r in df_ca_v.iterrows():
-                if busqueda_libre in str(r).upper():
-                    estilo = "card-urgente" if "URGENTE" in str(r.iloc[3]).upper() else "card-white"
-                    btn_wsp = f'<a href="{generar_wsp_link(r.iloc[4], r.iloc[1], r.iloc[2], False)}" target="_blank" style="flex: 2; background:#2980b9; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem;">SOLICITAR VIAJE</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
-                    link_r = f"https://www.google.com/maps/dir/?api=1&origin={urllib.parse.quote(str(r.iloc[1]))}&destination={urllib.parse.quote(str(r.iloc[2]))}&travelmode=driving"
-                    
-                    # RENDERIZADO CORREGIDO: Alineado a las columnas reales del Excel (B: Origen, C: Destino, D: Mercadería, F: Empresa)
-                    st.markdown(f"""<div class="{estilo}"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div class="route-txt">📍 {r.iloc[1]} <br>➔ {r.iloc[2]}</div><div style="font-size:0.9rem; margin:8px 0; opacity:0.9;">📦 <b>{r.iloc[3]}</b> | 🏢 {r.iloc[5]}</div><div style="display: flex; gap: 8px;">{btn_wsp}<a href="{link_r}" target="_blank" style="flex: 1; background:#30363d; color: #539bf5 !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem; border: 1px solid #539bf5;">🗺️ RUTA</a></div></div>""", unsafe_allow_html=True)
+                # Validación estricta para evitar que filas rotas o parciales muestren guiones vacíos
+                if len(r) >= 5 and str(r.iloc[1]).strip() != "-" and str(r.iloc[2]).strip() != "-":
+                    if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[1]).upper() or filtro_loc in str(r.iloc[2]).upper()):
+                        
+                        orig = str(r.iloc[1]).strip()
+                        dest = str(r.iloc[2]).strip()
+                        merc = str(r.iloc[3]).strip()
+                        wsp_ca = str(r.iloc[4]).strip()
+                        empr = str(r.iloc[5]).strip() if len(r) > 5 else "PARTICULAR"
+                        
+                        estilo = "card-urgente" if "URGENTE" in merc.upper() else "card-white"
+                        btn_wsp = f'<a href="{generar_wsp_link(wsp_ca, orig, dest, False)}" target="_blank" style="flex: 2; background:#2980b9; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem;">SOLICITAR VIAJE</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
+                        link_r = f"https://www.google.com/maps/dir/?api=1&origin={urllib.parse.quote(orig)}&destination={urllib.parse.quote(dest)}&travelmode=driving"
+                        
+                        st.markdown(f"""<div class="{estilo}"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div class="route-txt">📍 {orig} <br>➔ {dest}</div><div style="font-size:0.9rem; margin:8px 0; opacity:0.9;">📦 <b>{merc}</b> | 🏢 {empr}</div><div style="display: flex; gap: 8px;">{btn_wsp}<a href="{link_r}" target="_blank" style="flex: 1; background:#30363d; color: #539bf5 !important; padding: 12px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 0.9rem; border: 1px solid #539bf5;">🗺️ RUTA</a></div></div>""", unsafe_allow_html=True)
 
 # --- TAB 3: COSECHA ---
 with tab3:
@@ -309,14 +324,19 @@ with tab3:
                         st.cache_data.clear(); st.rerun()
     with c2:
         if not df_ca_raw.empty:
-            # FILTRADO DE ARRIME: Se toman únicamente las filas donde la columna B es exactamente 'ARRIME ZONA'
+            # FILTRADO EXPLICITO DE ARRIME: Tomamos solo donde la Columna B sea exactamente 'ARRIME ZONA'
             df_arr = df_ca_raw[df_ca_raw.iloc[:, 1].astype(str).str.strip().str.upper() == 'ARRIME ZONA']
             for idx, r in df_arr.iterrows():
-                if busqueda_libre in str(r).upper():
-                    btn_c = f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(r.iloc[4])}" target="_blank" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">CONTACTAR</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
-                    
-                    # RENDERIZADO DE ARRIME: C es Localidad, D es Detalle, E es WhatsApp
-                    st.markdown(f"""<div class="card-cosecha"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div style="font-weight:bold; font-size:1.1rem;">📍 ZONA: {r.iloc[2]}</div>🌾 {r.iloc[3]} | 📱 {ocultar_telefono(r.iloc[4])}{btn_c}</div>""", unsafe_allow_html=True)
+                # Aseguramos que la fila tenga contenido real antes de renderizar
+                if len(r) >= 4 and str(r.iloc[2]).strip() != "-":
+                    if busqueda_libre in str(r).upper() and (filtro_loc == "TODAS" or filtro_loc in str(r.iloc[2]).upper()):
+                        
+                        zona = str(r.iloc[2]).strip()
+                        detalle = str(r.iloc[3]).strip()
+                        wsp_arr = str(r.iloc[4]).strip() if len(r) > 4 else ""
+                        
+                        btn_c = f'<a href="https://api.whatsapp.com/send?phone={limpiar_wsp(wsp_arr)}" target="_blank" style="background: #238636; color: white !important; padding: 12px; border-radius: 8px; text-decoration: none; display: block; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">CONTACTAR</a>' if es_user_vip or st.session_state.admin_mode else lock_btn_html
+                        st.markdown(f"""<div class="card-cosecha"><div class="badge-time">{formatear_fecha(r.iloc[0])}</div><div style="font-weight:bold; font-size:1.1rem;">📍 ZONA: {zona}</div>🌾 {detalle} | 📱 {ocultar_telefono(wsp_arr)}{btn_c}</div>""", unsafe_allow_html=True)
 
 # --- TAB 4: CALCULADOR ---
 with tab4:
